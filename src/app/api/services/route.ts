@@ -117,8 +117,8 @@ export async function GET(request: Request) {
     const [config, overrides, pricesRes, namesRes] = await Promise.all([
       getMarkupConfig(),
       getPriceOverrides(),
-      fetch(`${BASE_URL}?api_key=${API_KEY}&action=getPrices&country=${country}`, { next: { revalidate: 60 } }),
-      fetch(`${BASE_URL}?api_key=${API_KEY}&action=getServicesList`, { next: { revalidate: 3600 } }),
+      fetch(`${BASE_URL}?api_key=${API_KEY}&action=getPrices&country=${country}`, { cache: 'no-store' }),
+      fetch(`${BASE_URL}?api_key=${API_KEY}&action=getServicesList`, { cache: 'no-store' }),
     ]);
 
     if (!pricesRes.ok || !namesRes.ok) throw new Error('Upstream API error');
