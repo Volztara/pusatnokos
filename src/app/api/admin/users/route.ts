@@ -34,14 +34,17 @@ export async function PATCH(req: Request) {
 
   if (action === 'blacklist') {
     await db.from('profiles').update({ is_blacklisted: value }).eq('id', userId);
-    // Log aksi
-    await db.from('admin_logs').insert({ action: value ? 'blacklist_user' : 'unblacklist_user', target_id: userId, details: `User ${value ? 'diblokir' : 'dibuka blokir'}` }).catch(() => {});
+    try {
+      await db.from('admin_logs').insert({ action: value ? 'blacklist_user' : 'unblacklist_user', target_id: userId, details: `User ${value ? 'diblokir' : 'dibuka blokir'}` });
+    } catch {}
     return NextResponse.json({ success: true });
   }
 
   if (action === 'set_balance') {
     await db.from('profiles').update({ balance: value }).eq('id', userId);
-    await db.from('admin_logs').insert({ action: 'set_balance', target_id: userId, details: `Saldo diset ke ${value}` }).catch(() => {});
+    try {
+      await db.from('admin_logs').insert({ action: 'set_balance', target_id: userId, details: `Saldo diset ke ${value}` });
+    } catch {}
     return NextResponse.json({ success: true });
   }
 
