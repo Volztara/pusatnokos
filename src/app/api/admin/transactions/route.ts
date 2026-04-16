@@ -38,7 +38,9 @@ export async function PATCH(req: Request) {
   // Update status di DB
   const newStatus = action === 'cancel' ? 'cancelled' : 'success';
   await db.from('orders').update({ status: newStatus }).eq('id', orderId);
-  await db.from('admin_logs').insert({ action: `order_${action}`, target_id: String(orderId), details: `Order ${activationId} di-${action} oleh admin` }).catch(() => {});
+  try {
+    await db.from('admin_logs').insert({ action: `order_${action}`, target_id: String(orderId), details: `Order ${activationId} di-${action} oleh admin` });
+  } catch {}
 
   // Refund saldo jika cancel
   if (action === 'cancel') {
