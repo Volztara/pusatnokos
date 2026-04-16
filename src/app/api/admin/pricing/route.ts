@@ -17,7 +17,9 @@ export async function PUT(req: Request) {
   const { idrRate, markupPct, minProfit, roundTo } = body;
 
   await db.from('admin_settings').upsert({ key: 'markup_config', value: { idrRate, markupPct, minProfit, roundTo } });
-  await db.from('admin_logs').insert({ action: 'update_pricing', target_id: 'global', details: JSON.stringify({ idrRate, markupPct, minProfit, roundTo }) }).catch(() => {});
+  try {
+    await db.from('admin_logs').insert({ action: 'update_pricing', target_id: 'global', details: JSON.stringify({ idrRate, markupPct, minProfit, roundTo }) });
+  } catch {}
 
   return NextResponse.json({ success: true });
 }
