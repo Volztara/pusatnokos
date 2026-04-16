@@ -33,15 +33,16 @@ export const viewport: Viewport = {
   themeColor           : '#4f46e5',
   width                : 'device-width',
   initialScale         : 1,
-  maximumScale         : 1,
-  userScalable         : false,
+  maximumScale         : 5,        // izinkan zoom untuk aksesibilitas
+  userScalable         : true,
   viewportFit          : 'cover',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" suppressHydrationWarning>
+    <html lang="id" suppressHydrationWarning style={{ overflowX: 'hidden' }}>
       <head>
+        <meta charSet="utf-8" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -49,7 +50,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body className={inter.className} suppressHydrationWarning>
+      <body
+        className={inter.className}
+        suppressHydrationWarning
+        style={{ overflowX: 'hidden', WebkitOverflowScrolling: 'touch' }}
+      >
         {children}
         <script
           dangerouslySetInnerHTML={{

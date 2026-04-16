@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import NextImage from 'next/image';
 import { 
   Smartphone, MessageCircle, Send, ShoppingBag, Camera, Search, Menu, X, 
   Zap, ShieldCheck, Clock, Code, ChevronRight, User, Wallet, LogOut, 
@@ -28,7 +29,8 @@ interface Order {
   price: number;
   icon: React.ReactNode;
   number: string;
-  status: 'waiting' | 'success' | 'cancelled' | 'expired';
+  status: 'waiting' | 'success' | 'cancelled' | 'expired' | 'completed';
+  autoDismissAt?: number;
   timeLeft: number;
   otpCode: string | null;
   isV2?: boolean;
@@ -80,7 +82,7 @@ interface NavItem {
 // MOCK DATA & CONSTANTS
 // ==========================================
 const ALL_SERVICES: Service[] = [
-  { id: 1,  code: 'wa',  name: 'WhatsApp',  category: 'Chat',       price: 3500, basePrice: 2800, profit: 700,  stock: 1240, outOfStock: false, icon: <div className="w-10 h-10 rounded-2xl flex items-center justify-center overflow-hidden shrink-0" style={{background:'#dcfce7'}}><img src="https://cdn.simpleicons.org/whatsapp/25D366" className="w-6 h-6" alt="WhatsApp"/></div> },
+  { id: 1,  code: 'wa',  name: 'WhatsApp',  category: 'Chat',       price: 3500, basePrice: 2800, profit: 700,  stock: 1240, outOfStock: false, icon: <div className="w-10 h-10 rounded-2xl flex items-center justify-center overflow-hidden shrink-0" style={{background:'#dcfce7'}}><img src="https://cdn.simpleicons.org/whatsapp/25D366" width={24} height={24} className="w-6 h-6" alt="WhatsApp"/></div> },
   { id: 2,  code: 'tg',  name: 'Telegram',  category: 'Chat',       price: 2500, basePrice: 2000, profit: 500,  stock: 850,  outOfStock: false, icon: <div className="w-10 h-10 rounded-2xl flex items-center justify-center overflow-hidden shrink-0" style={{background:'#dbeafe'}}><img src="https://cdn.simpleicons.org/telegram/26A5E4" className="w-6 h-6" alt="Telegram"/></div> },
   { id: 3,  code: 'li',  name: 'Line',      category: 'Chat',       price: 1500, basePrice: 1200, profit: 300,  stock: 420,  outOfStock: false, icon: <div className="w-10 h-10 rounded-2xl flex items-center justify-center overflow-hidden shrink-0" style={{background:'#dcfce7'}}><img src="https://cdn.simpleicons.org/line/00C300" className="w-6 h-6" alt="Line"/></div> },
   { id: 4,  code: 'gj',  name: 'Gojek',     category: 'Transport',  price: 1500, basePrice: 1200, profit: 300,  stock: 430,  outOfStock: false, icon: <div className="w-10 h-10 rounded-2xl flex items-center justify-center overflow-hidden shrink-0" style={{background:'#dcfce7'}}><img src="https://cdn.simpleicons.org/gojek/00AA13" className="w-6 h-6" alt="Gojek"/></div> },
@@ -138,6 +140,185 @@ const formatTimeStr = (s: number): string => {
 };
 
 // ==========================================
+// MODULE-LEVEL SERVICE ICON HELPER
+// Dual-source: simpleicons (verified slugs) + Google Favicon CDN (universal fallback)
+// Google Favicon API: no CORS, no auth, works dari localhost & production.
+// ==========================================
+type LogoCfg =
+  | { type: 'si';  slug: string; color: string; bg: string }   // simpleicons CDN
+  | { type: 'fav'; domain: string; bg: string };               // Google Favicon CDN
+
+const SERVICE_LOGO_MAP: [string[], LogoCfg][] = [
+  // ── Chat ──────────────────────────────────────────────────────────────
+  [['whatsapp'],             { type:'si',  slug:'whatsapp',      color:'25D366', bg:'#dcfce7' }],
+  [['telegram'],             { type:'si',  slug:'telegram',      color:'26A5E4', bg:'#dbeafe' }],
+  [['line'],                 { type:'si',  slug:'line',          color:'00C300', bg:'#dcfce7' }],
+  [['signal'],               { type:'si',  slug:'signal',        color:'3A76F0', bg:'#dbeafe' }],
+  [['discord'],              { type:'si',  slug:'discord',       color:'5865F2', bg:'#ede9fe' }],
+  [['wechat'],               { type:'si',  slug:'wechat',        color:'07C160', bg:'#dcfce7' }],
+  [['viber'],                { type:'si',  slug:'viber',         color:'7360F2', bg:'#ede9fe' }],
+  [['skype'],                { type:'si',  slug:'skype',         color:'00AFF0', bg:'#dbeafe' }],
+  [['kakao'],                { type:'fav', domain:'kakao.com',               bg:'#fef9c3' }],
+  [['imo'],                  { type:'fav', domain:'imo.im',                  bg:'#dbeafe' }],
+  [['zalo'],                 { type:'fav', domain:'zalo.me',                 bg:'#dbeafe' }],
+  [['bigo'],                 { type:'fav', domain:'bigo.tv',                 bg:'#dcfce7' }],
+  [['michat'],               { type:'fav', domain:'michat.mobi',             bg:'#fee2e2' }],
+  [['icq'],                  { type:'fav', domain:'icq.com',                 bg:'#dcfce7' }],
+  // ── Social ────────────────────────────────────────────────────────────
+  [['instagram'],            { type:'si',  slug:'instagram',     color:'E1306C', bg:'#fce7f3' }],
+  [['tiktok'],               { type:'si',  slug:'tiktok',        color:'010101', bg:'#f1f5f9' }],
+  [['facebook'],             { type:'si',  slug:'facebook',      color:'1877F2', bg:'#dbeafe' }],
+  [['twitter','x.com'],      { type:'si',  slug:'x',             color:'000000', bg:'#f1f5f9' }],
+  [['linkedin'],             { type:'si',  slug:'linkedin',      color:'0A66C2', bg:'#dbeafe' }],
+  [['snapchat'],             { type:'si',  slug:'snapchat',      color:'FFFC00', bg:'#fef9c3' }],
+  [['pinterest'],            { type:'si',  slug:'pinterest',     color:'E60023', bg:'#fee2e2' }],
+  [['reddit'],               { type:'si',  slug:'reddit',        color:'FF4500', bg:'#fee2e2' }],
+  [['youtube'],              { type:'si',  slug:'youtube',       color:'FF0000', bg:'#fee2e2' }],
+  [['twitch'],               { type:'si',  slug:'twitch',        color:'9146FF', bg:'#ede9fe' }],
+  [['vk','vkontakte'],       { type:'si',  slug:'vk',            color:'4A76A8', bg:'#dbeafe' }],
+  [['tumblr'],               { type:'si',  slug:'tumblr',        color:'34526F', bg:'#dbeafe' }],
+  [['quora'],                { type:'fav', domain:'quora.com',               bg:'#fee2e2' }],
+  [['clubhouse'],            { type:'fav', domain:'joinclubhouse.com',       bg:'#fef9c3' }],
+  [['odnoklassniki'],        { type:'fav', domain:'ok.ru',                   bg:'#fef3c7' }],
+  [['behance'],              { type:'si',  slug:'behance',       color:'1769FF', bg:'#dbeafe' }],
+  // ── E-Commerce ────────────────────────────────────────────────────────
+  [['shopee'],               { type:'si',  slug:'shopee',        color:'EE4D2D', bg:'#fee2e2' }],
+  [['amazon'],               { type:'si',  slug:'amazon',        color:'FF9900', bg:'#fef3c7' }],
+  [['ebay'],                 { type:'si',  slug:'ebay',          color:'E53238', bg:'#fee2e2' }],
+  [['aliexpress'],           { type:'fav', domain:'aliexpress.com',          bg:'#fee2e2' }],
+  [['tokopedia'],            { type:'fav', domain:'tokopedia.com',           bg:'#dcfce7' }],
+  [['lazada'],               { type:'fav', domain:'lazada.co.id',            bg:'#dbeafe' }],
+  [['temu'],                 { type:'fav', domain:'temu.com',                bg:'#fee2e2' }],
+  [['wildberries'],          { type:'fav', domain:'wildberries.ru',          bg:'#fce7f3' }],
+  [['bukalapak'],            { type:'fav', domain:'bukalapak.com',           bg:'#fee2e2' }],
+  [['blibli'],               { type:'fav', domain:'blibli.com',              bg:'#dbeafe' }],
+  [['meesho'],               { type:'fav', domain:'meesho.com',              bg:'#ede9fe' }],
+  [['flipkart'],             { type:'fav', domain:'flipkart.com',            bg:'#dbeafe' }],
+  [['ozon'],                 { type:'fav', domain:'ozon.ru',                 bg:'#dbeafe' }],
+  [['avito'],                { type:'fav', domain:'avito.ru',                bg:'#dcfce7' }],
+  [['coupang'],              { type:'fav', domain:'coupang.com',             bg:'#fee2e2' }],
+  [['daraz'],                { type:'fav', domain:'daraz.pk',                bg:'#fee2e2' }],
+  [['mercadolibre','mercado libre'],{ type:'fav', domain:'mercadolibre.com', bg:'#fef9c3' }],
+  [['poshmark'],             { type:'fav', domain:'poshmark.com',            bg:'#fee2e2' }],
+  [['jd.com'],               { type:'fav', domain:'jd.com',                  bg:'#fee2e2' }],
+  // ── Transport ─────────────────────────────────────────────────────────
+  [['gojek'],                { type:'si',  slug:'gojek',         color:'00AA13', bg:'#dcfce7' }],
+  [['grab'],                 { type:'si',  slug:'grab',          color:'00B14F', bg:'#dcfce7' }],
+  [['uber'],                 { type:'si',  slug:'uber',          color:'000000', bg:'#f1f5f9' }],
+  [['lyft'],                 { type:'si',  slug:'lyft',          color:'FF00BF', bg:'#fce7f3' }],
+  [['indriver'],             { type:'fav', domain:'indrive.com',              bg:'#dcfce7' }],
+  [['maxim'],                { type:'fav', domain:'taximaxim.com',            bg:'#fef9c3' }],
+  [['didi'],                 { type:'fav', domain:'didiglobal.com',           bg:'#fee2e2' }],
+  [['lalamove'],             { type:'fav', domain:'lalamove.com',             bg:'#fee2e2' }],
+  [['borzo'],                { type:'fav', domain:'borzo.com',                bg:'#fce7f3' }],
+  [['doordash'],             { type:'fav', domain:'doordash.com',             bg:'#fee2e2' }],
+  [['rappi'],                { type:'fav', domain:'rappi.com',                bg:'#fee2e2' }],
+  // ── Finance / Crypto ──────────────────────────────────────────────────
+  [['paypal'],               { type:'si',  slug:'paypal',        color:'003087', bg:'#dbeafe' }],
+  [['binance'],              { type:'si',  slug:'binance',        color:'F3BA2F', bg:'#fef9c3' }],
+  [['coinbase'],             { type:'si',  slug:'coinbase',       color:'0052FF', bg:'#dbeafe' }],
+  [['okx'],                  { type:'si',  slug:'okx',            color:'000000', bg:'#f1f5f9' }],
+  [['dana'],                 { type:'fav', domain:'dana.id',                  bg:'#dbeafe' }],
+  [['ovo'],                  { type:'fav', domain:'ovo.id',                   bg:'#ede9fe' }],
+  [['gopay'],                { type:'fav', domain:'gopay.co.id',              bg:'#dcfce7' }],
+  [['linkaja'],              { type:'fav', domain:'linkaja.id',               bg:'#fee2e2' }],
+  [['shopeepay'],            { type:'fav', domain:'shopee.co.id',             bg:'#fee2e2' }],
+  [['bybit'],                { type:'fav', domain:'bybit.com',                bg:'#fef9c3' }],
+  [['cashapp'],              { type:'fav', domain:'cash.app',                 bg:'#dcfce7' }],
+  [['revolut'],              { type:'fav', domain:'revolut.com',              bg:'#f1f5f9' }],
+  [['paytm'],                { type:'fav', domain:'paytm.com',                bg:'#dbeafe' }],
+  [['bkash'],                { type:'fav', domain:'bkash.com',                bg:'#fce7f3' }],
+  [['phonepe'],              { type:'fav', domain:'phonepe.com',              bg:'#ede9fe' }],
+  [['metamask'],             { type:'fav', domain:'metamask.io',              bg:'#fef3c7' }],
+  // ── Tech / Mail ───────────────────────────────────────────────────────
+  [['google','gmail'],       { type:'si',  slug:'google',        color:'EA4335', bg:'#fee2e2' }],
+  [['microsoft','outlook'],  { type:'si',  slug:'microsoft',     color:'00A4EF', bg:'#dbeafe' }],
+  [['apple','icloud'],       { type:'si',  slug:'apple',         color:'000000', bg:'#f1f5f9' }],
+  [['yahoo'],                { type:'si',  slug:'yahoo',         color:'720E9E', bg:'#ede9fe' }],
+  [['proton'],               { type:'fav', domain:'proton.me',                bg:'#ede9fe' }],
+  [['yandex'],               { type:'fav', domain:'yandex.com',               bg:'#fee2e2' }],
+  [['mail.ru'],              { type:'fav', domain:'mail.ru',                  bg:'#dbeafe' }],
+  // ── Streaming ─────────────────────────────────────────────────────────
+  [['netflix'],              { type:'si',  slug:'netflix',       color:'E50914', bg:'#fee2e2' }],
+  [['spotify'],              { type:'si',  slug:'spotify',       color:'1DB954', bg:'#dcfce7' }],
+  [['disney'],               { type:'fav', domain:'disneyplus.com',           bg:'#dbeafe' }],
+  [['hbo'],                  { type:'fav', domain:'hbomax.com',               bg:'#ede9fe' }],
+  [['prime video','primevideo'],{ type:'fav', domain:'primevideo.com',        bg:'#dbeafe' }],
+  [['hulu'],                 { type:'fav', domain:'hulu.com',                 bg:'#dcfce7' }],
+  [['peacock'],              { type:'fav', domain:'peacocktv.com',            bg:'#f1f5f9' }],
+  [['crunchyroll'],          { type:'fav', domain:'crunchyroll.com',          bg:'#fee2e2' }],
+  [['iqiyi'],                { type:'fav', domain:'iqiyi.com',                bg:'#dcfce7' }],
+  [['wetv'],                 { type:'fav', domain:'wetv.vip',                 bg:'#fee2e2' }],
+  [['viu'],                  { type:'fav', domain:'viu.com',                  bg:'#fef9c3' }],
+  // ── Gaming ────────────────────────────────────────────────────────────
+  [['steam'],                { type:'si',  slug:'steam',         color:'000000', bg:'#e2e8f0' }],
+  [['roblox'],               { type:'si',  slug:'roblox',        color:'E02525', bg:'#fee2e2' }],
+  [['epic'],                 { type:'si',  slug:'epicgames',     color:'313131', bg:'#f1f5f9' }],
+  [['playstation'],          { type:'si',  slug:'playstation',   color:'003087', bg:'#dbeafe' }],
+  [['xbox'],                 { type:'si',  slug:'xbox',          color:'107C10', bg:'#dcfce7' }],
+  [['minecraft'],            { type:'fav', domain:'minecraft.net',             bg:'#dcfce7' }],
+  [['fortnite'],             { type:'fav', domain:'fortnite.com',              bg:'#dbeafe' }],
+  [['valorant'],             { type:'fav', domain:'playvalorant.com',          bg:'#fee2e2' }],
+  [['pubg'],                 { type:'fav', domain:'pubg.com',                  bg:'#fef3c7' }],
+  [['free fire','freefire'], { type:'fav', domain:'ff.garena.com',             bg:'#fee2e2' }],
+  [['mobile legend','mlbb'], { type:'fav', domain:'mobilelegends.net',         bg:'#fee2e2' }],
+  [['clash'],                { type:'fav', domain:'supercell.com',             bg:'#fef9c3' }],
+  // ── Dating ────────────────────────────────────────────────────────────
+  [['tinder'],               { type:'si',  slug:'tinder',        color:'FF6B6B', bg:'#fee2e2' }],
+  [['bumble'],               { type:'si',  slug:'bumble',        color:'F1AE14', bg:'#fef9c3' }],
+  [['badoo'],                { type:'fav', domain:'badoo.com',                 bg:'#fce7f3' }],
+  [['hinge'],                { type:'fav', domain:'hinge.co',                  bg:'#fee2e2' }],
+  // ── Travel ────────────────────────────────────────────────────────────
+  [['airbnb'],               { type:'si',  slug:'airbnb',        color:'FF5A5F', bg:'#fee2e2' }],
+  [['booking'],              { type:'fav', domain:'booking.com',               bg:'#dbeafe' }],
+  [['traveloka'],            { type:'fav', domain:'traveloka.com',             bg:'#dbeafe' }],
+  [['agoda'],                { type:'fav', domain:'agoda.com',                 bg:'#fee2e2' }],
+  [['tiket'],                { type:'fav', domain:'tiket.com',                 bg:'#dbeafe' }],
+  [['expedia'],              { type:'fav', domain:'expedia.com',               bg:'#dbeafe' }],
+  [['pegipegi'],             { type:'fav', domain:'pegipegi.com',              bg:'#fee2e2' }],
+  // ── Lainnya ───────────────────────────────────────────────────────────
+  [['irctc'],                { type:'fav', domain:'irctc.co.in',               bg:'#fee2e2' }],
+  [['shopify'],              { type:'si',  slug:'shopify',       color:'96BF48', bg:'#dcfce7' }],
+];
+
+function getServiceIconByName(name: string): React.ReactNode {
+  const n = name.toLowerCase();
+  for (const [keys, cfg] of SERVICE_LOGO_MAP) {
+    if (keys.some(k => n.includes(k))) {
+      const src = cfg.type === 'si'
+        ? `https://cdn.simpleicons.org/${cfg.slug}/${cfg.color}`
+        : `https://www.google.com/s2/favicons?domain=${cfg.domain}&sz=128`;
+      const imgSize = cfg.type === 'si' ? 'w-6 h-6' : 'w-7 h-7';
+      return (
+        <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden" style={{ background: cfg.bg }}>
+          <img
+            src={src}
+            alt={name}
+            className={`${imgSize} object-contain`}
+            onError={(e) => {
+              const el = e.currentTarget as HTMLImageElement;
+              el.style.display = 'none';
+              const parent = el.parentElement;
+              if (parent) {
+                parent.style.fontSize = '16px';
+                parent.style.fontWeight = '900';
+                parent.style.color = '#4f46e5';
+                parent.textContent = name.charAt(0).toUpperCase();
+              }
+            }}
+          />
+        </div>
+      );
+    }
+  }
+  return (
+    <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-black shrink-0" style={{ background: '#eef2ff', color: '#4f46e5' }}>
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
+// ==========================================
 // MAIN APP COMPONENT
 // ==========================================
 export default function App() {
@@ -147,6 +328,7 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const [services, setServices] = useState<Service[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
+  const [serviceError,    setServiceError]    = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<string>('6');
   const [countries, setCountries] = useState<Country[]>([
     { id: '6',  name: '🇮🇩 Indonesia' },
@@ -208,89 +390,8 @@ export default function App() {
     return 'Lainnya';
   };
 
-  const getServiceIcon = (code: string, name: string): React.ReactNode => {
-    const n = name.toLowerCase();
-
-    // Map nama ke Simple Icons CDN (https://cdn.simpleicons.org/[slug]/[color])
-    const logoMap: [string[], { slug: string; bg: string; color: string }][] = [
-      [['whatsapp'],           { slug: 'whatsapp',      bg: '#dcfce7', color: '25D366' }],
-      [['telegram'],           { slug: 'telegram',      bg: '#dbeafe', color: '26A5E4' }],
-      [['instagram'],          { slug: 'instagram',     bg: '#fce7f3', color: 'E1306C' }],
-      [['tiktok'],             { slug: 'tiktok',        bg: '#f1f5f9', color: '010101' }],
-      [['facebook'],           { slug: 'facebook',      bg: '#dbeafe', color: '1877F2' }],
-      [['google','gmail'],     { slug: 'google',        bg: '#fee2e2', color: 'EA4335' }],
-      [['twitter','x.com'],    { slug: 'x',             bg: '#f1f5f9', color: '000000' }],
-      [['shopee'],             { slug: 'shopee',        bg: '#fee2e2', color: 'EE4D2D' }],
-      [['tokopedia'],          { slug: 'tokopedia',     bg: '#dcfce7', color: '42B549' }],
-      [['lazada'],             { slug: 'lazada',        bg: '#dbeafe', color: '0F136D' }],
-      [['gojek'],              { slug: 'gojek',         bg: '#dcfce7', color: '00AA13' }],
-      [['grab'],               { slug: 'grab',          bg: '#dcfce7', color: '00B14F' }],
-      [['netflix'],            { slug: 'netflix',       bg: '#fee2e2', color: 'E50914' }],
-      [['spotify'],            { slug: 'spotify',       bg: '#dcfce7', color: '1DB954' }],
-      [['discord'],            { slug: 'discord',       bg: '#ede9fe', color: '5865F2' }],
-      [['amazon'],             { slug: 'amazon',        bg: '#fef3c7', color: 'FF9900' }],
-      [['microsoft','outlook'],{ slug: 'microsoft',     bg: '#dbeafe', color: '00A4EF' }],
-      [['apple','icloud'],     { slug: 'apple',         bg: '#f1f5f9', color: '000000' }],
-      [['paypal'],             { slug: 'paypal',        bg: '#dbeafe', color: '003087' }],
-      [['binance'],            { slug: 'binance',       bg: '#fef9c3', color: 'F3BA2F' }],
-      [['tinder'],             { slug: 'tinder',        bg: '#fee2e2', color: 'FF6B6B' }],
-      [['line'],               { slug: 'line',          bg: '#dcfce7', color: '00C300' }],
-      [['signal'],             { slug: 'signal',        bg: '#dbeafe', color: '3A76F0' }],
-      [['steam'],              { slug: 'steam',         bg: '#e2e8f0', color: '1B2838' }],
-      [['roblox'],             { slug: 'roblox',        bg: '#fee2e2', color: 'E02525' }],
-      [['linkedin'],           { slug: 'linkedin',      bg: '#dbeafe', color: '0A66C2' }],
-      [['youtube'],            { slug: 'youtube',       bg: '#fee2e2', color: 'FF0000' }],
-      [['snapchat'],           { slug: 'snapchat',      bg: '#fef9c3', color: 'FFFC00' }],
-      [['pinterest'],          { slug: 'pinterest',     bg: '#fee2e2', color: 'E60023' }],
-      [['dana'],               { slug: 'dana',          bg: '#dbeafe', color: '1F8EE1' }],
-      [['ovo'],                { slug: 'ovo',           bg: '#ede9fe', color: '4C3494' }],
-      [['gopay'],              { slug: 'gojek',         bg: '#dcfce7', color: '00AA13' }],
-      [['airbnb'],             { slug: 'airbnb',        bg: '#fee2e2', color: 'FF5A5F' }],
-      [['uber'],               { slug: 'uber',          bg: '#f1f5f9', color: '000000' }],
-      [['reddit'],             { slug: 'reddit',        bg: '#fee2e2', color: 'FF4500' }],
-      [['twitch'],             { slug: 'twitch',        bg: '#ede9fe', color: '9146FF' }],
-      [['vk','vkontakte'],     { slug: 'vk',            bg: '#dbeafe', color: '4A76A8' }],
-      [['wechat'],             { slug: 'wechat',        bg: '#dcfce7', color: '07C160' }],
-      [['viber'],              { slug: 'viber',         bg: '#ede9fe', color: '7360F2' }],
-      [['skype'],              { slug: 'skype',         bg: '#dbeafe', color: '00AFF0' }],
-      [['bumble'],             { slug: 'bumble',        bg: '#fef9c3', color: 'F1AE14' }],
-      [['booking'],            { slug: 'bookingdotcom', bg: '#dbeafe', color: '003580' }],
-      [['traveloka'],          { slug: 'traveloka',     bg: '#dbeafe', color: '0064D3' }],
-      [['coinbase'],           { slug: 'coinbase',      bg: '#dbeafe', color: '0052FF' }],
-      [['bybit'],              { slug: 'bybit',         bg: '#fef9c3', color: 'F7A600' }],
-      [['okx'],                { slug: 'okx',           bg: '#f1f5f9', color: '000000' }],
-      [['ebay'],               { slug: 'ebay',          bg: '#fee2e2', color: 'E53238' }],
-      [['blibli'],             { slug: 'blibli',        bg: '#dbeafe', color: '0060AF' }],
-      [['bukalapak'],          { slug: 'bukalapak',     bg: '#fee2e2', color: 'E91E8C' }],
-      [['yahoo'],              { slug: 'yahoo',         bg: '#ede9fe', color: '720E9E' }],
-    ];
-
-    for (const [keys, cfg] of logoMap) {
-      if (keys.some(k => n.includes(k))) {
-        return (
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden" style={{ background: cfg.bg }}>
-            <img
-              src={`https://cdn.simpleicons.org/${cfg.slug}/${cfg.color}`}
-              alt={name}
-              className="w-6 h-6 object-contain"
-              onError={(e) => {
-                const el = e.currentTarget;
-                el.style.display = 'none';
-                el.parentElement!.innerHTML = '📱';
-              }}
-            />
-          </div>
-        );
-      }
-    }
-
-    // Default fallback
-    return (
-      <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0" style={{ background: '#eef2ff' }}>
-        📱
-      </div>
-    );
-  };
+  // Delegasikan ke fungsi module-level — satu sumber kebenaran untuk semua ikon
+  const getServiceIcon = (_code: string, name: string): React.ReactNode => getServiceIconByName(name);
 
   // Fetch countries sekali saat load
   useEffect(() => {
@@ -337,6 +438,7 @@ export default function App() {
         setServices(mapped.length > 0 ? mapped : []);
       } catch {
         setServices([]);
+        setServiceError(true);
       } finally {
         setLoadingServices(false);
       }
@@ -393,19 +495,19 @@ export default function App() {
   }, [user?.email]);
 
   return (
-    <div className="relative text-slate-800 dark:text-slate-200 font-sans selection:bg-indigo-200 selection:text-indigo-900 bg-slate-50 dark:bg-slate-950 min-h-screen transition-colors duration-300">
+    <div className="relative text-slate-800 dark:text-slate-200 font-sans selection:bg-indigo-200 selection:text-indigo-900 bg-slate-50 dark:bg-slate-950 min-h-screen transition-colors duration-300" style={{WebkitTapHighlightColor:"transparent"}}>
       
       {/* GLOBAL TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] bg-slate-900/95 dark:bg-white/95 backdrop-blur-md text-white dark:text-slate-900 px-6 py-3.5 rounded-full shadow-2xl font-bold flex items-center transition-all animate-in fade-in slide-in-from-top-4 duration-300">
-          <CheckCircle2 className="w-5 h-5 mr-2.5 text-green-400 dark:text-green-600" /> {toastMsg}
+        <div className="fixed bottom-20 md:top-6 md:bottom-auto left-1/2 transform -translate-x-1/2 z-[100] bg-slate-900/95 dark:bg-white/95 backdrop-blur-md text-white dark:text-slate-900 px-5 py-3 rounded-2xl shadow-2xl font-bold flex items-center gap-2 transition-all animate-in fade-in slide-in-from-bottom-4 md:slide-in-from-top-4 duration-300 max-w-[calc(100vw-2rem)] text-sm">
+          <CheckCircle2 className="w-5 h-5 shrink-0 text-green-400 dark:text-green-600" /><span className="truncate">{toastMsg}</span>
         </div>
       )}
 
       {currentView === 'login' || currentView === 'register' ? (
         <AuthView type={currentView} onNavigate={navigate} onAuth={handleLogin} showToast={showToast} isDarkMode={isDarkMode} />
       ) : currentView === 'dashboard' ? (
-        <DashboardLayout user={user} onLogout={handleLogout} showToast={showToast} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} activeServices={activeServices} countries={countries} selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry} />
+        <DashboardLayout user={user} onLogout={handleLogout} showToast={showToast} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} activeServices={activeServices} serviceError={serviceError} countries={countries} selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry} />
       ) : (
         <LandingPage onNavigate={navigate} showToast={showToast} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} activeServices={activeServices} />
       )}
@@ -452,7 +554,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
   };
 
   return (
-    <div className="min-h-screen bg-[#fafafa] dark:bg-[#020617] transition-colors duration-300">
+    <div className="min-h-screen bg-[#fafafa] dark:bg-[#020617] transition-colors duration-300 overflow-x-hidden" style={{minHeight:"100svh"}}>
       <button onClick={() => showToast("Membuka Live Chat WhatsApp...")} aria-label="Hubungi Customer Service" className="fixed bottom-6 left-6 z-[90] bg-[#25D366] text-white p-4 rounded-full shadow-[0_8px_30px_rgb(37,211,102,0.3)] hover:bg-[#1ebd5a] transition-all transform hover:scale-110 flex items-center group">
         <MessageSquare className="w-6 h-6" />
         <span className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-xs group-hover:ml-3 transition-all duration-300 font-bold text-sm">Hubungi CS</span>
@@ -473,14 +575,14 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
             </div>
 
             <div className="hidden md:flex items-center space-x-4">
-              <button suppressHydrationWarning onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition">
+              <button suppressHydrationWarning onClick={() => setIsDarkMode(!isDarkMode)} aria-label="Toggle dark mode" className="p-2 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition">
                 {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
               <button onClick={() => onNavigate('login')} className="text-sm font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 px-4 py-2.5 rounded-xl transition hover:bg-slate-100 dark:hover:bg-slate-800">Masuk</button>
               <button onClick={() => onNavigate('register')} className="text-sm font-bold bg-slate-900 dark:bg-indigo-600 text-white px-5 py-2.5 rounded-xl shadow-lg hover:shadow-indigo-500/30 transition-all transform active:scale-95">Mulai Gratis</button>
             </div>
             <div className="md:hidden flex items-center space-x-2">
-              <button suppressHydrationWarning onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 text-slate-500 dark:text-slate-400">
+              <button suppressHydrationWarning onClick={() => setIsDarkMode(!isDarkMode)} aria-label="Toggle dark mode" className="p-2 text-slate-500 dark:text-slate-400">
                 {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
               <button onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Toggle Menu" className="p-2 text-slate-800 dark:text-slate-200">{isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}</button>
@@ -501,9 +603,9 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
       </nav>
 
       {/* HERO SECTION */}
-      <div id="beranda" className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden text-center">
+      <div id="beranda" className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 text-center">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 pointer-events-none">
-          <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-indigo-500/15 dark:bg-indigo-500/10 blur-[120px] rounded-full"></div>
+          <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-[min(800px,100vw)] h-[600px] bg-indigo-500/15 dark:bg-indigo-500/10 blur-[120px] rounded-full"></div>
         </div>
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="inline-flex items-center px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-400 text-sm font-bold mb-8 shadow-sm">
@@ -525,31 +627,50 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
             </button>
           </div>
 
-          {/* Floating app chips */}
+          {/* Floating app chips — pakai Google Favicon agar semua logo tampil */}
           <div className="flex items-center justify-center gap-2 flex-wrap mt-10">
-            {['WhatsApp','Telegram','Shopee','Tokopedia','Gojek','Instagram','TikTok','Facebook'].map(app => (
-              <div key={app} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 flex items-center gap-1.5 shadow-sm text-xs font-bold text-slate-600 dark:text-slate-300">
-                <img src={`https://cdn.simpleicons.org/${app.toLowerCase()}`} className="w-3.5 h-3.5" alt={app} onError={e=>{(e.target as any).style.display='none'}}/>
-                {app}
+            {[
+              { name: 'WhatsApp',  domain: 'whatsapp.com'   },
+              { name: 'Telegram',  domain: 'telegram.org'   },
+              { name: 'Shopee',    domain: 'shopee.co.id'   },
+              { name: 'Tokopedia', domain: 'tokopedia.com'  },
+              { name: 'Gojek',     domain: 'gojek.com'      },
+              { name: 'Instagram', domain: 'instagram.com'  },
+              { name: 'TikTok',    domain: 'tiktok.com'     },
+              { name: 'Facebook',  domain: 'facebook.com'   },
+            ].map(app => (
+              <div key={app.name} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 flex items-center gap-1.5 shadow-sm text-xs font-bold text-slate-600 dark:text-slate-300 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors">
+                <img
+                  src={`https://www.google.com/s2/favicons?domain=${app.domain}&sz=32`}
+                  width={14} height={14}
+                  className="w-3.5 h-3.5 object-contain"
+                  alt={app.name}
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+                {app.name}
               </div>
             ))}
-            <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-400">+500 lainnya</div>
+            <div className="bg-indigo-50 dark:bg-slate-800 border border-indigo-100 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-indigo-500 dark:text-indigo-400">+500 lainnya</div>
           </div>
 
-          {/* Stats strip */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12 max-w-3xl mx-auto">
-            {[
-              { val: '500+', label: 'Layanan Tersedia',  icon: <Package className="w-5 h-5 text-indigo-500"/> },
-              { val: '50K+', label: 'Pengguna Aktif',    icon: <Users className="w-5 h-5 text-violet-500"/> },
-              { val: '99%',  label: 'Tingkat Sukses',    icon: <TrendingUp className="w-5 h-5 text-green-500"/> },
-              { val: '24/7', label: 'Server Online',     icon: <Activity className="w-5 h-5 text-blue-500"/> },
-            ].map(s => (
-              <div key={s.label} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 text-center shadow-sm">
-                <div className="flex justify-center mb-1.5">{s.icon}</div>
-                <div className="text-2xl font-black text-slate-900 dark:text-white">{s.val}</div>
-                <div className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-0.5">{s.label}</div>
+          {/* Stats strip — redesign lebih premium */}
+          <div className="mt-14 max-w-3xl mx-auto">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">
+              <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-slate-100 dark:divide-slate-800">
+                {[
+                  { val: '500+',  label: 'Layanan Tersedia', icon: <Package className="w-5 h-5 text-indigo-600 dark:text-indigo-400"/>,   bg: 'bg-indigo-50 dark:bg-indigo-900/20', color: 'text-indigo-600 dark:text-indigo-400' },
+                  { val: '50K+',  label: 'Pengguna Aktif',   icon: <Users className="w-5 h-5 text-violet-600 dark:text-violet-400"/>,     bg: 'bg-violet-50 dark:bg-violet-900/20',  color: 'text-violet-600 dark:text-violet-400' },
+                  { val: '99%',   label: 'Tingkat Sukses',   icon: <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400"/>,  bg: 'bg-green-50 dark:bg-green-900/20',    color: 'text-green-600 dark:text-green-400' },
+                  { val: '24/7',  label: 'Server Online',    icon: <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400"/>,      bg: 'bg-blue-50 dark:bg-blue-900/20',      color: 'text-blue-600 dark:text-blue-400' },
+                ].map(s => (
+                  <div key={s.label} className="flex flex-col items-center justify-center py-7 px-4 text-center gap-2">
+                    <div className={`w-10 h-10 ${s.bg} rounded-2xl flex items-center justify-center`}>{s.icon}</div>
+                    <div className={`text-3xl font-black ${s.color}`}>{s.val}</div>
+                    <div className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-tight">{s.label}</div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </div>
@@ -591,7 +712,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
                 <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
                   <div className="relative">
                     <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                    <input type="text" placeholder="Contoh: Shopee, Telegram..." className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-12 pr-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium transition-shadow dark:text-white" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                    <input type="text" placeholder="Contoh: Shopee, Telegram..." className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-12 pr-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 text-base font-medium transition-shadow dark:text-white" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                   </div>
                 </div>
                 <div className="overflow-y-auto flex-1 bg-slate-50/50 dark:bg-slate-900/50 p-3">
@@ -718,7 +839,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
               <div key={i} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
                 <button 
                   onClick={() => setActiveFaq(activeFaq === i ? null : i)} 
-                  className="w-full px-6 py-5 text-left flex justify-between font-bold text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 focus:outline-none transition-colors"
+                  className="w-full px-6 py-5 text-left flex justify-between font-bold text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500 transition-colors"
                 >
                   {faq.q} <ChevronDown className={"w-5 h-5 text-slate-400 transition-transform " + (activeFaq === i ? 'rotate-180' : '')} />
                 </button>
@@ -730,7 +851,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
       </div>
 
       {/* CTA SECTION */}
-      <div className="py-24 bg-indigo-600 dark:bg-indigo-700 relative overflow-hidden">
+      <div className="py-24 bg-indigo-600 dark:bg-indigo-700 relative">
         <div className="absolute inset-0 -z-0 pointer-events-none">
           <div className="absolute -top-20 -left-20 w-96 h-96 bg-violet-600/30 blur-[80px] rounded-full"/>
           <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-blue-600/30 blur-[80px] rounded-full"/>
@@ -946,12 +1067,12 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
     finally { setIsLoading(false); }
   };
 
-  const inputCls = "w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/50 dark:text-white text-sm font-medium transition-all";
+  const inputCls = "w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/50 dark:text-white text-base font-medium transition-all";
   const btnCls   = (loading: boolean) => "w-full flex justify-center items-center py-4 rounded-2xl text-sm font-bold text-white transition-all active:scale-95 disabled:opacity-70 " + (loading ? "bg-indigo-400" : "bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-700");
 
   const ErrorBox = () => error ? (
-    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm font-bold bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 px-4 py-3 rounded-2xl">
-      <AlertCircle className="w-4 h-4 shrink-0" /> {error}
+    <div className="flex items-start gap-2 text-red-600 dark:text-red-400 text-sm font-bold bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 px-4 py-3 rounded-2xl">
+      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /><span className="break-words min-w-0">{error}</span>
     </div>
   ) : null;
 
@@ -991,8 +1112,8 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#020617] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden transition-colors duration-300">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none"></div>
+    <div className="min-h-screen bg-slate-50 dark:bg-[#020617] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden transition-colors duration-300" style={{minHeight:"100svh"}}>
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[min(800px,100vw)] h-[min(800px,100vh)] bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none"></div>
       <div className="mx-auto w-full max-w-md text-center mb-8 relative z-10">
         <div className="flex justify-center cursor-pointer mb-6 hover:scale-105 transition-transform" onClick={() => onNavigate("landing")}>
           <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-md border border-slate-100 dark:border-slate-700"><Smartphone className="h-10 w-10 text-indigo-600 dark:text-indigo-400" /></div>
@@ -1001,7 +1122,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 font-medium">{subtitles[step]}</p>
       </div>
 
-      <div className="mx-auto w-full max-w-md bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl py-8 px-6 sm:px-10 shadow-2xl border border-slate-200/50 dark:border-slate-800/50 rounded-3xl relative z-10">
+      <div className="mx-auto w-full max-w-md bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl py-8 px-6 sm:px-10 shadow-2xl border border-slate-200/50 dark:border-slate-800/50 rounded-3xl relative z-10" style={{paddingBottom:"calc(1.5rem + env(safe-area-inset-bottom,0px))"}}>
 
         {/* ── LOGIN FORM ── */}
         {step === "form" && isLogin && (
@@ -1009,7 +1130,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Alamat Email</label>
               <div className="relative"><Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="email@contoh.com" />
+                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="Email kamu" />
               </div>
             </div>
             <div>
@@ -1042,7 +1163,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Alamat Email</label>
               <div className="relative"><Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="email@contoh.com" />
+                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="Email kamu" />
               </div>
             </div>
             <div>
@@ -1086,7 +1207,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Alamat Email</label>
               <div className="relative"><Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="email@contoh.com" />
+                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="Email kamu" />
               </div>
             </div>
             <ErrorBox />
@@ -1142,12 +1263,13 @@ interface DashboardLayoutProps {
   isDarkMode: boolean;
   setIsDarkMode: (val: boolean) => void;
   activeServices: Service[];
+  serviceError?: boolean;
   countries: Country[];
   selectedCountry: string;
   setSelectedCountry: (val: string) => void;
 }
 
-function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode, activeServices, countries, selectedCountry, setSelectedCountry }: DashboardLayoutProps) {
+function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode, activeServices, serviceError, countries, selectedCountry, setSelectedCountry }: DashboardLayoutProps) {
   const [activeTab, setActiveTab] = useState<string>('buy');
   const [balance, setBalance] = useState<number>(user?.balance ?? 0);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -1181,7 +1303,13 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
           price        : o.price,
           icon         : <Smartphone className="w-5 h-5" />,
           number       : o.phone,
-          status       : o.status as Order['status'],
+          // 'success' dari DB → 'completed' agar tidak muncul di panel aktif saat reload
+          // 'waiting' yang sudah lewat 20 menit → 'expired'
+          status       : o.status === 'success'
+            ? 'completed' as Order['status']
+            : (o.status === 'waiting' && Date.now() - new Date(o.created_at).getTime() > 1200000)
+              ? 'expired' as Order['status']
+              : o.status as Order['status'],
           timeLeft     : Math.max(0, 1200 - Math.floor((Date.now() - new Date(o.created_at).getTime()) / 1000)),
           otpCode      : o.otp_code ?? null,
           isV2         : o.is_v2 ?? false,
@@ -1235,6 +1363,17 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
     showToast('Pesanan dibatalkan. Saldo Rp ' + orderToCancel.price.toLocaleString('id-ID') + ' dikembalikan.');
   };
 
+  const [notifCount,  setNotifCount]  = useState(0);
+  const [notifItems,  setNotifItems]  = useState<{ id: number; msg: string; time: string; read: boolean }[]>([]);
+  const [showNotif,   setShowNotif]   = useState(false);
+
+  // Tambah notifikasi baru — stable setter, aman dipanggil dari dalam interval/SSE
+  const addNotif = useCallback((msg: string) => {
+    const item = { id: Date.now(), msg, time: new Date().toLocaleTimeString('id-ID'), read: false };
+    setNotifItems(prev => [item, ...prev].slice(0, 20));
+    setNotifCount(c => c + 1);
+  }, []);
+
   // Ref selalu berisi orders terbaru — agar interval tidak perlu di-reset setiap render
   const ordersRef = useRef(orders);
   useEffect(() => { ordersRef.current = orders; }, [orders]);
@@ -1253,11 +1392,20 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
             if (o.activationId !== event.activationId) return o;
             if (o.isV2) {
               const otpCodes = [...(o.otpCodes ?? []), { service: event.service, code: event.smsCode }];
-              return { ...o, status: 'success', otpCodes };
+              return { ...o, status: 'success', otpCodes, autoDismissAt: Date.now() + 60000 };
             }
-            return { ...o, status: 'success', otpCode: event.smsCode };
+            return { ...o, status: 'success', otpCode: event.smsCode, autoDismissAt: Date.now() + 60000 };
           }));
+          // Auto-dismiss dari panel aktif setelah 60 detik
+          setTimeout(() => {
+            setOrders(cur => cur.map(o =>
+              o.activationId === event.activationId && o.status === 'success'
+                ? { ...o, status: 'completed' as Order['status'] }
+                : o
+            ));
+          }, 60000);
           showToast(`OTP masuk: ${event.smsCode}`);
+          addNotif(`🔑 OTP masuk untuk ${event.service ?? 'pesanan kamu'}: ${event.smsCode}`);
         } catch { /* abaikan parse error */ }
       };
       es.onerror = () => { es?.close(); es = null; };
@@ -1282,16 +1430,28 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                 code,
               }));
               setOrders(current => current.map(o =>
-                o.id === order.id ? { ...o, status: 'success', otpCodes } : o
+                o.id === order.id ? { ...o, status: 'success', otpCodes, autoDismissAt: Date.now() + 60000 } : o
               ));
               fetch('/api/user/orders', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activationId: order.activationId, status: 'success', otpCode: data.otpCodes[0] }) }).catch(() => {});
               showToast(`OTP bundle ${order.serviceName} masuk!`);
+              addNotif(`🔑 OTP Bundle ${order.serviceName} masuk!`);
+              setTimeout(() => {
+                setOrders(cur => cur.map(o =>
+                  o.id === order.id && o.status === 'success' ? { ...o, status: 'completed' as Order['status'] } : o
+                ));
+              }, 60000);
             } else if (!order.isV2 && data.otpCode) {
               setOrders(current => current.map(o =>
-                o.id === order.id ? { ...o, status: 'success', otpCode: data.otpCode } : o
+                o.id === order.id ? { ...o, status: 'success', otpCode: data.otpCode, autoDismissAt: Date.now() + 60000 } : o
               ));
               fetch('/api/user/orders', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activationId: order.activationId, status: 'success', otpCode: data.otpCode }) }).catch(() => {});
               showToast(`Berhasil! Kode OTP ${order.serviceName} masuk.`);
+              addNotif(`🔑 OTP ${order.serviceName}: ${data.otpCode}`);
+              setTimeout(() => {
+                setOrders(cur => cur.map(o =>
+                  o.id === order.id && o.status === 'success' ? { ...o, status: 'completed' as Order['status'] } : o
+                ));
+              }, 60000);
             }
           } else if (data.status === 'cancel') {
             setOrders(current => current.map(o =>
@@ -1307,7 +1467,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       es?.close();
       clearInterval(pollInterval);
     };
-  }, [showToast]); // showToast stable karena useCallback — interval dibuat SEKALI saja
+  }, [showToast, addNotif]); // showToast & addNotif stable (useCallback) — interval dibuat SEKALI saja
 
   // ── Countdown timer setiap detik ────────────────────────────────────
   useEffect(() => {
@@ -1349,17 +1509,6 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
     return () => clearInterval(countdownInterval);
   }, [showToast, updateBalance]);
 
-  const [notifCount,  setNotifCount]  = useState(0);
-  const [notifItems,  setNotifItems]  = useState<{ id: number; msg: string; time: string; read: boolean }[]>([]);
-  const [showNotif,   setShowNotif]   = useState(false);
-
-  // Tambah notifikasi baru
-  const addNotif = (msg: string) => {
-    const item = { id: Date.now(), msg, time: new Date().toLocaleTimeString('id-ID'), read: false };
-    setNotifItems(prev => [item, ...prev].slice(0, 20));
-    setNotifCount(c => c + 1);
-  };
-
   const navItems: NavItem[] = [
     { id: 'dashboard', name: 'Dashboard', icon: <BarChart2 className="w-5 h-5" /> },
     { id: 'buy',     name: 'Beli Nomor',        icon: <ShoppingCart className="w-5 h-5" /> },
@@ -1370,7 +1519,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
   ];
 
   return (
-    <div className="min-h-screen bg-[#fafafa] dark:bg-[#020617] flex flex-col md:flex-row font-sans relative transition-colors duration-300">
+    <div className="min-h-screen bg-[#fafafa] dark:bg-[#020617] flex flex-col md:flex-row font-sans relative transition-colors duration-300" style={{minHeight:"100svh"}}>
       
       {/* SIDEBAR DESKTOP */}
       <div className="hidden md:flex flex-col w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 fixed h-full z-10 shadow-sm transition-colors duration-300">
@@ -1384,7 +1533,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
         </div>
         <div className="flex-1 py-6 px-5 space-y-2 overflow-y-auto">
           {navItems.map(i => (
-            <button key={i.id} onClick={() => setActiveTab(i.id)} className={"w-full flex items-center px-4 py-4 text-[15px] font-bold rounded-2xl transition-all " + (activeTab === i.id ? 'bg-slate-900 dark:bg-indigo-600 text-white shadow-lg shadow-slate-900/20 dark:shadow-none' : 'text-slate-600 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400')}>
+            <button key={i.id} onClick={() => setActiveTab(i.id)} className={"w-full flex items-center px-4 py-4 text-[15px] font-bold rounded-2xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500 " + (activeTab === i.id ? 'bg-slate-900 dark:bg-indigo-600 text-white shadow-lg shadow-slate-900/20 dark:shadow-none' : 'text-slate-600 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400')}>
               <div className={"mr-4 " + (activeTab === i.id ? 'text-indigo-400 dark:text-indigo-200' : 'text-slate-400 dark:text-slate-500')}>{i.icon}</div>{i.name}
             </button>
           ))}
@@ -1392,7 +1541,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       </div>
 
       {/* MAIN WRAPPER */}
-      <div className="flex-1 md:ml-72 flex flex-col min-h-screen overflow-x-hidden">
+      <div className="flex-1 md:ml-72 flex flex-col min-h-screen">
         <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl h-[80px] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-40 shadow-sm transition-colors duration-300">
           <div className="md:hidden flex items-center font-black text-xl tracking-tight dark:text-white">
             <Smartphone className="h-7 w-7 text-indigo-600 dark:text-indigo-400 mr-2"/> PusatNokos.
@@ -1403,13 +1552,13 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
           </div>
 
           <div className="flex items-center space-x-3 sm:space-x-5">
-            <button suppressHydrationWarning onClick={() => setIsDarkMode(!isDarkMode)} className="p-2.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+            <button suppressHydrationWarning onClick={() => setIsDarkMode(!isDarkMode)} aria-label="Toggle dark mode" className="p-2.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
               {isDarkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}
             </button>
 
             {/* Notifikasi Bell */}
             <div className="relative">
-              <button onClick={() => { setShowNotif(v => !v); setNotifCount(0); }} className="relative p-2.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+              <button onClick={() => { setShowNotif(v => !v); setNotifCount(0); }} aria-label="Buka notifikasi" className="relative p-2.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
                 <Bell className="w-5 h-5" />
                 {notifCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
@@ -1421,7 +1570,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                 <div className="absolute right-0 top-12 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden">
                   <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                     <span className="font-black text-slate-900 dark:text-white text-sm">Notifikasi</span>
-                    <button onClick={() => { setNotifItems([]); setShowNotif(false); }} className="text-xs text-slate-400 hover:text-red-500 font-bold">Hapus semua</button>
+                    <button onClick={() => { setNotifItems([]); setShowNotif(false); }} aria-label="Hapus semua notifikasi" className="text-xs text-slate-400 hover:text-red-500 font-bold">Hapus semua</button>
                   </div>
                   <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
                     {notifItems.length === 0 ? (
@@ -1442,7 +1591,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
             
             <button onClick={() => setActiveTab('topup')} className="font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 px-5 py-2.5 rounded-xl text-sm hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 transition-colors shadow-sm">+ Topup</button>
             <button onClick={onLogout} className="hidden md:flex font-bold text-slate-500 dark:text-slate-400 text-sm hover:text-red-600 dark:hover:text-red-400 px-3 py-2 rounded-xl transition-colors"><LogOut className="w-5 h-5 mr-2"/> Keluar</button>
-            <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-xl"><Menu className="h-6 w-6" /></button>
+            <button onClick={() => setIsSidebarOpen(true)} aria-label="Buka menu" className="md:hidden p-2.5 text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center"><Menu className="h-6 w-6" /></button>
           </div>
         </header>
 
@@ -1455,7 +1604,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                   <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Saldo Anda</div>
                   <div className="text-2xl font-black text-indigo-700 dark:text-indigo-400">Rp {balance.toLocaleString('id-ID')}</div>
                 </div>
-                <button onClick={() => setIsSidebarOpen(false)} className="bg-white dark:bg-slate-800 p-2 rounded-full shadow-sm border border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400"><X className="w-5 h-5"/></button>
+                <button onClick={() => setIsSidebarOpen(false)} aria-label="Tutup menu" className="bg-white dark:bg-slate-800 p-2 rounded-full shadow-sm border border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400"><X className="w-5 h-5"/></button>
               </div>
               <div className="flex-1 py-6 px-5 space-y-2 overflow-y-auto">
                 {navItems.map(i => (
@@ -1473,13 +1622,47 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
 
         <main className="flex-1 p-4 sm:p-8 pb-32 md:pb-8">
           {activeTab === 'dashboard' && <UserDashboardView user={user} balance={balance} orders={orders} mutasi={mutasi} setActiveTab={setActiveTab} />}
-          {activeTab === 'buy' && <BuyView balance={balance} setBalance={setBalance} orders={orders} setOrders={setOrders} showToast={showToast} onCancelOrder={handleCancelOrder} favorites={favorites} setFavorites={setFavorites} setMutasi={setMutasi} activeServices={activeServices} countries={countries} selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry} user={user} updateBalance={updateBalance} autoRetryQueue={autoRetryQueue} setAutoRetryQueue={setAutoRetryQueue} failedNumbers={failedNumbers} />}
+          {activeTab === 'buy' && <BuyView balance={balance} setBalance={setBalance} orders={orders} setOrders={setOrders} showToast={showToast} onCancelOrder={handleCancelOrder} favorites={favorites} setFavorites={setFavorites} setMutasi={setMutasi} activeServices={activeServices} serviceError={serviceError} countries={countries} selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry} user={user} updateBalance={updateBalance} autoRetryQueue={autoRetryQueue} setAutoRetryQueue={setAutoRetryQueue} failedNumbers={failedNumbers} />}
           {activeTab === 'topup' && <TopupView balance={balance} setBalance={setBalance} showToast={showToast} setActiveTab={setActiveTab} setMutasi={setMutasi} updateBalance={updateBalance} user={user} />}
           {activeTab === 'history' && <HistoryView orders={orders} />}
           {activeTab === 'mutasi' && <MutasiView mutasi={mutasi} user={user} />}
           {activeTab === 'profile' && <ProfileView user={user} showToast={showToast} />}
         </main>
       </div>
+
+      {/* ── Bottom Navigation Bar (mobile only) ──────────────────────── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]" style={{paddingBottom:"env(safe-area-inset-bottom,0px)"}}>
+        <div className="flex items-stretch h-16">
+          {[
+            { id: 'buy',      label: 'Beli',      icon: <ShoppingCart className="w-5 h-5" /> },
+            { id: 'topup',    label: 'Deposit',   icon: <CreditCard className="w-5 h-5" /> },
+            { id: 'dashboard',label: 'Home',      icon: <BarChart2 className="w-5 h-5" /> },
+            { id: 'history',  label: 'Riwayat',   icon: <History className="w-5 h-5" /> },
+            { id: 'profile',  label: 'Akun',      icon: <Settings className="w-5 h-5" /> },
+          ].map(item => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={"flex-1 flex flex-col items-center justify-center gap-0.5 transition-all " +
+                (activeTab === item.id
+                  ? "text-indigo-600 dark:text-indigo-400"
+                  : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300")}
+            >
+              <div className={"p-1.5 rounded-xl transition-all " +
+                (activeTab === item.id ? "bg-indigo-50 dark:bg-indigo-900/30" : "")}>
+                {item.icon}
+              </div>
+              <span className={"text-[10px] font-bold leading-none " +
+                (activeTab === item.id ? "text-indigo-600 dark:text-indigo-400" : "")}>
+                {item.label}
+              </span>
+              {activeTab === item.id && (
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
+              )}
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   );
 }
@@ -1498,6 +1681,7 @@ interface BuyViewProps {
   setFavorites: React.Dispatch<React.SetStateAction<number[]>>;
   setMutasi: React.Dispatch<React.SetStateAction<Mutasi[]>>;
   activeServices: Service[];
+  serviceError?: boolean;
   countries: Country[];
   selectedCountry: string;
   setSelectedCountry: (val: string) => void;
@@ -1685,7 +1869,7 @@ function CountryDropdown({ countries, value, onChange }: {
   );
 
   return (
-    <div ref={ref} className="relative w-full sm:w-[260px]">
+    <div ref={ref} className="relative w-full sm:w-64">
       <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Negara Server</label>
       <button
         type="button"
@@ -1708,7 +1892,7 @@ function CountryDropdown({ countries, value, onChange }: {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Cari negara..."
-                className="w-full pl-8 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none dark:text-white font-medium"
+                className="w-full pl-8 pr-3 py-2 text-base bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white font-medium"
               />
             </div>
           </div>
@@ -1766,14 +1950,14 @@ function SortDropdown({ value, onChange }: { value: string; onChange: (v: string
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm min-w-[160px]"
+        className="w-full flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm min-w-40"
       >
         <span>{selected.icon}</span>
         <span className="flex-1 text-left">{selected.label}</span>
         <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute top-full mt-2 right-0 w-52 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+        <div className="absolute top-full mt-2 right-0 w-52 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden max-h-[60vh] overflow-y-auto">
           {SORT_OPTIONS.map(opt => (
             <button
               key={opt.value}
@@ -1792,7 +1976,7 @@ function SortDropdown({ value, onChange }: { value: string; onChange: (v: string
   );
 }
 
-function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOrder, favorites, setFavorites, setMutasi, activeServices, countries, selectedCountry, setSelectedCountry, user, updateBalance, autoRetryQueue, setAutoRetryQueue, failedNumbers }: BuyViewProps) {
+function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOrder, favorites, setFavorites, setMutasi, activeServices, serviceError, countries, selectedCountry, setSelectedCountry, user, updateBalance, autoRetryQueue, setAutoRetryQueue, failedNumbers }: BuyViewProps) {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeCategory, setActiveCategory] = useState<string>('Semua');
   const [sortOrder, setSortOrder] = useState<string>('default');
@@ -1876,7 +2060,21 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         }),
       });
       const data = await res.json();
-      if (!res.ok) { showToast(data.error ?? 'Gagal memesan bundle.'); return; }
+      if (!res.ok) {
+        // Tampilkan pesan yang ramah, bukan raw JSON dari provider
+        const rawErr = typeof data.error === 'string' ? data.error : JSON.stringify(data.error ?? data);
+        let friendlyMsg = 'Gagal memesan bundle. Coba lagi.';
+        if (rawErr.includes('INVALID') || rawErr.includes('UNPROCESSABLE') || rawErr.includes('Validation')) {
+          const badNames = bundleServices.map(s => s.name).join(', ');
+          friendlyMsg = `Layanan berikut tidak mendukung Mode Bundle: ${badNames}. Pilih layanan lain (misal: WhatsApp, Telegram, Shopee).`;
+        } else if (rawErr.includes('balance') || rawErr.includes('saldo')) {
+          friendlyMsg = 'Saldo tidak cukup untuk bundle ini.';
+        } else if (rawErr.includes('stock') || rawErr.includes('stok')) {
+          friendlyMsg = 'Stok nomor habis untuk salah satu layanan yang dipilih.';
+        }
+        showToast(friendlyMsg);
+        return;
+      }
 
       setBalance(prev => prev - bundleTotalPrice);
       const newOrder: Order = {
@@ -2046,10 +2244,19 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-10">
+    <div className={`space-y-8 max-w-7xl mx-auto pb-10 ${isBundleMode && bundleSelected.size > 0 ? 'pb-28' : 'pb-10'}`}>
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">Beli Nomor OTP</h1>
+          <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3">Beli Nomor OTP</h1>
+          <button
+            onClick={handleRefreshStok}
+            disabled={isRefreshingStok}
+            aria-label="Refresh daftar layanan"
+            className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors shadow-sm disabled:opacity-50"
+            title="Refresh stok"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshingStok ? 'animate-spin' : ''}`} />
+          </button>
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">Pilih layanan aplikasi. Harga & stok diperbarui secara real-time.</p>
         </div>
         <button
@@ -2059,6 +2266,18 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
           {isBundleMode ? '✕ Batal Bundle' : '⚡ Mode Bundle'}
         </button>
       </div>
+
+      {/* Banner info Mode Bundle */}
+      {isBundleMode && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-2xl px-5 py-3.5 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+          <div className="text-sm text-amber-800 dark:text-amber-200">
+            <span className="font-bold">Mode Bundle:</span> Pilih 2–4 layanan untuk 1 nomor. Tidak semua layanan mendukung bundle —{' '}
+            <span className="font-bold">Chat & Social lebih banyak yang kompatibel</span>{' '}
+            (WhatsApp, Telegram, Instagram, dll). Layanan E-Commerce seperti Tokopedia, Lazada, Amazon mungkin tidak didukung.
+          </div>
+        </div>
+      )}
 
       <div className="bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 rounded-3xl p-5 md:p-6 flex flex-col xl:flex-row gap-5 justify-between items-end z-10 transition-colors">
         {/* Country Dropdown */}
@@ -2082,8 +2301,8 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
             <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 dark:text-slate-500" />
             <input
               type="text"
-              placeholder="Ketik WhatsApp, Telegram..."
-              className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/50 outline-none text-sm font-bold transition-all shadow-sm dark:text-white"
+              placeholder="Cari layanan..."
+              className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/50 outline-none text-base font-bold transition-all shadow-sm dark:text-white"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -2094,24 +2313,28 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         <SortDropdown value={sortOrder} onChange={setSortOrder} />
       </div>
 
-      <div className="flex overflow-x-auto gap-3 pb-2 no-scrollbar px-1">
+      <div className="relative">
+        {/* Fade gradient right edge */}
+        <div className="pointer-events-none absolute right-0 top-0 bottom-2 w-12 bg-gradient-to-l from-[#fafafa] dark:from-[#020617] to-transparent z-10" />
+        <div className="flex overflow-x-auto gap-3 pb-2 px-1" style={{scrollbarWidth:'none', msOverflowStyle:'none', WebkitOverflowScrolling:'touch'}}>
         {CATEGORIES.map(cat => (
           <button 
             key={cat} 
             onClick={() => setActiveCategory(cat)} 
-            className={"px-6 py-3 rounded-xl text-sm font-bold whitespace-nowrap border-2 transition-all " + (activeCategory === cat ? 'bg-indigo-600 dark:bg-indigo-600 text-white border-indigo-600 dark:border-indigo-600 shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500')}
+            className={"flex-shrink-0 px-6 py-3 rounded-xl text-sm font-bold whitespace-nowrap border-2 transition-all " + (activeCategory === cat ? 'bg-indigo-600 dark:bg-indigo-600 text-white border-indigo-600 dark:border-indigo-600 shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500')}
           >
             {cat}
           </button>
         ))}
+        </div>
       </div>
 
       <div className={`grid grid-cols-1 ${activeOrders.length > 0 ? 'xl:grid-cols-3' : ''} gap-8 items-start`}>
         
-        <div className={"bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 rounded-[2rem] overflow-hidden flex flex-col transition-colors " + (activeOrders.length > 0 ? 'xl:col-span-2' : '')}>
+        <div className={"bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-700 rounded-[2rem] overflow-hidden flex flex-col transition-colors " + (activeOrders.length > 0 ? 'xl:col-span-2' : '')}>
           <div className="overflow-x-auto flex-1 min-h-[400px] max-h-[600px] overflow-y-auto">
             <table className="w-full text-left min-w-[650px]">
-              <thead className="bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 text-[11px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-bold sticky top-0 z-10 shadow-sm">
+              <thead className="bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 text-[11px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-bold sticky top-0 z-10 shadow-sm">
                 <tr>
                   <th className="p-5 sm:px-6 w-2/5">Layanan App</th>
                   <th className="p-5 sm:px-6 w-1/5">Stok Server</th>
@@ -2145,7 +2368,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                         <div className="flex items-center">
                           <button 
                             onClick={() => toggleFavorite(s.id)}
-                            className="mr-3 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shrink-0"
+                            className="mr-3 p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shrink-0"
                           >
                             <Star className={`w-4 h-4 transition-colors ${favorites.includes(s.id) ? 'fill-yellow-400 text-yellow-400' : 'text-slate-300 dark:text-slate-600'}`} />
                           </button>
@@ -2154,9 +2377,9 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                               {s.icon}
                             </div>
                             <div>
-                              <div className="font-bold text-slate-900 dark:text-white text-[15px]">{s.name}</div>
+                              <div className="font-bold text-slate-900 dark:text-white text-[15px] truncate max-w-[180px] sm:max-w-none">{s.name}</div>
                               <div className="flex items-center gap-1.5 mt-0.5">
-                                <div className="text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800/50 inline-block font-bold uppercase tracking-wider">{s.category}</div>
+                                <div className="text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800/50 inline-block font-bold uppercase tracking-wider whitespace-nowrap shrink-0">{s.category}</div>
                                 {s.outOfStock && <div className="text-[10px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded border border-red-200 dark:border-red-800/50 font-bold uppercase tracking-wider">Stok Habis</div>}
                                 {serviceSuccessRates[s.name] !== undefined && (
                                   <div className={`text-[10px] px-2 py-0.5 rounded border font-bold uppercase tracking-wider ${
@@ -2180,7 +2403,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                       </td>
                       <td className="p-5 sm:px-6">
                         <div className="font-black text-slate-900 dark:text-white text-base">Rp {s.price.toLocaleString('id-ID')}</div>
-                        <div className="text-[10px] text-slate-400 font-medium mt-0.5">per OTP</div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">per OTP</div>
                       </td>
                       <td className="p-5 sm:px-6 text-right">
                         {isBundleMode ? (
@@ -2195,7 +2418,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                           <button 
                             onClick={() => !s.outOfStock && handleBuy(s)} 
                             disabled={isProcessing || s.outOfStock} 
-                            className={"text-white px-6 py-3.5 rounded-xl text-sm font-bold shadow-md w-full max-w-[140px] ml-auto transition-all flex justify-center items-center " + (s.outOfStock ? 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed' : isProcessing ? 'bg-indigo-400 cursor-wait' : 'bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:shadow-lg active:scale-95')}
+                            className={"text-white px-6 py-3.5 rounded-xl text-sm font-bold shadow-md w-full max-w-36 ml-auto transition-all flex justify-center items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 " + (s.outOfStock ? 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed' : isProcessing ? 'bg-indigo-400 cursor-wait' : 'bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:shadow-lg active:scale-95')}
                           >
                             {s.outOfStock ? 'Habis' : isProcessing ? <RefreshCw className="w-4 h-4 animate-spin"/> : 'Beli Nomor'}
                           </button>
@@ -2203,6 +2426,22 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                       </td>
                     </tr>
                   ))
+                ) : serviceError ? (
+                  <tr>
+                    <td colSpan={4} className="py-24 text-center">
+                      <div className="w-20 h-20 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <AlertCircle className="w-10 h-10 text-red-400 dark:text-red-500" />
+                      </div>
+                      <p className="font-extrabold text-slate-800 dark:text-slate-200 text-lg">Gagal memuat layanan</p>
+                      <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2 mb-5">Periksa koneksi internet kamu, lalu coba lagi.</p>
+                      <button
+                        onClick={() => window.location.reload()}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-colors active:scale-95"
+                      >
+                        <RefreshCw className="w-4 h-4" /> Muat Ulang
+                      </button>
+                    </td>
+                  </tr>
                 ) : (
                   <tr>
                     <td colSpan={4} className="py-24 text-center">
@@ -2217,54 +2456,42 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
           </div>
         </div>
 
-        {/* Bundle Cart Bar */}
-        {isBundleMode && bundleSelected.size > 0 && (
-          <div className="bg-slate-900 dark:bg-indigo-600 text-white rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl animate-in slide-in-from-bottom-4 duration-200">
-            <div>
-              <div className="text-xs font-bold text-slate-400 dark:text-indigo-200 uppercase tracking-widest mb-1">Bundle Dipilih ({bundleSelected.size} layanan)</div>
-              <div className="font-bold text-sm">{bundleServices.map(s => s.name).join(' + ')}</div>
-            </div>
-            <div className="flex items-center gap-4 shrink-0">
-              <div className="text-right">
-                <div className="text-xs text-slate-400 dark:text-indigo-200">Total</div>
-                <div className="text-xl font-black">Rp {bundleTotalPrice.toLocaleString('id-ID')}</div>
-              </div>
-              <button
-                onClick={handleBuyBundle}
-                disabled={isProcessing || bundleSelected.size < 2}
-                className="bg-indigo-600 dark:bg-white dark:text-indigo-600 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-indigo-500 dark:hover:bg-slate-100 transition-colors disabled:opacity-50 active:scale-95 shadow-lg"
-              >
-                {isProcessing ? <RefreshCw className="w-4 h-4 animate-spin" /> : bundleSelected.size < 2 ? 'Min. 2 layanan' : 'Beli Bundle'}
-              </button>
-            </div>
-          </div>
-        )}
-
         {activeOrders.length > 0 && (
           <div className="xl:col-span-1 space-y-4 sticky top-[104px]">
-            <div className="bg-indigo-600 text-white rounded-[2rem] shadow-xl overflow-hidden border border-indigo-500 animate-in fade-in slide-in-from-right-8 duration-300">
+            <div className="bg-indigo-600 text-white rounded-[2rem] shadow-xl overflow-hidden border border-indigo-400/60 animate-in fade-in slide-in-from-right-8 duration-300">
               <div className="px-6 py-4 border-b border-indigo-500/50 flex items-center bg-indigo-700/60 font-bold">
                 <Zap className="w-5 h-5 mr-2 text-yellow-300" /> Pesanan Aktif ({activeOrders.length})
               </div>
               
-              <div className="p-4 sm:p-5 space-y-5 max-h-[calc(100vh-220px)] overflow-y-auto bg-indigo-600/20">
+              <div className="p-4 sm:p-5 space-y-5 max-h-[calc(100vh-220px)] overflow-y-auto bg-indigo-600/20" style={{scrollbarWidth:'none'}}>
                 {activeOrders.map(o => (
                   <div key={o.id} className={"bg-white/10 backdrop-blur-md rounded-3xl p-5 border shadow-sm relative overflow-hidden transition-all " + (o.status === 'success' ? 'border-green-400 ring-2 ring-green-400/50' : 'border-white/20')}>
                     {o.status === 'success' && <div className="absolute -right-6 -top-6 w-20 h-20 bg-green-500 rounded-full blur-2xl opacity-40 animate-pulse"></div>}
                     
                     <div className="flex justify-between items-center mb-4 relative z-10">
                       <div className="flex items-center font-bold text-sm">
-                        <div className="w-9 h-9 mr-3 flex items-center justify-center bg-white border border-slate-100 rounded-xl shadow-sm text-indigo-600">{o.icon}</div>
+                        <div className="mr-3 shrink-0">{getServiceIconByName(o.serviceName)}</div>
                         {o.serviceName}
                       </div>
-                      {o.status === 'waiting' && (
-                        <span className="bg-indigo-900/50 text-indigo-100 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-indigo-400/30 flex items-center shadow-sm">
-                          <Clock className="w-3 h-3 mr-1.5"/>{formatTimeStr(o.timeLeft)}
-                        </span>
-                      )}
-                      {o.status === 'success' && (
-                        <span className="bg-green-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider shadow-sm">SELESAI</span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {o.status === 'waiting' && (
+                          <span className="bg-indigo-900/50 text-indigo-100 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-indigo-400/30 flex items-center shadow-sm">
+                            <Clock className="w-3.5 h-3.5 mr-1.5"/>{formatTimeStr(o.timeLeft)}
+                          </span>
+                        )}
+                        {o.status === 'success' && (
+                          <>
+                            <span className="bg-green-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider shadow-sm">SELESAI</span>
+                            <button
+                              onClick={() => setOrders(cur => cur.map(x => x.id === o.id ? { ...x, status: 'completed' as Order['status'] } : x))}
+                              className="bg-white/20 hover:bg-white/40 text-white w-6 h-6 rounded-full flex items-center justify-center transition-colors"
+                              title="Tutup"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
 
                     {/* Action buttons row */}
@@ -2272,20 +2499,20 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                       <div className="grid grid-cols-3 gap-2 mb-4 relative z-10">
                         <button 
                           onClick={() => handleResend(o)}
-                          className="bg-blue-500/20 text-blue-200 hover:bg-blue-500 hover:text-white py-2 rounded-xl text-[11px] font-bold border border-blue-500/30 transition-colors active:scale-95"
+                          className="bg-blue-500/20 text-blue-200 hover:bg-blue-500 hover:text-white py-3 rounded-xl text-[11px] font-bold border border-blue-500/30 transition-colors active:scale-95"
                         >
                           RESEND
                         </button>
                         <button
                           onClick={() => openSmsModal(o)}
-                          className="bg-white/10 text-white hover:bg-white/20 py-2 rounded-xl text-[11px] font-bold border border-white/20 transition-colors active:scale-95"
+                          className="bg-white/10 text-white hover:bg-white/20 py-3 rounded-xl text-[11px] font-bold border border-white/20 transition-colors active:scale-95"
                         >
                           SMS
                         </button>
                         <button 
                           onClick={() => onCancelOrder(o.id)} 
                           disabled={o.timeLeft > 900}
-                          className={"py-2 rounded-xl text-[11px] font-bold border transition-colors active:scale-95 " + (o.timeLeft > 900 ? 'bg-white/5 text-white/30 border-white/10 cursor-not-allowed' : 'bg-red-500/20 text-red-300 hover:bg-red-500 hover:text-white border-red-500/30')}
+                          className={"py-3 rounded-xl text-[11px] font-bold border transition-colors active:scale-95 " + (o.timeLeft > 900 ? 'bg-white/5 text-white/30 border-white/10 cursor-not-allowed' : 'bg-red-500/20 text-red-300 hover:bg-red-500 hover:text-white border-red-500/30')}
                           title={o.timeLeft > 900 ? 'Tunggu 5 menit sebelum bisa membatalkan' : 'Batalkan pesanan'}
                         >
                           BATAL
@@ -2296,7 +2523,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                     <div className="space-y-3 relative z-10">
                       <div>
                         <span className="text-[10px] uppercase text-indigo-200 font-bold tracking-wider mb-1.5 block">Nomor HP Diterima</span>
-                        <div className="bg-white text-slate-900 px-4 py-3 rounded-xl font-mono text-lg font-black tracking-widest cursor-pointer shadow-inner text-center hover:bg-slate-50 transition-colors flex justify-center items-center group" onClick={() => copyToClipboard(o.number, showToast)}>
+                        <div className="bg-white text-slate-900 px-4 py-3 rounded-xl font-mono text-lg font-black tracking-widest cursor-pointer shadow-inner text-center hover:bg-slate-50 transition-colors flex justify-center items-center group" onClick={() => copyToClipboard(o.number, showToast)} aria-label={`Salin nomor ${o.number}`}>
                           {o.number} <Copy className="w-4 h-4 ml-2.5 text-slate-300 group-hover:text-indigo-600 transition-colors"/>
                         </div>
                       </div>
@@ -2322,7 +2549,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                         ) : (
                           /* V1 reguler */
                           o.otpCode ? (
-                            <div className="bg-green-500 text-white px-4 py-3.5 rounded-xl font-black text-2xl tracking-widest cursor-pointer shadow-lg text-center border border-green-400 hover:bg-green-400 transition-colors animate-in zoom-in flex justify-center items-center group" onClick={() => copyToClipboard(o.otpCode ?? '', showToast)}>
+                            <div className="bg-green-500 text-white px-4 py-3.5 rounded-xl font-black text-2xl tracking-widest cursor-pointer shadow-lg text-center border border-green-400 hover:bg-green-400 transition-colors animate-in zoom-in flex justify-center items-center group" onClick={() => copyToClipboard(o.otpCode ?? '', showToast)} aria-label={`Salin kode OTP ${o.otpCode}`}>
                               {o.otpCode} <Copy className="w-5 h-5 ml-2.5 opacity-70 group-hover:opacity-100 transition-opacity"/>
                             </div>
                           ) : (
@@ -2376,10 +2603,46 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         )}
 
       </div>
+      {/* ── Bundle Cart Bar — Fixed di bawah layar ───────────────────── */}
+      {isBundleMode && bundleSelected.size > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 md:left-72 z-50 p-3 sm:p-4 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-slate-900 dark:bg-indigo-700 text-white rounded-2xl px-5 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xl border border-white/10 max-w-5xl mx-auto">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="bg-indigo-500/30 p-2 rounded-xl shrink-0">
+                <Zap className="w-4 h-4 text-yellow-300" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] font-bold text-slate-400 dark:text-indigo-200 uppercase tracking-widest">
+                  Bundle Dipilih ({bundleSelected.size} layanan)
+                </div>
+                <div className="font-bold text-sm truncate">{bundleServices.map(s => s.name).join(' + ')}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 shrink-0 w-full sm:w-auto justify-between sm:justify-end">
+              <div className="text-right">
+                <div className="text-[10px] text-slate-400 dark:text-indigo-200 font-bold uppercase tracking-widest">Total</div>
+                <div className="text-xl font-black">Rp {bundleTotalPrice.toLocaleString('id-ID')}</div>
+              </div>
+              <button
+                onClick={handleBuyBundle}
+                disabled={isProcessing || bundleSelected.size < 2}
+                className="bg-indigo-500 hover:bg-indigo-400 dark:bg-white dark:text-indigo-700 dark:hover:bg-slate-100 text-white px-7 py-3.5 rounded-xl font-black text-sm transition-all disabled:opacity-50 active:scale-95 shadow-lg whitespace-nowrap"
+              >
+                {isProcessing
+                  ? <RefreshCw className="w-4 h-4 animate-spin inline" />
+                  : bundleSelected.size < 2
+                    ? 'Min. 2 layanan'
+                    : `⚡ Beli Bundle`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* SMS Modal */}
       {smsModal && (
-        <div className="fixed inset-0 z-[200] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSmsModal(null)}>
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[200] bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setSmsModal(null)}>
+          <div className="bg-white dark:bg-slate-900 rounded-none sm:rounded-3xl shadow-2xl border-0 sm:border border-slate-200 dark:border-slate-800 w-full sm:max-w-md p-5 sm:p-6 max-h-screen overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <div>
                 <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Semua SMS Masuk</div>
@@ -2518,7 +2781,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">Deposit Saldo</h1>
+        <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">Deposit Saldo</h1>
         <div className="flex gap-2">
           {['select', 'history'].map(m => (
             <button key={m} onClick={() => setDepositMode(m as any)} className={"px-4 py-2 rounded-xl text-sm font-bold transition-colors " + (depositMode === m || (depositMode === 'manual' && m === 'select') ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-300')}>
@@ -2576,7 +2839,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                 <label className="block text-sm font-bold mb-3 text-slate-800 dark:text-slate-200">Nominal Deposit</label>
                 <div className="relative">
                   <span className="absolute left-5 top-4 text-slate-400 font-black text-xl">Rp</span>
-                  <input type="number" value={amount} onChange={e => setAmount(e.target.value)} min="10000" placeholder="10000" className="w-full px-14 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white" />
+                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={amount} onChange={e => setAmount(e.target.value.replace(/\D/g,""))} min="10000" placeholder="10000" className="w-full px-14 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white" />
                 </div>
                 <div className="flex flex-wrap gap-2 mt-3">
                   {QUICK_AMOUNTS.map(q => (
@@ -2612,7 +2875,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                   <div className="space-y-4">
                     {selectedBank.qrisUrl && selectedBank.qrisUrl !== 'GANTI_DENGAN_URL_QRIS' ? (
                       <div className="flex justify-center">
-                        <img src={selectedBank.qrisUrl} alt="QRIS Pusat Nokos" className="w-64 h-64 object-contain rounded-2xl border-2 border-slate-200 dark:border-slate-700 p-2" />
+                        <NextImage src={selectedBank.qrisUrl} alt="QRIS Pusat Nokos" width={256} height={256} className="w-64 h-64 object-contain rounded-2xl border-2 border-slate-200 dark:border-slate-700 p-2" />
                       </div>
                     ) : (
                       <div className="flex justify-center">
@@ -2684,7 +2947,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
               </div>
               <div>
                 <label className="block text-sm font-bold mb-2 text-slate-800 dark:text-slate-200">Catatan (opsional)</label>
-                <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Misal: transfer dari BCA atas nama Budi" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white resize-none h-20" />
+                <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Misal: transfer dari BCA atas nama Budi" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-base font-medium outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white resize-none h-20" />
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setStep(2)} className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">← Kembali</button>
@@ -2770,7 +3033,26 @@ function HistoryView({ orders }: HistoryViewProps) {
       // Cek harga dulu
       const costRes  = await fetch(`/api/reactivation?id=${activationId}`);
       const costData = await costRes.json();
-      if (!costRes.ok) { showHistoryToast(costData.error ?? 'Gagal cek harga reaktivasi.'); return; }
+
+      if (!costRes.ok) {
+        // Activation ID sudah expired / tidak ditemukan di provider (404/500 upstream)
+        const errStr = typeof costData.error === 'string' ? costData.error.toLowerCase() : '';
+        const isExpired = !costRes.ok && (
+          costRes.status === 404 ||
+          errStr.includes('404') ||
+          errStr.includes('not found') ||
+          errStr.includes('expired') ||
+          errStr.includes('invalid') ||
+          errStr.includes('upstream') ||
+          errStr.includes('server')
+        );
+        if (isExpired) {
+          showHistoryToast('Nomor ini sudah kadaluarsa di provider dan tidak bisa diaktifkan ulang. Silakan beli nomor baru untuk layanan yang sama.');
+        } else {
+          showHistoryToast(costData.error ?? 'Gagal cek harga reaktivasi.');
+        }
+        return;
+      }
 
       const konfirmasi = window.confirm(
         `Pakai nomor ini lagi?\nBiaya reaktivasi: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`
@@ -2787,10 +3069,15 @@ function HistoryView({ orders }: HistoryViewProps) {
       if (res.ok && data.success) {
         showHistoryToast(`✅ Reaktivasi berhasil! Nomor: ${data.phone}`);
       } else {
-        showHistoryToast(data.error ?? 'Gagal reaktivasi.');
+        const errStr2 = typeof data.error === 'string' ? data.error.toLowerCase() : '';
+        if (errStr2.includes('upstream') || errStr2.includes('server') || errStr2.includes('404')) {
+          showHistoryToast('Reaktivasi gagal — nomor sudah kadaluarsa. Beli nomor baru untuk layanan ini.');
+        } else {
+          showHistoryToast(data.error ?? 'Gagal reaktivasi.');
+        }
       }
     } catch {
-      showHistoryToast('Kesalahan jaringan saat reaktivasi.');
+      showHistoryToast('Kesalahan jaringan. Periksa koneksi dan coba lagi.');
     } finally {
       setReactivating(null);
     }
@@ -2838,7 +3125,7 @@ function HistoryView({ orders }: HistoryViewProps) {
 
       {/* Header + Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">Riwayat Transaksi</h1>
+        <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">Riwayat Transaksi</h1>
         <div className="flex gap-2 flex-wrap">
           {[
             { value: '',          label: 'Semua Status', color: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700' },
@@ -2962,14 +3249,27 @@ function HistoryView({ orders }: HistoryViewProps) {
                               try {
                                 const costRes  = await fetch(`/api/reactivation?id=${a.activationId}`);
                                 const costData = await costRes.json();
-                                if (costData.error) { showHistoryToast(costData.error); return; }
+                                if (!costRes.ok) {
+                                  const e = typeof costData.error === 'string' ? costData.error.toLowerCase() : '';
+                                  const expired = e.includes('404') || e.includes('upstream') || e.includes('server') || e.includes('not found') || e.includes('invalid');
+                                  showHistoryToast(expired
+                                    ? 'Nomor ini sudah kadaluarsa di provider dan tidak bisa diaktifkan ulang. Beli nomor baru untuk layanan ini.'
+                                    : (costData.error ?? 'Gagal cek harga reaktivasi.'));
+                                  return;
+                                }
                                 const confirm = window.confirm(`Pakai nomor ${a.phone} lagi?\nBiaya: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`);
                                 if (!confirm) return;
                                 const res  = await fetch('/api/reactivation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: a.activationId, service: a.service }) });
                                 const data = await res.json();
-                                if (!res.ok) { showHistoryToast(data.error ?? 'Gagal reaktivasi.'); return; }
+                                if (!res.ok) {
+                                  const e2 = typeof data.error === 'string' ? data.error.toLowerCase() : '';
+                                  showHistoryToast(e2.includes('upstream') || e2.includes('server')
+                                    ? 'Reaktivasi gagal — nomor sudah kadaluarsa. Beli nomor baru.'
+                                    : (data.error ?? 'Gagal reaktivasi.'));
+                                  return;
+                                }
                                 showHistoryToast(`Berhasil! Nomor ${data.phone} siap dipakai lagi.`);
-                              } catch { showHistoryToast('Gagal melakukan reaktivasi.'); }
+                              } catch { showHistoryToast('Kesalahan jaringan. Coba lagi.'); }
                               finally { setReactivating(null); }
                             }}
                             className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 rounded-lg text-[11px] font-black hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 transition-colors disabled:opacity-50 flex items-center gap-1"
@@ -3052,13 +3352,13 @@ function MutasiView({ mutasi, user }: MutasiViewProps) {
     <div className="max-w-5xl mx-auto space-y-6 pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">Buku Mutasi Saldo</h1>
+          <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">Buku Mutasi Saldo</h1>
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2 hidden md:block">Catatan rinci pemasukan dan pengeluaran saldo Anda.</p>
         </div>
         <select
           value={filterType}
           onChange={e => setFilterType(e.target.value as '' | 'in' | 'out')}
-          className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500/50 shadow-sm w-full sm:w-40"
+          className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-base font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500/50 shadow-sm w-full sm:w-40"
         >
           <option value="">Semua</option>
           <option value="in">Masuk (+)</option>
@@ -3151,7 +3451,13 @@ function ProfileView({ user, showToast }: ProfileViewProps) {
 
   return (
     <div className="max-w-3xl space-y-6 mx-auto pb-10">
-      <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">Pengaturan Akun</h1>
+      <div className="flex items-center gap-3 md:hidden mb-2">
+        <button onClick={() => history.back()} className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 shadow-sm">
+          <ChevronRight className="w-5 h-5 rotate-180" />
+        </button>
+        <h1 className="text-xl font-extrabold text-slate-900 dark:text-white">Pengaturan Akun</h1>
+      </div>
+      <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">Pengaturan Akun</h1>
       
       <div className="grid grid-cols-1 gap-8">
         <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800 p-6 md:p-10 h-fit max-w-3xl transition-colors">
@@ -3172,7 +3478,7 @@ function ProfileView({ user, showToast }: ProfileViewProps) {
           <form className="space-y-6 pt-8 border-t border-slate-100 dark:border-slate-800" onSubmit={handleSave}>
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">Nama Lengkap</label>
-              <input type="text" className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none font-bold text-slate-500 dark:text-slate-400 cursor-not-allowed text-sm" defaultValue={user?.name} disabled />
+              <input type="text" className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none font-bold text-slate-500 dark:text-slate-400 cursor-not-allowed text-base" defaultValue={user?.name} disabled />
             </div>
             <div className="pt-2">
               <button type="submit" disabled={isLoading} className="bg-slate-900 dark:bg-indigo-600 text-white font-bold text-sm px-8 py-4 rounded-2xl hover:bg-indigo-600 dark:hover:bg-indigo-700 transition-all active:scale-95 shadow-lg w-full sm:w-auto flex justify-center items-center">
