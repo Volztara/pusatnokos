@@ -30,20 +30,21 @@ export async function GET(request: Request) {
   let errors    = 0;
 
   try {
-    // ── 1. Ambil semua order waiting yang sudah expired dari Supabase ──
+    // ── 1. Ambil order waiting yang sudah > 20 menit ─────────────────
     const cutoff = new Date(Date.now() - 20 * 60 * 1000).toISOString();
 
     const { data: expiredOrders, error: dbErr } = await db
       .from('orders')
-      .select('id, activation_id, email, price, service_name')
+      .select('id, activation_id, user_id, price, service_name')
       .eq('status', 'waiting')
       .lt('created_at', cutoff);
 
     if (dbErr) throw dbErr;
+
     if (!expiredOrders || expiredOrders.length === 0) {
       return NextResponse.json({
         cancelled: 0, refunded: 0, skipped: 0, errors: 0,
-        message: 'Tidak ada order expired.',
+        message  : 'Tidak ada order expired.',
         timestamp: new Date().toISOString(),
       });
     }
@@ -51,79 +52,80 @@ export async function GET(request: Request) {
     console.log(`[cron] Found ${expiredOrders.length} expired orders`);
 
     for (const order of expiredOrders) {
-      const activationId = order.activation_id;
+      const { activation_id, user_id, price, service_name } = order;
 
       // ── 2. Cancel di HeroSMS ───────────────────────────────────────
-      if (activationId) {
+      if (activation_id) {
         try {
           const cancelRes  = await fetch(
-            `${BASE_URL}?api_key=${API_KEY}&action=setStatus&id=${activationId}&status=8`,
+            `${BASE_URL}?api_key=${API_KEY}&action=setStatus&id=${activation_id}&status=8`,
             { cache: 'no-store' }
           );
           const cancelText = (await cancelRes.text()).trim();
           if (cancelText.startsWith('ACCESS_CANCEL') || cancelText.startsWith('ACTIVATION_STATUS_CHANGED')) {
             cancelled++;
-            console.log(`[cron] ✅ HeroSMS cancelled ${activationId}`);
           } else {
-            console.warn(`[cron] ⚠️ HeroSMS response for ${activationId}: ${cancelText}`);
+            console.warn(`[cron] HeroSMS response for ${activation_id}: ${cancelText}`);
           }
         } catch (e) {
-          console.error(`[cron] ❌ HeroSMS cancel failed for ${activationId}:`, e);
+          console.error(`[cron] HeroSMS cancel failed for ${activation_id}:`, e);
           errors++;
         }
       }
 
-      // ── 3. Update status di Supabase → expired ─────────────────────
+      // ── 3. Update status order → expired ──────────────────────────
       const { error: updateErr } = await db
         .from('orders')
         .update({ status: 'expired' })
         .eq('id', order.id);
 
       if (updateErr) {
-        console.error(`[cron] ❌ Supabase update failed for order ${order.id}:`, updateErr);
+        console.error(`[cron] Supabase update failed for order ${order.id}:`, updateErr);
         errors++;
         continue;
       }
 
-      // ── 4. Refund saldo user ───────────────────────────────────────
-      if (order.email && order.price > 0) {
+      // ── 4. Refund saldo user via user_id ──────────────────────────
+      if (user_id && price > 0) {
         const { data: profile } = await db
           .from('profiles')
           .select('balance')
-          .eq('email', order.email)
+          .eq('id', user_id)
           .single();
 
         if (profile) {
-          const newBalance = (profile.balance ?? 0) + order.price;
+          const newBalance = (profile.balance ?? 0) + price;
+
           const { error: balErr } = await db
             .from('profiles')
             .update({ balance: newBalance })
-            .eq('email', order.email);
+            .eq('id', user_id);
 
           if (!balErr) {
-            // Catat mutasi refund
+            // Catat mutasi refund pakai user_id
             await db.from('mutations').insert({
-              email      : order.email,
+              user_id    : user_id,
               type       : 'in',
-              amount     : order.price,
-              description: `Refund Kadaluarsa: ${order.service_name}`,
+              amount     : price,
+              description: `Refund Kadaluarsa: ${service_name}`,
               created_at : new Date().toISOString(),
             });
             refunded++;
-            console.log(`[cron] 💰 Refunded Rp${order.price} to ${order.email}`);
+            console.log(`[cron] Refunded Rp${price} to user ${user_id}`);
           } else {
-            console.error(`[cron] ❌ Refund failed for ${order.email}:`, balErr);
+            console.error(`[cron] Refund failed for user ${user_id}:`, balErr);
             errors++;
           }
+        } else {
+          skipped++;
         }
       }
 
-      // Rate limit — jangan spam Supabase/HeroSMS
       await new Promise(r => setTimeout(r, 100));
     }
 
     const elapsed = Date.now() - startTime;
-    console.log(`[cron] Done in ${elapsed}ms — cancelled: ${cancelled}, refunded: ${refunded}, skipped: ${skipped}, errors: ${errors}`);
+    console.log(`[cron] Done in ${elapsed}ms — cancelled:${cancelled} refunded:${refunded} skipped:${skipped} errors:${errors}`);
 
     return NextResponse.json({
       cancelled,

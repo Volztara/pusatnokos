@@ -467,6 +467,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <a href="#beranda" onClick={(e) => scrollToId(e, 'beranda')} className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">Beranda</a>
+              <a href="#cara" onClick={(e) => scrollToId(e, 'cara')} className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">Cara Kerja</a>
               <a href="#demo" onClick={(e) => scrollToId(e, 'demo')} className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">Harga & Demo</a>
               <a href="#fitur" onClick={(e) => scrollToId(e, 'fitur')} className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">Fitur Keamanan</a>
             </div>
@@ -522,6 +523,58 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
             <button onClick={(e) => scrollToId(e, 'fitur')} className="flex items-center justify-center px-8 py-4 border-2 border-slate-200 dark:border-slate-800 text-base font-bold rounded-2xl text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
               <ShieldCheck className="mr-2 w-5 h-5 text-indigo-600 dark:text-indigo-400"/> Pelajari Fitur
             </button>
+          </div>
+
+          {/* Floating app chips */}
+          <div className="flex items-center justify-center gap-2 flex-wrap mt-10">
+            {['WhatsApp','Telegram','Shopee','Tokopedia','Gojek','Instagram','TikTok','Facebook'].map(app => (
+              <div key={app} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 flex items-center gap-1.5 shadow-sm text-xs font-bold text-slate-600 dark:text-slate-300">
+                <img src={`https://cdn.simpleicons.org/${app.toLowerCase()}`} className="w-3.5 h-3.5" alt={app} onError={e=>{(e.target as any).style.display='none'}}/>
+                {app}
+              </div>
+            ))}
+            <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-400">+500 lainnya</div>
+          </div>
+
+          {/* Stats strip */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12 max-w-3xl mx-auto">
+            {[
+              { val: '500+', label: 'Layanan Tersedia',  icon: <Package className="w-5 h-5 text-indigo-500"/> },
+              { val: '50K+', label: 'Pengguna Aktif',    icon: <Users className="w-5 h-5 text-violet-500"/> },
+              { val: '99%',  label: 'Tingkat Sukses',    icon: <TrendingUp className="w-5 h-5 text-green-500"/> },
+              { val: '24/7', label: 'Server Online',     icon: <Activity className="w-5 h-5 text-blue-500"/> },
+            ].map(s => (
+              <div key={s.label} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 text-center shadow-sm">
+                <div className="flex justify-center mb-1.5">{s.icon}</div>
+                <div className="text-2xl font-black text-slate-900 dark:text-white">{s.val}</div>
+                <div className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-0.5">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* CARA KERJA */}
+      <div id="cara" className="py-24 bg-slate-50 dark:bg-slate-950 border-y border-slate-200 dark:border-slate-800/50">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-16">
+            <div className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest text-sm mb-3">Cara Kerja</div>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">Hanya 3 Langkah Mudah</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+            <div className="hidden md:block absolute top-10 left-[18%] right-[18%] h-0.5 bg-gradient-to-r from-indigo-200 via-violet-200 to-indigo-200 dark:from-indigo-800 dark:via-violet-800 dark:to-indigo-800"/>
+            {[
+              { step: '01', icon: <Wallet className="w-7 h-7 text-indigo-600 dark:text-indigo-400"/>, title: 'Deposit Saldo', desc: 'Top up saldo via QRIS atau Virtual Account bank manapun. Diproses otomatis dalam hitungan detik.' },
+              { step: '02', icon: <ShoppingCart className="w-7 h-7 text-violet-600 dark:text-violet-400"/>, title: 'Pilih & Beli Nomor', desc: 'Cari layanan yang kamu butuhkan, pilih negara, dan klik Beli Nomor. Nomor langsung aktif.' },
+              { step: '03', icon: <CheckCircle className="w-7 h-7 text-green-600 dark:text-green-400"/>, title: 'Terima Kode OTP', desc: 'Kode OTP masuk otomatis ke dashboard kamu dalam hitungan detik. Salin & gunakan!' },
+            ].map((s, i) => (
+              <div key={i} className="relative bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm text-center hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors">
+                <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-white dark:border-slate-900 shadow-md relative z-10">{s.icon}</div>
+                <div className="absolute top-6 right-6 text-6xl font-black text-slate-100 dark:text-slate-800 select-none">{s.step}</div>
+                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mb-3">{s.title}</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">{s.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -625,6 +678,37 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
         </div>
       </div>
 
+      {/* TESTIMONIAL */}
+      <div className="py-20 bg-white dark:bg-[#020617] border-t border-slate-200 dark:border-slate-800/50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-12">
+            <div className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest text-sm mb-3">Testimoni</div>
+            <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white">Dipercaya Ribuan Pengguna</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {[
+              { name: 'Andi R.', role: 'Reseller Online', text: 'Langsung berhasil buat akun marketplace baru. OTP masuk cepat banget, gak sampai 30 detik. Recommended!', rating: 5 },
+              { name: 'Siti N.', role: 'Freelancer', text: 'Auto refund beneran jalan pas nomor saya gagal terima OTP. Saldo balik dalam hitungan detik. Jujur dan amanah!', rating: 5 },
+              { name: 'Budi S.', role: 'Developer', text: 'Stok nomornya banyak dan variatif. Bisa pilih dari berbagai negara. Harga juga bersaing, paling murah yang pernah saya coba.', rating: 5 },
+            ].map((t, i) => (
+              <div key={i} className="bg-white dark:bg-slate-900 rounded-3xl p-7 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors">
+                <div className="flex gap-1 mb-4">
+                  {[...Array(t.rating)].map((_, j) => <Star key={j} className="w-4 h-4 fill-yellow-400 text-yellow-400"/>)}
+                </div>
+                <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-6">"{t.text}"</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center font-black text-indigo-600 dark:text-indigo-400">{t.name[0]}</div>
+                  <div>
+                    <div className="font-bold text-slate-900 dark:text-white text-sm">{t.name}</div>
+                    <div className="text-xs text-slate-400 font-medium">{t.role}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* FAQ */}
       <div id="faq" className="bg-[#fafafa] dark:bg-slate-950 py-24 border-t border-slate-200 dark:border-slate-800/50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
@@ -641,6 +725,26 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
                 {activeFaq === i && <div className="px-6 pb-5 pt-1 text-slate-600 dark:text-slate-400 text-sm leading-relaxed animate-in slide-in-from-top-2">{faq.a}</div>}
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+
+      {/* CTA SECTION */}
+      <div className="py-24 bg-indigo-600 dark:bg-indigo-700 relative overflow-hidden">
+        <div className="absolute inset-0 -z-0 pointer-events-none">
+          <div className="absolute -top-20 -left-20 w-96 h-96 bg-violet-600/30 blur-[80px] rounded-full"/>
+          <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-blue-600/30 blur-[80px] rounded-full"/>
+        </div>
+        <div className="max-w-3xl mx-auto px-4 text-center relative z-10">
+          <h2 className="text-4xl sm:text-5xl font-black text-white mb-6 leading-tight">Siap Mulai Verifikasi<br/>Tanpa Ribet?</h2>
+          <p className="text-indigo-100 text-lg mb-10">Daftar gratis sekarang. Tidak perlu kartu kredit. Langsung bisa beli nomor OTP pertama kamu.</p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button onClick={() => onNavigate('register')} className="flex items-center justify-center gap-2 px-8 py-4 bg-white text-indigo-600 font-black text-base rounded-2xl hover:bg-indigo-50 shadow-xl transition-all hover:-translate-y-0.5 active:scale-95">
+              Daftar Gratis Sekarang <ArrowRight className="w-5 h-5"/>
+            </button>
+            <button onClick={() => onNavigate('login')} className="flex items-center justify-center gap-2 px-8 py-4 border-2 border-white/30 text-white font-bold text-base rounded-2xl hover:bg-white/10 transition-all">
+              Sudah punya akun? Masuk
+            </button>
           </div>
         </div>
       </div>
