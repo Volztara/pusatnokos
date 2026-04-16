@@ -1,0 +1,88 @@
+// src/app/api/auth/register/route.ts
+import { NextResponse } from 'next/server';
+import { Resend } from 'resend';
+import { createClient } from '@supabase/supabase-js';
+
+const resend = new Resend(process.env.RESEND_API_KEY!);
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+// Simple in-memory OTP store (shared via global)
+declare global { var _otpStore: Map<string, any> | undefined; }
+const otpStore: Map<string, any> = globalThis._otpStore ?? (globalThis._otpStore = new Map());
+
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+export async function POST(request: Request) {
+  try {
+    const { email, password, name } = await request.json();
+
+    if (!email || !password || !name) {
+      return NextResponse.json({ error: 'Semua field wajib diisi.' }, { status: 400 });
+    }
+    if (password.length < 6) {
+      return NextResponse.json({ error: 'Password minimal 6 karakter.' }, { status: 400 });
+    }
+
+    // Cek email sudah terdaftar
+    const { data: existing } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('email', email.toLowerCase())
+      .single();
+
+    if (existing) {
+      return NextResponse.json({ error: 'Email sudah terdaftar. Silakan login.' }, { status: 400 });
+    }
+
+    // Rate limiting
+    const prev = otpStore.get(email);
+    if (prev && prev.expiresAt - 9 * 60 * 1000 > Date.now()) {
+      return NextResponse.json({ error: 'Tunggu 60 detik sebelum minta kode baru.' }, { status: 429 });
+    }
+
+    // Simpan data register sementara (termasuk password) — dipakai saat verifikasi
+    const code = generateOTP();
+    otpStore.set(email, {
+      code,
+      expiresAt : Date.now() + 10 * 60 * 1000,
+      name,
+      password,
+      isRegister: true,
+      isReset   : false,
+    });
+
+    // Kirim email verifikasi
+    const { error: sendErr } = await resend.emails.send({
+      from   : 'Pusat Nokos <noreply@pusatnokos.com>',  // ganti setelah domain verified
+      to     : email,
+      subject: 'Aktivasi Akun Pusat Nokos',
+      html   : `
+        <div style="font-family:sans-serif;max-width:480px;margin:auto;background:#fff;border-radius:24px;padding:40px;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+          <h2 style="color:#0f172a;font-size:20px;font-weight:800;margin-bottom:8px;">Halo, ${name}!</h2>
+          <p style="color:#334155;font-size:15px;">Masukkan kode berikut untuk mengaktifkan akun kamu:</p>
+          <div style="background:#f1f5f9;border-radius:16px;padding:24px;text-align:center;margin:24px 0;">
+            <div style="font-size:42px;font-weight:900;letter-spacing:12px;color:#4f46e5;font-family:monospace;">${code}</div>
+            <p style="color:#94a3b8;font-size:13px;margin:12px 0 0;">Berlaku <strong>10 menit</strong></p>
+          </div>
+          <p style="color:#94a3b8;font-size:13px;text-align:center;">Jangan bagikan kode ini ke siapapun.</p>
+        </div>
+      `,
+    });
+
+    if (sendErr) {
+      console.error('[register] Resend error:', sendErr);
+      return NextResponse.json({ error: 'Gagal mengirim email. Coba lagi.' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+
+  } catch (err) {
+    console.error('[POST /api/auth/register]', err);
+    return NextResponse.json({ error: 'Terjadi kesalahan server.' }, { status: 500 });
+  }
+}
