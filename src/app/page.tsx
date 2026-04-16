@@ -1250,7 +1250,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       <div className="hidden md:flex flex-col w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 fixed h-full z-10 shadow-sm transition-colors duration-300">
         <div className="h-[80px] flex items-center px-8 border-b border-slate-100 dark:border-slate-800">
           <div className="bg-indigo-600 p-2 rounded-xl shadow-md shadow-indigo-200 dark:shadow-none mr-3"><Smartphone className="h-6 w-6 text-white" /></div>
-          <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Nokos.</span>
+          <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">PusatNokos.</span>
         </div>
         <div className="p-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
           <div className="text-[11px] text-slate-500 dark:text-slate-400 font-bold mb-2 tracking-widest uppercase">Total Saldo</div>
@@ -1269,7 +1269,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       <div className="flex-1 md:ml-72 flex flex-col min-h-screen overflow-x-hidden">
         <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl h-[80px] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-40 shadow-sm transition-colors duration-300">
           <div className="md:hidden flex items-center font-black text-xl tracking-tight dark:text-white">
-            <Smartphone className="h-7 w-7 text-indigo-600 dark:text-indigo-400 mr-2"/> Nokos.
+            <Smartphone className="h-7 w-7 text-indigo-600 dark:text-indigo-400 mr-2"/> PusatNokos.
           </div>
           
           <div className="hidden md:flex items-center">
