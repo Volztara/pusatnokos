@@ -12,6 +12,8 @@ export async function GET() {
 export async function PUT(req: Request) {
   const { overrides } = await req.json();
   await db.from('admin_settings').upsert({ key: 'price_overrides', value: overrides });
-  await db.from('admin_logs').insert({ action: 'update_price_overrides', target_id: 'global', details: `${Object.keys(overrides).length} override disimpan` }).catch(() => {});
+  try {
+    await db.from('admin_logs').insert({ action: 'update_price_overrides', target_id: 'global', details: `${Object.keys(overrides).length} override disimpan` });
+  } catch {}
   return NextResponse.json({ success: true });
 }
