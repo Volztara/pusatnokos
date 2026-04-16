@@ -7,7 +7,7 @@ import {
   Copy, Check, ShieldAlert, Activity, Zap, RotateCcw, Signal, Ban,
   Moon, Sun, Users, TrendingUp, ShoppingCart, DollarSign, Download,
   Settings, FileText, Search, ChevronDown, BarChart2, Sliders,
-  UserX, UserCheck, XCircle, Eye, Package, LogOut
+  UserX, UserCheck, XCircle, Eye, EyeOff, Package, LogOut, Lock, Mail
 } from 'lucide-react';
 
 // ─── TYPES ───────────────────────────────────────────────────────────
@@ -131,6 +131,130 @@ export default function AdminPage() {
   const [isDark,      setIsDark]      = useState(false);
   const [toast,       setToast]       = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState(new Date());
+
+  // ── Auth ─────────────────────────────────────────────────────────────
+  const [isAuthed,    setIsAuthed]    = useState(false);
+  const [loginEmail,  setLoginEmail]  = useState('');
+  const [loginPass,   setLoginPass]   = useState('');
+  const [showPass,    setShowPass]    = useState(false);
+  const [loginErr,    setLoginErr]    = useState('');
+  const [loginLoading,setLoginLoading]= useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsAuthed(localStorage.getItem('admin_authed') === 'true');
+    }
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginErr('');
+    setLoginLoading(true);
+    try {
+      const r = await fetch('/api/admin/login', {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ email: loginEmail, password: loginPass }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        localStorage.setItem('admin_authed', 'true');
+        setIsAuthed(true);
+      } else {
+        setLoginErr(d.message ?? 'Email atau password salah.');
+      }
+    } catch {
+      setLoginErr('Gagal terhubung ke server.');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  // ── Login Screen ─────────────────────────────────────────────────────
+  if (!isAuthed) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {/* Logo */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-900 dark:bg-indigo-600 rounded-3xl shadow-xl mb-4">
+              <ShieldAlert className="w-8 h-8 text-white" />
+            </div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Pusat Nokos</div>
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white mt-1">Admin Panel</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Masuk dengan akun administrator</p>
+          </div>
+
+          {/* Card */}
+          <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl p-8">
+            <form onSubmit={handleLogin} className="space-y-5">
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Email Admin</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
+                  <input
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={loginEmail}
+                    onChange={e => setLoginEmail(e.target.value)}
+                    placeholder="admin@email.com"
+                    className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white transition"
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
+                  <input
+                    type={showPass ? 'text' : 'password'}
+                    required
+                    autoComplete="current-password"
+                    value={loginPass}
+                    onChange={e => setLoginPass(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full pl-12 pr-12 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPass(v => !v)}
+                    className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition"
+                  >
+                    {showPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Error */}
+              {loginErr && (
+                <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 text-red-600 dark:text-red-400 text-sm font-bold px-4 py-3 rounded-2xl">
+                  <AlertCircle className="w-4 h-4 shrink-0" /> {loginErr}
+                </div>
+              )}
+
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={loginLoading}
+                className="w-full bg-slate-900 dark:bg-indigo-600 text-white font-bold py-4 rounded-2xl hover:bg-indigo-600 dark:hover:bg-indigo-700 active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {loginLoading
+                  ? <><RefreshCw className="w-4 h-4 animate-spin" /> Memverifikasi...</>
+                  : <><ShieldAlert className="w-4 h-4" /> Masuk ke Panel</>
+                }
+              </button>
+            </form>
+          </div>
+
+          <p className="text-center text-xs text-slate-400 mt-6">Akses terbatas untuk administrator saja.</p>
+        </div>
+      </div>
+    );
+  }
 
   // HeroSMS
   const [balance,     setBalance]     = useState<{ balance: number } | null>(null);
