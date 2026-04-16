@@ -2613,7 +2613,7 @@ function HistoryView({ orders }: HistoryViewProps) {
                               // Cek biaya dulu
                               const costRes  = await fetch(`/api/reactivation?id=${a.activationId}`);
                               const costData = await costRes.json();
-                              if (costData.error) { showToast(costData.error); return; }
+                              if (costData.error) { showHistoryToast(costData.error); return; }
 
                               const confirm = window.confirm(
                                 `Pakai nomor ${a.phone} lagi?\nBiaya: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}\n\nLayanan yang sama akan digunakan.`
@@ -2626,9 +2626,9 @@ function HistoryView({ orders }: HistoryViewProps) {
                                 body   : JSON.stringify({ id: a.activationId, service: a.service }),
                               });
                               const data = await res.json();
-                              if (!res.ok) { showToast(data.error ?? 'Gagal reaktivasi.'); return; }
-                              showToast(`Berhasil! Nomor ${data.phone} siap dipakai lagi.`);
-                            } catch { showToast('Gagal melakukan reaktivasi.'); }
+                              if (!res.ok) { showHistoryToast(data.error ?? 'Gagal reaktivasi.'); return; }
+                              showHistoryToast(`Berhasil! Nomor ${data.phone} siap dipakai lagi.`);
+                            } catch { showHistoryToast('Gagal melakukan reaktivasi.'); }
                             finally { setReactivating(null); }
                           }}
                           className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 rounded-lg text-[11px] font-black hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 transition-colors disabled:opacity-50 flex items-center gap-1"
