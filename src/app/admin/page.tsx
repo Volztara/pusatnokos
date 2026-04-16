@@ -140,11 +140,120 @@ export default function AdminPage() {
   const [loginErr,      setLoginErr]      = useState('');
   const [loginLoading,  setLoginLoading]  = useState(false);
 
+  // HeroSMS
+  const [balance,     setBalance]     = useState<{ balance: number } | null>(null);
+  const [activations, setActivations] = useState<Activation[]>([]);
+  const [loadingAct,  setLoadingAct]  = useState(true);
+
+  // Dashboard
+  const [stats,       setStats]       = useState<Stats | null>(null);
+
+  // Users
+  const [users,       setUsers]       = useState<User[]>([]);
+  const [userTotal,   setUserTotal]   = useState(0);
+  const [userPage,    setUserPage]    = useState(1);
+  const [userSearch,  setUserSearch]  = useState('');
+  const [loadingUsers,setLoadingUsers]= useState(false);
+
+  // Transactions
+  const [txns,        setTxns]        = useState<Transaction[]>([]);
+  const [txnTotal,    setTxnTotal]    = useState(0);
+  const [txnPage,     setTxnPage]     = useState(1);
+  const [txnStatus,   setTxnStatus]   = useState('');
+  const [txnSearch,   setTxnSearch]   = useState('');
+  const [loadingTxns, setLoadingTxns] = useState(false);
+  const [actionLoading,setActionLoading] = useState<string | null>(null);
+
+  // Pricing
+  const [pricing,     setPricing]     = useState<PricingConfig>({ idrRate: 17135.75, markupPct: 0.25, minProfit: 200, roundTo: 100 });
+  const [savingPrice, setSavingPrice] = useState(false);
+
+  // Logs
+  const [logs,        setLogs]        = useState<AdminLog[]>([]);
+  const [logTotal,    setLogTotal]    = useState(0);
+  const [logPage,     setLogPage]     = useState(1);
+
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+
+  // Dark mode
+  useEffect(() => {
+    const saved = localStorage.getItem('theme');
+    const dark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    setIsDark(dark);
+    document.documentElement.classList.toggle('dark', dark);
+  }, []);
+
+  const toggleDark = () => setIsDark(p => {
+    const next = !p;
+    document.documentElement.classList.toggle('dark', next);
+    localStorage.setItem('theme', next ? 'dark' : 'light');
+    return next;
+  });
+
+  // Auth check
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setIsAuthed(localStorage.getItem('admin_authed') === 'true');
     }
   }, []);
+
+  // ── Fetchers ────────────────────────────────────────────────────────
+  const fetchBalance = useCallback(async () => {
+    try { const r = await fetch('/api/balance'); setBalance(await r.json()); } catch {}
+  }, []);
+
+  const fetchActivations = useCallback(async () => {
+    setLoadingAct(true);
+    try { const r = await fetch('/api/activations'); setActivations(await r.json()); } catch { setActivations([]); }
+    finally { setLoadingAct(false); }
+  }, []);
+
+  const fetchStats = useCallback(async () => {
+    try { const r = await fetch('/api/admin/stats'); setStats(await r.json()); } catch {}
+  }, []);
+
+  const fetchUsers = useCallback(async (p: number, s: string) => {
+    setLoadingUsers(true);
+    try {
+      const r = await fetch(`/api/admin/users?page=${p}&search=${encodeURIComponent(s)}`);
+      const d = await r.json();
+      setUsers(d.users ?? []); setUserTotal(d.total ?? 0);
+    } catch {}
+    finally { setLoadingUsers(false); }
+  }, []);
+
+  const fetchTxns = useCallback(async (p: number, status: string, search: string) => {
+    setLoadingTxns(true);
+    try {
+      const r = await fetch(`/api/admin/transactions?page=${p}&status=${status}&search=${encodeURIComponent(search)}`);
+      const d = await r.json();
+      setTxns(d.transactions ?? []); setTxnTotal(d.total ?? 0);
+    } catch {}
+    finally { setLoadingTxns(false); }
+  }, []);
+
+  const fetchPricing = useCallback(async () => {
+    try { const r = await fetch('/api/admin/pricing'); setPricing(await r.json()); } catch {}
+  }, []);
+
+  const fetchLogs = useCallback(async (p: number) => {
+    try {
+      const r = await fetch(`/api/admin/logs?page=${p}`);
+      const d = await r.json();
+      setLogs(d.logs ?? []); setLogTotal(d.total ?? 0);
+    } catch {}
+  }, []);
+
+  const refreshAll = useCallback(() => {
+    fetchBalance(); fetchActivations(); fetchStats();
+    setLastRefresh(new Date());
+  }, [fetchBalance, fetchActivations, fetchStats]);
+
+  useEffect(() => { if (!isAuthed) return; refreshAll(); const t = setInterval(refreshAll, 15000); return () => clearInterval(t); }, [refreshAll, isAuthed]);
+  useEffect(() => { if (!isAuthed) return; if (tab === 'users') fetchUsers(userPage, userSearch); }, [tab, userPage, isAuthed]);
+  useEffect(() => { if (!isAuthed) return; if (tab === 'transactions') fetchTxns(txnPage, txnStatus, txnSearch); }, [tab, txnPage, txnStatus, isAuthed]);
+  useEffect(() => { if (!isAuthed) return; if (tab === 'pricing') fetchPricing(); }, [tab, isAuthed]);
+  useEffect(() => { if (!isAuthed) return; if (tab === 'logs') fetchLogs(logPage); }, [tab, logPage, isAuthed]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -256,115 +365,6 @@ export default function AdminPage() {
     );
   }
 
-  // HeroSMS
-  const [balance,     setBalance]     = useState<{ balance: number } | null>(null);
-  const [activations, setActivations] = useState<Activation[]>([]);
-  const [loadingAct,  setLoadingAct]  = useState(true);
-
-  // Dashboard
-  const [stats,       setStats]       = useState<Stats | null>(null);
-
-  // Users
-  const [users,       setUsers]       = useState<User[]>([]);
-  const [userTotal,   setUserTotal]   = useState(0);
-  const [userPage,    setUserPage]    = useState(1);
-  const [userSearch,  setUserSearch]  = useState('');
-  const [loadingUsers,setLoadingUsers]= useState(false);
-
-  // Transactions
-  const [txns,        setTxns]        = useState<Transaction[]>([]);
-  const [txnTotal,    setTxnTotal]    = useState(0);
-  const [txnPage,     setTxnPage]     = useState(1);
-  const [txnStatus,   setTxnStatus]   = useState('');
-  const [txnSearch,   setTxnSearch]   = useState('');
-  const [loadingTxns, setLoadingTxns] = useState(false);
-  const [actionLoading,setActionLoading] = useState<string | null>(null);
-
-  // Pricing
-  const [pricing,     setPricing]     = useState<PricingConfig>({ idrRate: 17135.75, markupPct: 0.25, minProfit: 200, roundTo: 100 });
-  const [savingPrice, setSavingPrice] = useState(false);
-
-  // Logs
-  const [logs,        setLogs]        = useState<AdminLog[]>([]);
-  const [logTotal,    setLogTotal]    = useState(0);
-  const [logPage,     setLogPage]     = useState(1);
-
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
-
-  // Dark mode
-  useEffect(() => {
-    const saved = localStorage.getItem('theme');
-    const dark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    setIsDark(dark);
-    document.documentElement.classList.toggle('dark', dark);
-  }, []);
-
-  const toggleDark = () => setIsDark(p => {
-    const next = !p;
-    document.documentElement.classList.toggle('dark', next);
-    localStorage.setItem('theme', next ? 'dark' : 'light');
-    return next;
-  });
-
-  // ── Fetchers ────────────────────────────────────────────────────────
-  const fetchBalance = useCallback(async () => {
-    try { const r = await fetch('/api/balance'); setBalance(await r.json()); } catch {}
-  }, []);
-
-  const fetchActivations = useCallback(async () => {
-    setLoadingAct(true);
-    try { const r = await fetch('/api/activations'); setActivations(await r.json()); } catch { setActivations([]); }
-    finally { setLoadingAct(false); }
-  }, []);
-
-  const fetchStats = useCallback(async () => {
-    try { const r = await fetch('/api/admin/stats'); setStats(await r.json()); } catch {}
-  }, []);
-
-  const fetchUsers = useCallback(async (p: number, s: string) => {
-    setLoadingUsers(true);
-    try {
-      const r = await fetch(`/api/admin/users?page=${p}&search=${encodeURIComponent(s)}`);
-      const d = await r.json();
-      setUsers(d.users ?? []); setUserTotal(d.total ?? 0);
-    } catch {}
-    finally { setLoadingUsers(false); }
-  }, []);
-
-  const fetchTxns = useCallback(async (p: number, status: string, search: string) => {
-    setLoadingTxns(true);
-    try {
-      const r = await fetch(`/api/admin/transactions?page=${p}&status=${status}&search=${encodeURIComponent(search)}`);
-      const d = await r.json();
-      setTxns(d.transactions ?? []); setTxnTotal(d.total ?? 0);
-    } catch {}
-    finally { setLoadingTxns(false); }
-  }, []);
-
-  const fetchPricing = useCallback(async () => {
-    try { const r = await fetch('/api/admin/pricing'); setPricing(await r.json()); } catch {}
-  }, []);
-
-  const fetchLogs = useCallback(async (p: number) => {
-    try {
-      const r = await fetch(`/api/admin/logs?page=${p}`);
-      const d = await r.json();
-      setLogs(d.logs ?? []); setLogTotal(d.total ?? 0);
-    } catch {}
-  }, []);
-
-  const refreshAll = useCallback(() => {
-    fetchBalance(); fetchActivations(); fetchStats();
-    setLastRefresh(new Date());
-  }, [fetchBalance, fetchActivations, fetchStats]);
-
-  useEffect(() => { refreshAll(); const t = setInterval(refreshAll, 15000); return () => clearInterval(t); }, [refreshAll]);
-  useEffect(() => { if (tab === 'users') fetchUsers(userPage, userSearch); }, [tab, userPage]);
-  useEffect(() => { if (tab === 'transactions') fetchTxns(txnPage, txnStatus, txnSearch); }, [tab, txnPage, txnStatus]);
-  useEffect(() => { if (tab === 'pricing') fetchPricing(); }, [tab]);
-  useEffect(() => { if (tab === 'logs') fetchLogs(logPage); }, [tab, logPage]);
-
-  // ── Actions ─────────────────────────────────────────────────────────
   const handleTxnAction = async (txn: Transaction, action: 'cancel' | 'done') => {
     setActionLoading(txn.id + action);
     try {
