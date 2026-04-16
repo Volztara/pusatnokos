@@ -1,56 +1,23 @@
 // src/app/api/cron/route.ts
-//
-// Cron job: auto-cancel semua aktivasi yang expired di HeroSMS.
-//
-// Cara setup di Vercel:
-//   1. Tambah file vercel.json di root project (lihat bawah)
-//   2. Deploy ke Vercel — cron otomatis jalan setiap 1 menit
-//
-// Cara setup manual (tanpa Vercel):
-//   Panggil GET /api/cron?secret=xxx dari cron service eksternal (cron-job.org, dll)
-//
-// vercel.json:
-// {
-//   "crons": [
-//     {
-//       "path": "/api/cron",
-//       "schedule": "* * * * *"
-//     }
-//   ]
-// }
-
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
-const API_KEY  = process.env.HEROSMS_API_KEY ?? '';
-const BASE_URL = 'https://hero-sms.com/stubs/handler_api.php';
-
-// Secret untuk proteksi endpoint dari akses luar
-// Set CRON_SECRET di environment variable
+const API_KEY     = process.env.HEROSMS_API_KEY ?? '';
+const BASE_URL    = 'https://hero-sms.com/stubs/handler_api.php';
 const CRON_SECRET = process.env.CRON_SECRET ?? '';
 
-/**
- * GET /api/cron
- *
- * Dipanggil oleh Vercel Cron atau service eksternal setiap 1 menit.
- *
- * Alur kerja:
- *   1. Ambil semua aktivasi aktif dari HeroSMS
- *   2. Filter yang sudah expired (created > 20 menit lalu)
- *   3. Cancel satu per satu via setStatus=8
- *
- * Response:
- *   { cancelled: number; skipped: number; errors: number; timestamp: string }
- */
+const db = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
 export async function GET(request: Request) {
-  // Verifikasi secret — skip jika CRON_SECRET tidak di-set (development)
+  // ── Auth ────────────────────────────────────────────────────────────
   if (CRON_SECRET) {
     const { searchParams } = new URL(request.url);
-    const secret = searchParams.get('secret') ?? '';
-
-    // Vercel Cron kirim Authorization header
-    const authHeader = request.headers.get('authorization') ?? '';
+    const secret       = searchParams.get('secret') ?? '';
+    const authHeader   = request.headers.get('authorization') ?? '';
     const bearerSecret = authHeader.replace('Bearer ', '');
-
     if (secret !== CRON_SECRET && bearerSecret !== CRON_SECRET) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -58,95 +25,112 @@ export async function GET(request: Request) {
 
   const startTime = Date.now();
   let cancelled = 0;
+  let refunded  = 0;
   let skipped   = 0;
   let errors    = 0;
 
   try {
-    // 1. Ambil semua aktivasi aktif
-    const res = await fetch(
-      `${BASE_URL}?api_key=${API_KEY}&action=getActiveActivations`,
-      { cache: 'no-store' }
-    );
+    // ── 1. Ambil semua order waiting yang sudah expired dari Supabase ──
+    const cutoff = new Date(Date.now() - 20 * 60 * 1000).toISOString();
 
-    if (!res.ok) throw new Error(`Upstream HTTP ${res.status}`);
-    const raw = await res.json();
+    const { data: expiredOrders, error: dbErr } = await db
+      .from('orders')
+      .select('id, activation_id, email, price, service_name')
+      .eq('status', 'waiting')
+      .lt('created_at', cutoff);
 
-    if (typeof raw === 'string') {
-      // Error dari HeroSMS
-      console.error('[cron] HeroSMS error:', raw);
+    if (dbErr) throw dbErr;
+    if (!expiredOrders || expiredOrders.length === 0) {
       return NextResponse.json({
-        cancelled : 0,
-        skipped   : 0,
-        errors    : 1,
-        message   : raw,
-        timestamp : new Date().toISOString(),
+        cancelled: 0, refunded: 0, skipped: 0, errors: 0,
+        message: 'Tidak ada order expired.',
+        timestamp: new Date().toISOString(),
       });
     }
 
-    const items: any[] = Array.isArray(raw)
-      ? raw
-      : Array.isArray(raw?.activeActivations)
-        ? raw.activeActivations
-        : [];
+    console.log(`[cron] Found ${expiredOrders.length} expired orders`);
 
-    const EXPIRE_MS = 20 * 60 * 1000; // 20 menit dalam milidetik
-    const now       = Date.now();
+    for (const order of expiredOrders) {
+      const activationId = order.activation_id;
 
-    // 2. Filter & cancel yang expired
-    for (const item of items) {
-      const id        = String(item.id ?? item.activationId ?? '');
-      const createdAt = item.created_at ?? item.createdAt ?? null;
-      const status    = String(item.status ?? '');
+      // ── 2. Cancel di HeroSMS ───────────────────────────────────────
+      if (activationId) {
+        try {
+          const cancelRes  = await fetch(
+            `${BASE_URL}?api_key=${API_KEY}&action=setStatus&id=${activationId}&status=8`,
+            { cache: 'no-store' }
+          );
+          const cancelText = (await cancelRes.text()).trim();
+          if (cancelText.startsWith('ACCESS_CANCEL') || cancelText.startsWith('ACTIVATION_STATUS_CHANGED')) {
+            cancelled++;
+            console.log(`[cron] ✅ HeroSMS cancelled ${activationId}`);
+          } else {
+            console.warn(`[cron] ⚠️ HeroSMS response for ${activationId}: ${cancelText}`);
+          }
+        } catch (e) {
+          console.error(`[cron] ❌ HeroSMS cancel failed for ${activationId}:`, e);
+          errors++;
+        }
+      }
 
-      if (!id) { skipped++; continue; }
+      // ── 3. Update status di Supabase → expired ─────────────────────
+      const { error: updateErr } = await db
+        .from('orders')
+        .update({ status: 'expired' })
+        .eq('id', order.id);
 
-      // Skip yang sudah selesai atau dibatalkan
-      if (['STATUS_OK', 'STATUS_CANCEL', '6', '8'].includes(status)) {
-        skipped++;
+      if (updateErr) {
+        console.error(`[cron] ❌ Supabase update failed for order ${order.id}:`, updateErr);
+        errors++;
         continue;
       }
 
-      // Cek apakah sudah expired berdasarkan waktu dibuat
-      if (createdAt) {
-        const createdMs = new Date(createdAt).getTime();
-        if (!isNaN(createdMs) && now - createdMs < EXPIRE_MS) {
-          skipped++; // Belum expired
-          continue;
+      // ── 4. Refund saldo user ───────────────────────────────────────
+      if (order.email && order.price > 0) {
+        const { data: profile } = await db
+          .from('profiles')
+          .select('balance')
+          .eq('email', order.email)
+          .single();
+
+        if (profile) {
+          const newBalance = (profile.balance ?? 0) + order.price;
+          const { error: balErr } = await db
+            .from('profiles')
+            .update({ balance: newBalance })
+            .eq('email', order.email);
+
+          if (!balErr) {
+            // Catat mutasi refund
+            await db.from('mutations').insert({
+              email      : order.email,
+              type       : 'in',
+              amount     : order.price,
+              description: `Refund Kadaluarsa: ${order.service_name}`,
+              created_at : new Date().toISOString(),
+            });
+            refunded++;
+            console.log(`[cron] 💰 Refunded Rp${order.price} to ${order.email}`);
+          } else {
+            console.error(`[cron] ❌ Refund failed for ${order.email}:`, balErr);
+            errors++;
+          }
         }
       }
 
-      // 3. Cancel via setStatus=8
-      try {
-        const cancelRes  = await fetch(
-          `${BASE_URL}?api_key=${API_KEY}&action=setStatus&id=${id}&status=8`,
-          { cache: 'no-store' }
-        );
-        const cancelText = (await cancelRes.text()).trim();
-
-        if (cancelText.startsWith('ACCESS_CANCEL') || cancelText.startsWith('ACTIVATION_STATUS_CHANGED')) {
-          cancelled++;
-          console.log(`[cron] ✅ Cancelled activation ${id}`);
-        } else {
-          errors++;
-          console.warn(`[cron] ⚠️ Unexpected response for ${id}: ${cancelText}`);
-        }
-      } catch (cancelErr) {
-        errors++;
-        console.error(`[cron] ❌ Failed to cancel ${id}:`, cancelErr);
-      }
-
-      // Rate limiting — jangan spam API HeroSMS
-      await new Promise(r => setTimeout(r, 200));
+      // Rate limit — jangan spam Supabase/HeroSMS
+      await new Promise(r => setTimeout(r, 100));
     }
 
     const elapsed = Date.now() - startTime;
-    console.log(`[cron] Done in ${elapsed}ms — cancelled: ${cancelled}, skipped: ${skipped}, errors: ${errors}`);
+    console.log(`[cron] Done in ${elapsed}ms — cancelled: ${cancelled}, refunded: ${refunded}, skipped: ${skipped}, errors: ${errors}`);
 
     return NextResponse.json({
       cancelled,
+      refunded,
       skipped,
       errors,
-      total    : items.length,
+      total    : expiredOrders.length,
       elapsed  : `${elapsed}ms`,
       timestamp: new Date().toISOString(),
     });
