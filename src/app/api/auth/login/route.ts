@@ -32,12 +32,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: msg }, { status: 401 });
     }
 
-    // Ambil profile
+    // Ambil profile + cek blacklist
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('name, email, balance')
+      .select('name, email, balance, is_blacklisted')
       .eq('id', data.user.id)
       .single();
+
+    // Tolak login jika user diblokir
+    if (profile?.is_blacklisted) {
+      return NextResponse.json(
+        { error: 'Akun kamu telah diblokir. Hubungi admin untuk informasi lebih lanjut.' },
+        { status: 403 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

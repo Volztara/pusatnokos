@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Smartphone, MessageCircle, Send, ShoppingBag, Camera, Search, Menu, X, 
   Zap, ShieldCheck, Clock, Code, ChevronRight, User, Wallet, LogOut, 
@@ -366,14 +366,31 @@ export default function App() {
   };
 
   const handleLogout = () => { 
-    if (window.confirm("Apakah Anda yakin ingin keluar dari perangkat ini?")) {
-      setUser(null);
-      // Hapus session dari localStorage
-      localStorage.removeItem('nokos_session');
-      showToast("Anda berhasil keluar dari sistem keamanan."); 
-      navigate('landing'); 
-    }
+    setUser(null);
+    localStorage.removeItem('nokos_session');
+    showToast("Anda berhasil keluar dari sistem keamanan."); 
+    navigate('landing'); 
   };
+
+  // Cek blacklist setiap 30 detik — auto logout jika diblokir
+  useEffect(() => {
+    if (!user?.email) return;
+    const checkBlacklist = async () => {
+      try {
+        const res = await fetch(`/api/auth/check-blacklist?email=${encodeURIComponent(user.email)}`);
+        const data = await res.json();
+        if (data.is_blacklisted) {
+          setUser(null);
+          localStorage.removeItem('nokos_session');
+          navigate('login');
+          showToast('Akun Anda telah diblokir oleh admin.');
+        }
+      } catch { /* abaikan error jaringan */ }
+    };
+    checkBlacklist();
+    const interval = setInterval(checkBlacklist, 30000);
+    return () => clearInterval(interval);
+  }, [user?.email]);
 
   return (
     <div className="relative text-slate-800 dark:text-slate-200 font-sans selection:bg-indigo-200 selection:text-indigo-900 bg-slate-50 dark:bg-slate-950 min-h-screen transition-colors duration-300">
@@ -1033,6 +1050,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
   const [mutasi, setMutasi] = useState<Mutasi[]>([]);
   const [favorites, setFavorites] = useState<number[]>([1, 2]);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [autoRetryQueue, setAutoRetryQueue] = useState<{serviceName: string; serviceCode: string; price: number; icon: React.ReactNode}[]>([]);
 
   // ── Fetch saldo + order dari Supabase saat pertama load ────────────
   useEffect(() => {
@@ -1207,7 +1225,16 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
               updateBalance(order.price, 'add');
               fetch('/api/user/orders', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activationId: order.activationId, status: 'expired' }) }).catch(() => {});
               setMutasi(prev => [{ id: Date.now(), date: new Date().toLocaleString('id-ID'), type: 'in', amount: order.price, desc: "Refund Kadaluarsa: " + order.serviceName }, ...prev]);
-              showToast("Waktu tunggu habis. Saldo Rp " + order.price.toLocaleString('id-ID') + " di-refund.");
+              showToast(`⏱ Nomor ${order.serviceName} kadaluarsa. Mencari nomor baru otomatis...`);
+              // Blacklist nomor yang expired
+              if (order.number) failedNumbers.current.add(order.number);
+              // Auto-retry: tambahkan ke antrian retry
+              setAutoRetryQueue(prev => [...prev, {
+                serviceName: order.serviceName,
+                serviceCode: '',
+                price: order.price,
+                icon: order.icon,
+              }]);
             });
           }, 0);
         }
@@ -1347,7 +1374,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
 
         <main className="flex-1 p-4 sm:p-8 pb-32 md:pb-8">
           {activeTab === 'dashboard' && <UserDashboardView user={user} balance={balance} orders={orders} mutasi={mutasi} setActiveTab={setActiveTab} />}
-          {activeTab === 'buy' && <BuyView balance={balance} setBalance={setBalance} orders={orders} setOrders={setOrders} showToast={showToast} onCancelOrder={handleCancelOrder} favorites={favorites} setFavorites={setFavorites} setMutasi={setMutasi} activeServices={activeServices} countries={countries} selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry} user={user} updateBalance={updateBalance} />}
+          {activeTab === 'buy' && <BuyView balance={balance} setBalance={setBalance} orders={orders} setOrders={setOrders} showToast={showToast} onCancelOrder={handleCancelOrder} favorites={favorites} setFavorites={setFavorites} setMutasi={setMutasi} activeServices={activeServices} countries={countries} selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry} user={user} updateBalance={updateBalance} autoRetryQueue={autoRetryQueue} setAutoRetryQueue={setAutoRetryQueue} />}
           {activeTab === 'topup' && <TopupView balance={balance} setBalance={setBalance} showToast={showToast} setActiveTab={setActiveTab} setMutasi={setMutasi} updateBalance={updateBalance} user={user} />}
           {activeTab === 'history' && <HistoryView orders={orders} />}
           {activeTab === 'mutasi' && <MutasiView mutasi={mutasi} user={user} />}
@@ -1377,6 +1404,8 @@ interface BuyViewProps {
   setSelectedCountry: (val: string) => void;
   user: UserData | null;
   updateBalance: (amount: number, type: 'add' | 'subtract') => Promise<void>;
+  autoRetryQueue: {serviceName: string; serviceCode: string; price: number; icon: React.ReactNode}[];
+  setAutoRetryQueue: React.Dispatch<React.SetStateAction<{serviceName: string; serviceCode: string; price: number; icon: React.ReactNode}[]>>;
 }
 
 // ==========================================
@@ -1491,20 +1520,53 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab }: {
   );
 }
 
-function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOrder, favorites, setFavorites, setMutasi, activeServices, countries, selectedCountry, setSelectedCountry, user, updateBalance }: BuyViewProps) {
+function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOrder, favorites, setFavorites, setMutasi, activeServices, countries, selectedCountry, setSelectedCountry, user, updateBalance, autoRetryQueue, setAutoRetryQueue }: BuyViewProps) {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeCategory, setActiveCategory] = useState<string>('Semua');
   const [sortOrder, setSortOrder] = useState<string>('default');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
   const [isRefreshingStok, setIsRefreshingStok] = useState<boolean>(false);
+
+  // Blacklist nomor yang pernah gagal/expired
+  const failedNumbers = useRef<Set<string>>(new Set());
+
+  // Hitung success rate per service dari riwayat order
+  const serviceSuccessRates = useMemo(() => {
+    const map: Record<string, { success: number; total: number }> = {};
+    orders.forEach(o => {
+      const key = o.serviceName;
+      if (!map[key]) map[key] = { success: 0, total: 0 };
+      map[key].total++;
+      if (o.status === 'success') map[key].success++;
+    });
+    const rates: Record<string, number> = {};
+    Object.entries(map).forEach(([k, v]) => {
+      rates[k] = v.total > 0 ? Math.round((v.success / v.total) * 100) : 0;
+    });
+    return rates;
+  }, [orders]);
+
+  // Auto-retry ketika ada order expired
+  useEffect(() => {
+    if (autoRetryQueue.length === 0 || isProcessing) return;
+    const retry = autoRetryQueue[0];
+    setAutoRetryQueue(prev => prev.slice(1));
+    // Cari service yang cocok berdasarkan nama
+    const matchedService = activeServices.find(s => s.name === retry.serviceName);
+    if (matchedService && balance >= matchedService.price) {
+      setTimeout(() => handleBuy(matchedService), 1500);
+    } else {
+      showToast(`Tidak bisa auto-retry ${retry.serviceName}: saldo tidak cukup atau layanan tidak ditemukan.`);
+    }
+  }, [autoRetryQueue, isProcessing]);
   const [isBundleMode, setIsBundleMode] = useState<boolean>(false);
   const [bundleSelected, setBundleSelected] = useState<Set<number>>(new Set());
   const [smsModal, setSmsModal] = useState<{ id: string; name: string } | null>(null);
   const [allSms, setAllSms] = useState<{ code: string; text: string }[]>([]);
   const [loadingSms, setLoadingSms] = useState(false);
   // Rate limiting — max 3 order per menit
-  const orderTimestamps = React.useRef<number[]>([]);
+  const orderTimestamps = useRef<number[]>([]);
 
   const openSmsModal = async (order: Order) => {
     setSmsModal({ id: order.activationId, name: order.serviceName });
@@ -1672,6 +1734,16 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         showToast(data.error ?? 'Gagal memesan nomor.');
         return;
       }
+
+      // Cek apakah nomor ini pernah gagal sebelumnya
+      if (failedNumbers.current.has(data.phone)) {
+        showToast('Nomor pernah gagal, mencari nomor lain...');
+        // Cancel dan retry
+        await fetch('/api/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: data.activationId, action: 'cancel' }) }).catch(() => {});
+        setIsProcessing(false);
+        handleBuy(service);
+        return;
+      }
       // Kurangi saldo di Supabase
       await updateBalance(service.price, 'subtract');
       const newOrder: Order = {
@@ -1825,6 +1897,15 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                               <div className="flex items-center gap-1.5 mt-0.5">
                                 <div className="text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800/50 inline-block font-bold uppercase tracking-wider">{s.category}</div>
                                 {s.outOfStock && <div className="text-[10px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded border border-red-200 dark:border-red-800/50 font-bold uppercase tracking-wider">Stok Habis</div>}
+                                {serviceSuccessRates[s.name] !== undefined && (
+                                  <div className={`text-[10px] px-2 py-0.5 rounded border font-bold uppercase tracking-wider ${
+                                    serviceSuccessRates[s.name] >= 70
+                                      ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50'
+                                      : serviceSuccessRates[s.name] >= 40
+                                        ? 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50'
+                                        : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50'
+                                  }`}>✓ {serviceSuccessRates[s.name]}% sukses</div>
+                                )}
                               </div>
                             </div>
                           </div>

@@ -1,10 +1,16 @@
 // src/app/api/order/route.ts
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
 const API_KEY  = process.env.HEROSMS_API_KEY ?? '';
 const BASE_URL = 'https://hero-sms.com/stubs/handler_api.php';
 
-// ─── KONFIGURASI MARKUP (sama seperti /api/services) ────────────────
+const db = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+// ─── KONFIGURASI MARKUP ────────────────────────────────────────────────
 const IDR_RATE   = 17135.75;
 const MARKUP_PCT = 0.25;
 const MIN_PROFIT = 200;
@@ -23,9 +29,26 @@ export async function POST(request: Request) {
     const service  = (body.service  ?? '').trim();
     const country  = (body.country  ?? '6').trim();
     const operator = (body.operator ?? '0').trim();
+    const email    = (body.email    ?? '').trim();
 
     if (!service) {
       return NextResponse.json({ error: 'Parameter "service" wajib diisi.' }, { status: 400 });
+    }
+
+    // Cek blacklist jika email diberikan
+    if (email) {
+      const { data: profile } = await db
+        .from('profiles')
+        .select('is_blacklisted')
+        .eq('email', email.toLowerCase())
+        .single();
+
+      if (profile?.is_blacklisted) {
+        return NextResponse.json(
+          { error: 'Akun kamu telah diblokir. Hubungi admin.' },
+          { status: 403 }
+        );
+      }
     }
 
     const priceRes = await fetch(
@@ -110,15 +133,6 @@ export async function GET(request: Request) {
   }
 }
 
-/**
- * PATCH /api/order
- * Body: { id, action: 'cancel' | 'done' | 'resend' }
- *
- * HeroSMS setStatus codes:
- *   3 → resend OTP
- *   6 → selesai
- *   8 → cancel
- */
 export async function PATCH(request: Request) {
   try {
     const body   = await request.json();
