@@ -1051,6 +1051,8 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
   const [favorites, setFavorites] = useState<number[]>([1, 2]);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [autoRetryQueue, setAutoRetryQueue] = useState<{serviceName: string; serviceCode: string; price: number; icon: React.ReactNode}[]>([]);
+  // Blacklist nomor yang pernah gagal/expired (shared ke BuyView)
+  const failedNumbers = useRef<Set<string>>(new Set());
 
   // ── Fetch saldo + order dari Supabase saat pertama load ────────────
   useEffect(() => {
@@ -1374,7 +1376,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
 
         <main className="flex-1 p-4 sm:p-8 pb-32 md:pb-8">
           {activeTab === 'dashboard' && <UserDashboardView user={user} balance={balance} orders={orders} mutasi={mutasi} setActiveTab={setActiveTab} />}
-          {activeTab === 'buy' && <BuyView balance={balance} setBalance={setBalance} orders={orders} setOrders={setOrders} showToast={showToast} onCancelOrder={handleCancelOrder} favorites={favorites} setFavorites={setFavorites} setMutasi={setMutasi} activeServices={activeServices} countries={countries} selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry} user={user} updateBalance={updateBalance} autoRetryQueue={autoRetryQueue} setAutoRetryQueue={setAutoRetryQueue} />}
+          {activeTab === 'buy' && <BuyView balance={balance} setBalance={setBalance} orders={orders} setOrders={setOrders} showToast={showToast} onCancelOrder={handleCancelOrder} favorites={favorites} setFavorites={setFavorites} setMutasi={setMutasi} activeServices={activeServices} countries={countries} selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry} user={user} updateBalance={updateBalance} autoRetryQueue={autoRetryQueue} setAutoRetryQueue={setAutoRetryQueue} failedNumbers={failedNumbers} />}
           {activeTab === 'topup' && <TopupView balance={balance} setBalance={setBalance} showToast={showToast} setActiveTab={setActiveTab} setMutasi={setMutasi} updateBalance={updateBalance} user={user} />}
           {activeTab === 'history' && <HistoryView orders={orders} />}
           {activeTab === 'mutasi' && <MutasiView mutasi={mutasi} user={user} />}
@@ -1406,6 +1408,7 @@ interface BuyViewProps {
   updateBalance: (amount: number, type: 'add' | 'subtract') => Promise<void>;
   autoRetryQueue: {serviceName: string; serviceCode: string; price: number; icon: React.ReactNode}[];
   setAutoRetryQueue: React.Dispatch<React.SetStateAction<{serviceName: string; serviceCode: string; price: number; icon: React.ReactNode}[]>>;
+  failedNumbers: React.MutableRefObject<Set<string>>;
 }
 
 // ==========================================
@@ -1520,16 +1523,13 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab }: {
   );
 }
 
-function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOrder, favorites, setFavorites, setMutasi, activeServices, countries, selectedCountry, setSelectedCountry, user, updateBalance, autoRetryQueue, setAutoRetryQueue }: BuyViewProps) {
+function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOrder, favorites, setFavorites, setMutasi, activeServices, countries, selectedCountry, setSelectedCountry, user, updateBalance, autoRetryQueue, setAutoRetryQueue, failedNumbers }: BuyViewProps) {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeCategory, setActiveCategory] = useState<string>('Semua');
   const [sortOrder, setSortOrder] = useState<string>('default');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
   const [isRefreshingStok, setIsRefreshingStok] = useState<boolean>(false);
-
-  // Blacklist nomor yang pernah gagal/expired
-  const failedNumbers = useRef<Set<string>>(new Set());
 
   // Hitung success rate per service dari riwayat order
   const serviceSuccessRates = useMemo(() => {
