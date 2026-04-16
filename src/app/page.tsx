@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { 
   Smartphone, MessageCircle, Send, ShoppingBag, Camera, Search, Menu, X, 
   Zap, ShieldCheck, Clock, Code, ChevronRight, User, Wallet, LogOut, 
@@ -347,10 +347,10 @@ export default function App() {
   // Gabung: data live + fallback ALL_SERVICES jika API gagal
   const activeServices = services.length > 0 ? services : ALL_SERVICES;
 
-  const showToast = (msg: string) => { 
+  const showToast = useCallback((msg: string) => { 
     setToastMsg(msg); 
     setTimeout(() => setToastMsg(null), 3000); 
-  };
+  }, []);
 
   const navigate = (view: string) => { 
     window.scrollTo({ top: 0, behavior: 'smooth' }); 
@@ -1131,12 +1131,13 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
     showToast('Pesanan dibatalkan. Saldo Rp ' + orderToCancel.price.toLocaleString('id-ID') + ' dikembalikan.');
   };
 
-  useEffect(() => {
-    const waitingOrders = orders.filter(o => o.status === 'waiting');
-    if (waitingOrders.length === 0) return;
+  // Ref selalu berisi orders terbaru — agar interval tidak perlu di-reset setiap render
+  const ordersRef = useRef(orders);
+  useEffect(() => { ordersRef.current = orders; }, [orders]);
 
-    // ── SSE: terima notifikasi OTP real-time dari webhook ──────────────
-    // Jauh lebih efisien dari polling — tidak perlu request setiap 5 detik
+  // ── Polling OTP setiap 5 detik ─────────────────────────────────────
+  useEffect(() => {
+    // SSE: terima notifikasi OTP real-time dari webhook
     let es: EventSource | null = null;
     try {
       es = new EventSource('/api/webhook/stream');
@@ -1144,7 +1145,6 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
         try {
           const event = JSON.parse(e.data);
           if (!event.activationId || !event.smsCode) return;
-
           setOrders(current => current.map(o => {
             if (o.activationId !== event.activationId) return o;
             if (o.isV2) {
@@ -1153,18 +1153,15 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
             }
             return { ...o, status: 'success', otpCode: event.smsCode };
           }));
-          setTimeout(() => {
-            showToast(`OTP masuk: ${event.smsCode}`);
-            addNotif(`🔔 OTP masuk via webhook: ${event.smsCode}`);
-          }, 0);
+          showToast(`OTP masuk: ${event.smsCode}`);
         } catch { /* abaikan parse error */ }
       };
       es.onerror = () => { es?.close(); es = null; };
-    } catch { /* SSE tidak tersedia, fallback ke polling */ }
+    } catch { /* fallback ke polling */ }
 
-    // ── Polling fallback setiap 5 detik ───────────────────────────────
-    // Tetap jalan sebagai backup jika webhook belum di-setup
+    // Polling fallback setiap 5 detik — pakai ordersRef agar tidak stale
     const pollInterval = setInterval(async () => {
+      const waitingOrders = ordersRef.current.filter(o => o.status === 'waiting');
       for (const order of waitingOrders) {
         if (!order.activationId) continue;
         try {
@@ -1185,16 +1182,12 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
               ));
               fetch('/api/user/orders', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activationId: order.activationId, status: 'success', otpCode: data.otpCodes[0] }) }).catch(() => {});
               showToast(`OTP bundle ${order.serviceName} masuk!`);
-              const _n1 = { id: Date.now(), msg: `OTP bundle ${order.serviceName} masuk!`, time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }), read: false }; setNotifItems(prev => [_n1, ...prev].slice(0, 20)); setNotifCount(c => c + 1);
-              addNotif(`🎉 OTP bundle ${order.serviceName} berhasil masuk!`);
             } else if (!order.isV2 && data.otpCode) {
               setOrders(current => current.map(o =>
                 o.id === order.id ? { ...o, status: 'success', otpCode: data.otpCode } : o
               ));
               fetch('/api/user/orders', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activationId: order.activationId, status: 'success', otpCode: data.otpCode }) }).catch(() => {});
-              showToast("Berhasil! Kode OTP " + order.serviceName + " masuk.");
-              const _n2 = { id: Date.now() + 1, msg: "OTP " + order.serviceName + " masuk: " + data.otpCode, time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }), read: false }; setNotifItems(prev => [_n2, ...prev].slice(0, 20)); setNotifCount(c => c + 1);
-              addNotif(`✅ OTP ${order.serviceName}: ${data.otpCode}`);
+              showToast(`Berhasil! Kode OTP ${order.serviceName} masuk.`);
             }
           } else if (data.status === 'cancel') {
             setOrders(current => current.map(o =>
@@ -1206,7 +1199,14 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       }
     }, 5000);
 
-    // Countdown timer setiap detik (hanya UI, tidak memanggil API)
+    return () => {
+      es?.close();
+      clearInterval(pollInterval);
+    };
+  }, [showToast]); // showToast stable karena useCallback — interval dibuat SEKALI saja
+
+  // ── Countdown timer setiap detik ────────────────────────────────────
+  useEffect(() => {
     const countdownInterval = setInterval(() => {
       setOrders(current => {
         const expiredOrders: Order[] = [];
@@ -1220,7 +1220,6 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
           return { ...order, timeLeft: newTimeLeft };
         });
 
-        // Handle expired orders setelah render selesai
         if (expiredOrders.length > 0) {
           setTimeout(() => {
             expiredOrders.forEach(order => {
@@ -1228,9 +1227,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
               fetch('/api/user/orders', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activationId: order.activationId, status: 'expired' }) }).catch(() => {});
               setMutasi(prev => [{ id: Date.now(), date: new Date().toLocaleString('id-ID'), type: 'in', amount: order.price, desc: "Refund Kadaluarsa: " + order.serviceName }, ...prev]);
               showToast(`⏱ Nomor ${order.serviceName} kadaluarsa. Mencari nomor baru otomatis...`);
-              // Blacklist nomor yang expired
               if (order.number) failedNumbers.current.add(order.number);
-              // Auto-retry: tambahkan ke antrian retry
               setAutoRetryQueue(prev => [...prev, {
                 serviceName: order.serviceName,
                 serviceCode: '',
@@ -1245,12 +1242,8 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       });
     }, 1000);
 
-    return () => {
-      es?.close();
-      clearInterval(pollInterval);
-      clearInterval(countdownInterval);
-    };
-  }, [orders, showToast]);
+    return () => clearInterval(countdownInterval);
+  }, [showToast, updateBalance]);
 
   const [notifCount,  setNotifCount]  = useState(0);
   const [notifItems,  setNotifItems]  = useState<{ id: number; msg: string; time: string; read: boolean }[]>([]);
@@ -1523,6 +1516,178 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab }: {
   );
 }
 
+// ── Flag & dial-code lookup ──────────────────────────────────────────
+const COUNTRY_META: Record<string, { flag: string; dial: string }> = {
+  id: { flag: '🇮🇩', dial: '+62'  }, us: { flag: '🇺🇸', dial: '+1'   },
+  gb: { flag: '🇬🇧', dial: '+44'  }, uk: { flag: '🇬🇧', dial: '+44'  },
+  my: { flag: '🇲🇾', dial: '+60'  }, th: { flag: '🇹🇭', dial: '+66'  },
+  br: { flag: '🇧🇷', dial: '+55'  }, fr: { flag: '🇫🇷', dial: '+33'  },
+  de: { flag: '🇩🇪', dial: '+49'  }, it: { flag: '🇮🇹', dial: '+39'  },
+  ru: { flag: '🇷🇺', dial: '+7'   }, cn: { flag: '🇨🇳', dial: '+86'  },
+  in: { flag: '🇮🇳', dial: '+91'  }, pk: { flag: '🇵🇰', dial: '+92'  },
+  ph: { flag: '🇵🇭', dial: '+63'  }, vn: { flag: '🇻🇳', dial: '+84'  },
+  sg: { flag: '🇸🇬', dial: '+65'  }, hk: { flag: '🇭🇰', dial: '+852' },
+  tw: { flag: '🇹🇼', dial: '+886' }, jp: { flag: '🇯🇵', dial: '+81'  },
+  kr: { flag: '🇰🇷', dial: '+82'  }, au: { flag: '🇦🇺', dial: '+61'  },
+  ca: { flag: '🇨🇦', dial: '+1'   }, mx: { flag: '🇲🇽', dial: '+52'  },
+  ar: { flag: '🇦🇷', dial: '+54'  }, co: { flag: '🇨🇴', dial: '+57'  },
+  eg: { flag: '🇪🇬', dial: '+20'  }, ng: { flag: '🇳🇬', dial: '+234' },
+  ke: { flag: '🇰🇪', dial: '+254' }, za: { flag: '🇿🇦', dial: '+27'  },
+  tr: { flag: '🇹🇷', dial: '+90'  }, sa: { flag: '🇸🇦', dial: '+966' },
+  ae: { flag: '🇦🇪', dial: '+971' }, il: { flag: '🇮🇱', dial: '+972' },
+  pl: { flag: '🇵🇱', dial: '+48'  }, ua: { flag: '🇺🇦', dial: '+380' },
+  ro: { flag: '🇷🇴', dial: '+40'  }, nl: { flag: '🇳🇱', dial: '+31'  },
+  be: { flag: '🇧🇪', dial: '+32'  }, se: { flag: '🇸🇪', dial: '+46'  },
+  es: { flag: '🇪🇸', dial: '+34'  }, pt: { flag: '🇵🇹', dial: '+351' },
+  cz: { flag: '🇨🇿', dial: '+420' }, hu: { flag: '🇭🇺', dial: '+36'  },
+  kz: { flag: '🇰🇿', dial: '+7'   }, uz: { flag: '🇺🇿', dial: '+998' },
+  mm: { flag: '🇲🇲', dial: '+95'  }, kh: { flag: '🇰🇭', dial: '+855' },
+  la: { flag: '🇱🇦', dial: '+856' }, mo: { flag: '🇲🇴', dial: '+853' },
+  bd: { flag: '🇧🇩', dial: '+880' }, lk: { flag: '🇱🇰', dial: '+94'  },
+  np: { flag: '🇳🇵', dial: '+977' }, ir: { flag: '🇮🇷', dial: '+98'  },
+  iq: { flag: '🇮🇶', dial: '+964' }, et: { flag: '🇪🇹', dial: '+251' },
+  gh: { flag: '🇬🇭', dial: '+233' }, tz: { flag: '🇹🇿', dial: '+255' },
+  '6': { flag: '🇮🇩', dial: '+62' },
+};
+function getCountryMeta(id: string) {
+  return COUNTRY_META[id.toLowerCase()] ?? { flag: '🌐', dial: '' };
+}
+
+// ── Custom Country Dropdown ──────────────────────────────────────────
+function CountryDropdown({ countries, value, onChange }: {
+  countries: Country[];
+  value: string;
+  onChange: (val: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = countries.find(c => c.id === value);
+  const meta = getCountryMeta(value);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false); setSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = countries.filter(c =>
+    c.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div ref={ref} className="relative w-full sm:w-[260px]">
+      <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Negara Server</label>
+      <button
+        type="button"
+        onClick={() => { setOpen(v => !v); setSearch(''); }}
+        className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm"
+      >
+        <span className="text-xl leading-none">{meta.flag}</span>
+        <span className="flex-1 text-left truncate">{selected?.name ?? 'Pilih Negara'}</span>
+        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full mt-2 left-0 w-full z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+          {/* Search */}
+          <div className="p-2 border-b border-slate-100 dark:border-slate-800">
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+              <input
+                autoFocus
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Cari negara..."
+                className="w-full pl-8 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none dark:text-white font-medium"
+              />
+            </div>
+          </div>
+          {/* List */}
+          <div className="overflow-y-auto max-h-60">
+            {filtered.length === 0 ? (
+              <div className="py-6 text-center text-slate-400 text-sm font-bold">Tidak ditemukan</div>
+            ) : filtered.map(c => {
+              const m = getCountryMeta(c.id);
+              const isActive = c.id === value;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => { onChange(c.id); setOpen(false); setSearch(''); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-left transition-colors ${isActive ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'}`}
+                >
+                  <span className="text-xl leading-none w-7 shrink-0">{m.flag}</span>
+                  <span className="flex-1 truncate">{c.name}</span>
+                  {m.dial && <span className="text-xs text-slate-400 font-medium shrink-0">{m.dial}</span>}
+                  {isActive && <Check className="w-4 h-4 text-indigo-600 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Custom Sort Dropdown ─────────────────────────────────────────────
+const SORT_OPTIONS = [
+  { value: 'default',    label: 'Rekomendasi',  icon: '⭐' },
+  { value: 'price_asc',  label: 'Harga Terendah', icon: '↓' },
+  { value: 'price_desc', label: 'Harga Tertinggi', icon: '↑' },
+  { value: 'stock_desc', label: 'Stok Terbanyak',  icon: '📦' },
+];
+function SortDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = SORT_OPTIONS.find(o => o.value === value) ?? SORT_OPTIONS[0];
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative w-full sm:w-auto">
+      <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Urutkan</label>
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm min-w-[160px]"
+      >
+        <span>{selected.icon}</span>
+        <span className="flex-1 text-left">{selected.label}</span>
+        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute top-full mt-2 right-0 w-52 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+          {SORT_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => { onChange(opt.value); setOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-left transition-colors ${opt.value === value ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'}`}
+            >
+              <span className="w-5 text-center">{opt.icon}</span>
+              <span className="flex-1">{opt.label}</span>
+              {opt.value === value && <Check className="w-4 h-4 text-indigo-600 shrink-0" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOrder, favorites, setFavorites, setMutasi, activeServices, countries, selectedCountry, setSelectedCountry, user, updateBalance, autoRetryQueue, setAutoRetryQueue, failedNumbers }: BuyViewProps) {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeCategory, setActiveCategory] = useState<string>('Semua');
@@ -1791,55 +1956,38 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         </button>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 rounded-3xl p-5 md:p-6 flex flex-col xl:flex-row gap-5 justify-between items-center z-10 transition-colors">
-        <div className="w-full xl:w-auto flex items-center space-x-3">
-          <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-2xl border border-indigo-100 dark:border-indigo-800 shrink-0">
-             <Globe className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+      <div className="bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 rounded-3xl p-5 md:p-6 flex flex-col xl:flex-row gap-5 justify-between items-end z-10 transition-colors">
+        {/* Country Dropdown */}
+        <div className="w-full xl:w-auto flex items-end space-x-3">
+          <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-2xl border border-indigo-100 dark:border-indigo-800 shrink-0 mb-0.5">
+            <Globe className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <div className="w-full sm:w-[250px]">
-            <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Negara Server</label>
-            <select 
-              value={selectedCountry}
-              onChange={(e) => setSelectedCountry(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer shadow-sm transition-colors"
-            >
-              {countries.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
+          <CountryDropdown
+            countries={countries}
+            value={selectedCountry}
+            onChange={setSelectedCountry}
+          />
         </div>
 
-        <div className="hidden xl:block w-px h-12 bg-slate-200 dark:bg-slate-800 mx-2"></div>
+        <div className="hidden xl:block w-px h-12 bg-slate-200 dark:bg-slate-800 mx-2 mb-0.5"></div>
 
+        {/* Search */}
         <div className="flex-1 w-full relative">
           <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Pencarian</label>
           <div className="relative">
             <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 dark:text-slate-500" />
-            <input 
-              type="text" 
-              placeholder="Ketik WhatsApp, Telegram..." 
-              className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/50 outline-none text-sm font-bold transition-all shadow-sm dark:text-white" 
-              value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)} 
+            <input
+              type="text"
+              placeholder="Ketik WhatsApp, Telegram..."
+              className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/50 outline-none text-sm font-bold transition-all shadow-sm dark:text-white"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </div>
 
-        <div className="w-full sm:w-auto relative">
-          <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Urutkan</label>
-          <div className="relative">
-            <ArrowUpDown className="absolute left-4 top-3.5 w-4 h-4 text-slate-400 dark:text-slate-500" />
-            <select 
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-              className="w-full pl-10 pr-8 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer shadow-sm transition-colors"
-            >
-              <option value="default">Rekomendasi</option>
-              <option value="price_asc">Harga Terendah</option>
-              <option value="price_desc">Harga Tertinggi</option>
-              <option value="stock_desc">Stok Terbanyak</option>
-            </select>
-          </div>
-        </div>
+        {/* Sort Dropdown */}
+        <SortDropdown value={sortOrder} onChange={setSortOrder} />
       </div>
 
       <div className="flex overflow-x-auto gap-3 pb-2 no-scrollbar px-1">
@@ -1869,12 +2017,21 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {isLoadingData ? (
-                  [...Array(6)].map((_, i) => (
+                  [...Array(8)].map((_, i) => (
                     <tr key={i} className="animate-pulse">
-                      <td className="p-5 sm:px-6 flex items-center space-x-4"><div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-2xl"></div><div className="space-y-2"><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24"></div><div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-16"></div></div></td>
-                      <td className="p-5 sm:px-6"><div className="h-5 bg-slate-100 dark:bg-slate-800 rounded-md w-24"></div></td>
-                      <td className="p-5 sm:px-6"><div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-24"></div></td>
-                      <td className="p-5 sm:px-6 text-right"><div className="h-11 bg-slate-200 dark:bg-slate-700 rounded-xl w-[130px] ml-auto"></div></td>
+                      <td className="p-5 sm:px-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-5 h-5 bg-slate-200 dark:bg-slate-700 rounded-full shrink-0"></div>
+                          <div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-2xl shrink-0"></div>
+                          <div className="space-y-2">
+                            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded-lg w-28"></div>
+                            <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-16"></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-5 sm:px-6"><div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-lg w-20"></div></td>
+                      <td className="p-5 sm:px-6"><div className="h-5 bg-slate-200 dark:bg-slate-700 rounded-lg w-24"></div></td>
+                      <td className="p-5 sm:px-6 text-right"><div className="h-10 bg-slate-200 dark:bg-slate-700 rounded-xl w-32 ml-auto"></div></td>
                     </tr>
                   ))
                 ) : finalServices.length > 0 ? (
@@ -2574,19 +2731,31 @@ function HistoryView({ orders }: HistoryViewProps) {
           <Zap className="w-4 h-4 text-yellow-400 dark:text-yellow-600" /> {historyToast}
         </div>
       )}
+
+      {/* Header + Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">Riwayat Transaksi</h1>
-        <select
-          value={filterStatus}
-          onChange={e => setFilterStatus(e.target.value)}
-          className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500/50 shadow-sm w-full sm:w-48"
-        >
-          <option value="">Semua Status</option>
-          <option value="success">Berhasil</option>
-          <option value="waiting">Menunggu OTP</option>
-          <option value="cancelled">Dibatalkan</option>
-          <option value="expired">Kadaluarsa</option>
-        </select>
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { value: '',          label: 'Semua Status', color: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700' },
+            { value: 'success',   label: '✅ Berhasil',   color: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50' },
+            { value: 'waiting',   label: '⏳ Menunggu',   color: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800/50' },
+            { value: 'cancelled', label: '❌ Dibatalkan', color: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/50' },
+            { value: 'expired',   label: '🕐 Kadaluarsa', color: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-600' },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setFilterStatus(opt.value)}
+              className={`px-4 py-2 rounded-xl text-xs font-black border-2 transition-all whitespace-nowrap ${
+                filterStatus === opt.value
+                  ? opt.color + ' ring-2 ring-offset-1 ring-indigo-400'
+                  : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
@@ -2601,129 +2770,115 @@ function HistoryView({ orders }: HistoryViewProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {/* Skeleton loading */}
               {isLoading && apiHistory.length === 0 ? (
-                 [...Array(3)].map((_, i) => (
+                [...Array(5)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td className="p-5 sm:px-6"><div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-32 mb-2"></div><div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-24"></div></td>
-                    <td className="p-5 sm:px-6"><div className="h-8 bg-slate-100 dark:bg-slate-800 rounded-lg w-40"></div></td>
-                    <td className="p-5 sm:px-6 text-right"><div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-full w-20 ml-auto"></div></td>
+                    <td className="p-5 sm:px-6">
+                      <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded-lg w-32 mb-2"></div>
+                      <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-24"></div>
+                    </td>
+                    <td className="p-5 sm:px-6">
+                      <div className="h-8 bg-slate-100 dark:bg-slate-800 rounded-lg w-44"></div>
+                    </td>
+                    <td className="p-5 sm:px-6 text-right">
+                      <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-lg w-20 ml-auto"></div>
+                    </td>
+                    <td className="p-5 sm:px-6 text-right">
+                      <div className="h-8 bg-slate-100 dark:bg-slate-800 rounded-lg w-24 ml-auto"></div>
+                    </td>
                   </tr>
                 ))
               ) : localOnly.length === 0 && apiHistory.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="py-24 text-center">
-                    <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-full flex items-center justify-center mx-auto mb-4"><History className="w-10 h-10 text-slate-300 dark:text-slate-500"/></div>
+                  <td colSpan={4} className="py-24 text-center">
+                    <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <History className="w-10 h-10 text-slate-300 dark:text-slate-500"/>
+                    </div>
                     <p className="font-extrabold text-slate-800 dark:text-slate-200 text-lg">Belum ada riwayat.</p>
                     <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">Transaksi yang Anda lakukan akan muncul di sini.</p>
                   </td>
                 </tr>
-              ) : orders.map(o => (
-                <tr key={o.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                  <td className="p-5 sm:px-6">
-                    <div className="font-bold text-base text-slate-900 dark:text-white">{o.serviceName}</div>
-                    <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{o.date}</div>
-                  </td>
-                  <td className="p-5 sm:px-6">
-                    <span className="font-mono font-bold text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg cursor-not-allowed dark:text-slate-300">
-                      {o.number} 
-                    </span>
-                    {o.otpCode && (
-                      <span className="text-sm font-black text-green-700 dark:text-green-400 ml-3 inline-flex items-center">
-                        OTP: <span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 ml-1.5 tracking-widest">{o.otpCode}</span>
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-5 sm:px-6 text-right">
-                    <span className={"px-3.5 py-1.5 text-[11px] font-black rounded-lg border uppercase tracking-wider " + (o.status === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50' : (o.status === 'waiting' ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800/50' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/50'))}>
-                      {o.status === 'cancelled' ? 'BATAL' : o.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              ) : (
+                <>
+                  {/* Baris sesi ini (lokal, belum ada di API) — dengan filter status */}
+                  {localOnly
+                    .filter(o => !filterStatus || o.status === filterStatus)
+                    .map(o => (
+                    <tr key={'local-' + o.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="p-5 sm:px-6">
+                        <div className="font-bold text-base text-slate-900 dark:text-white">{o.serviceName}</div>
+                        <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{o.date}</div>
+                      </td>
+                      <td className="p-5 sm:px-6">
+                        <span className="font-mono font-bold text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg dark:text-slate-300">{o.number}</span>
+                        {o.otpCode && (
+                          <span className="text-sm font-black text-green-700 dark:text-green-400 ml-3 inline-flex items-center">
+                            OTP: <span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 ml-1.5 tracking-widest">{o.otpCode}</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-5 sm:px-6 text-right">
+                        <span className={"px-3.5 py-1.5 text-[11px] font-black rounded-lg border uppercase tracking-wider " + (STATUS_COLOR[o.status] ?? STATUS_COLOR['cancelled'])}>
+                          {o.status === 'cancelled' ? 'BATAL' : o.status === 'waiting' ? 'MENUNGGU' : o.status === 'success' ? 'BERHASIL' : 'KADALUARSA'}
+                        </span>
+                      </td>
+                      <td className="p-5 sm:px-6 text-right">—</td>
+                    </tr>
+                  ))}
 
-              {/* Baris sesi ini (lokal, belum ada di API) */}
-              {!isLoading && localOnly.map(o => (
-                <tr key={'local-' + o.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                  <td className="p-5 sm:px-6">
-                    <div className="font-bold text-base text-slate-900 dark:text-white">{o.serviceName}</div>
-                    <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{o.date}</div>
-                  </td>
-                  <td className="p-5 sm:px-6">
-                    <span className="font-mono font-bold text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg dark:text-slate-300">{o.number}</span>
-                    {o.otpCode && (
-                      <span className="text-sm font-black text-green-700 dark:text-green-400 ml-3 inline-flex items-center">
-                        OTP: <span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 ml-1.5 tracking-widest">{o.otpCode}</span>
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-5 sm:px-6 text-right">
-                    <span className={"px-3.5 py-1.5 text-[11px] font-black rounded-lg border uppercase tracking-wider " + (STATUS_COLOR[o.status] ?? STATUS_COLOR['cancelled'])}>
-                      {o.status === 'cancelled' ? 'BATAL' : o.status === 'waiting' ? 'MENUNGGU' : o.status === 'success' ? 'BERHASIL' : o.status.toUpperCase()}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-
-              {/* Baris dari /api/history */}
-              {!isLoading && apiHistory.map(a => (
-                <tr key={'api-' + a.activationId} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                  <td className="p-5 sm:px-6">
-                    <div className="font-bold text-base text-slate-900 dark:text-white uppercase">{a.service}</div>
-                    <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{a.createdAt ?? '—'}</div>
-                  </td>
-                  <td className="p-5 sm:px-6">
-                    <span className="font-mono font-bold text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg dark:text-slate-300">{a.phone}</span>
-                    {a.otpCode && (
-                      <span className="text-sm font-black text-green-700 dark:text-green-400 ml-3 inline-flex items-center">
-                        OTP: <span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 ml-1.5 tracking-widest">{a.otpCode}</span>
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-5 sm:px-6 text-right">
-                    <div className="flex items-center justify-end gap-2 flex-wrap">
-                      <span className={"px-3.5 py-1.5 text-[11px] font-black rounded-lg border uppercase tracking-wider " + (STATUS_COLOR[a.status] ?? STATUS_COLOR['cancelled'])}>
-                        {a.statusLabel}
-                      </span>
-                      {/* Tombol Pakai Lagi — hanya untuk pesanan berhasil */}
-                      {a.status === 'success' && a.activationId && (
-                        <button
-                          disabled={reactivating === a.activationId}
-                          onClick={async () => {
-                            setReactivating(a.activationId);
-                            try {
-                              // Cek biaya dulu
-                              const costRes  = await fetch(`/api/reactivation?id=${a.activationId}`);
-                              const costData = await costRes.json();
-                              if (costData.error) { showHistoryToast(costData.error); return; }
-
-                              const confirm = window.confirm(
-                                `Pakai nomor ${a.phone} lagi?\nBiaya: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}\n\nLayanan yang sama akan digunakan.`
-                              );
-                              if (!confirm) return;
-
-                              const res  = await fetch('/api/reactivation', {
-                                method : 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body   : JSON.stringify({ id: a.activationId, service: a.service }),
-                              });
-                              const data = await res.json();
-                              if (!res.ok) { showHistoryToast(data.error ?? 'Gagal reaktivasi.'); return; }
-                              showHistoryToast(`Berhasil! Nomor ${data.phone} siap dipakai lagi.`);
-                            } catch { showHistoryToast('Gagal melakukan reaktivasi.'); }
-                            finally { setReactivating(null); }
-                          }}
-                          className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 rounded-lg text-[11px] font-black hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 transition-colors disabled:opacity-50 flex items-center gap-1"
-                        >
-                          {reactivating === a.activationId
-                            ? <RefreshCw className="w-3 h-3 animate-spin" />
-                            : null}
-                          Pakai Lagi
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                  {/* Baris dari /api/history */}
+                  {apiHistory.map(a => (
+                    <tr key={'api-' + a.activationId} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="p-5 sm:px-6">
+                        <div className="font-bold text-base text-slate-900 dark:text-white uppercase">{a.service}</div>
+                        <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{a.createdAt ?? '—'}</div>
+                      </td>
+                      <td className="p-5 sm:px-6">
+                        <span className="font-mono font-bold text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg dark:text-slate-300">{a.phone}</span>
+                        {a.otpCode && (
+                          <span className="text-sm font-black text-green-700 dark:text-green-400 ml-3 inline-flex items-center">
+                            OTP: <span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 ml-1.5 tracking-widest">{a.otpCode}</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-5 sm:px-6 text-right">
+                        <div className="flex items-center justify-end gap-2 flex-wrap">
+                          <span className={"px-3.5 py-1.5 text-[11px] font-black rounded-lg border uppercase tracking-wider " + (STATUS_COLOR[a.status] ?? STATUS_COLOR['cancelled'])}>
+                            {a.statusLabel}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="p-5 sm:px-6 text-right">
+                        {a.status === 'success' && a.activationId && (
+                          <button
+                            disabled={reactivating === a.activationId}
+                            onClick={async () => {
+                              setReactivating(a.activationId);
+                              try {
+                                const costRes  = await fetch(`/api/reactivation?id=${a.activationId}`);
+                                const costData = await costRes.json();
+                                if (costData.error) { showHistoryToast(costData.error); return; }
+                                const confirm = window.confirm(`Pakai nomor ${a.phone} lagi?\nBiaya: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`);
+                                if (!confirm) return;
+                                const res  = await fetch('/api/reactivation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: a.activationId, service: a.service }) });
+                                const data = await res.json();
+                                if (!res.ok) { showHistoryToast(data.error ?? 'Gagal reaktivasi.'); return; }
+                                showHistoryToast(`Berhasil! Nomor ${data.phone} siap dipakai lagi.`);
+                              } catch { showHistoryToast('Gagal melakukan reaktivasi.'); }
+                              finally { setReactivating(null); }
+                            }}
+                            className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 rounded-lg text-[11px] font-black hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 transition-colors disabled:opacity-50 flex items-center gap-1"
+                          >
+                            {reactivating === a.activationId ? <RefreshCw className="w-3 h-3 animate-spin" /> : null}
+                            Pakai Lagi
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </>
+              )}
             </tbody>
           </table>
         </div>

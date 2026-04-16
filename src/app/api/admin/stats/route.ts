@@ -18,8 +18,8 @@ export async function GET() {
     { count: newUsersToday },
   ] = await Promise.all([
     db.from('profiles').select('*', { count: 'exact', head: true }),
-    db.from('orders').select('*', { count: 'exact', head: true }),
-    db.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', todayISO),
+    db.from('orders').select('*', { count: 'exact', head: true }).in('status', ['waiting', 'success']),
+    db.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', todayISO).in('status', ['waiting', 'success']),
     db.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'waiting'),
     db.from('mutations').select('amount').eq('type', 'out'),
     db.from('mutations').select('amount').eq('type', 'out').gte('created_at', todayISO),

@@ -133,12 +133,12 @@ export default function AdminPage() {
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
   // ── Auth ─────────────────────────────────────────────────────────────
-  const [isAuthed,    setIsAuthed]    = useState(false);
-  const [loginEmail,  setLoginEmail]  = useState('');
-  const [loginPass,   setLoginPass]   = useState('');
-  const [showPass,    setShowPass]    = useState(false);
-  const [loginErr,    setLoginErr]    = useState('');
-  const [loginLoading,setLoginLoading]= useState(false);
+  const [isAuthed,      setIsAuthed]      = useState(false);
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPass,     setLoginPass]     = useState('');
+  const [showPass,      setShowPass]      = useState(false);
+  const [loginErr,      setLoginErr]      = useState('');
+  const [loginLoading,  setLoginLoading]  = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -154,14 +154,14 @@ export default function AdminPage() {
       const r = await fetch('/api/admin/login', {
         method : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body   : JSON.stringify({ email: loginEmail, password: loginPass }),
+        body   : JSON.stringify({ username: loginUsername, password: loginPass }),
       });
       const d = await r.json();
       if (d.success) {
         localStorage.setItem('admin_authed', 'true');
         setIsAuthed(true);
       } else {
-        setLoginErr(d.message ?? 'Email atau password salah.');
+        setLoginErr(d.message ?? 'Username atau password salah.');
       }
     } catch {
       setLoginErr('Gagal terhubung ke server.');
@@ -188,18 +188,18 @@ export default function AdminPage() {
           {/* Card */}
           <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl p-8">
             <form onSubmit={handleLogin} className="space-y-5">
-              {/* Email */}
+              {/* Username */}
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Email Admin</label>
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Username</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
                   <input
-                    type="email"
+                    type="text"
                     required
-                    autoComplete="email"
-                    value={loginEmail}
-                    onChange={e => setLoginEmail(e.target.value)}
-                    placeholder="admin@email.com"
+                    autoComplete="username"
+                    value={loginUsername}
+                    onChange={e => setLoginUsername(e.target.value)}
+                    placeholder="Username admin"
                     className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white transition"
                   />
                 </div>
