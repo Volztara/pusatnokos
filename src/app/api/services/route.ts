@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const API_KEY  = process.env.HEROSMS_API_KEY!;
+const API_KEY  = process.env.HEROSMS_API_KEY ?? '';
 const BASE_URL = 'https://hero-sms.com/stubs/handler_api.php';
 
 const db = createClient(
@@ -10,7 +10,6 @@ const db = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// ─── Default config (fallback jika Supabase kosong) ──────────────────
 const DEFAULT_CONFIG = {
   idrRate   : 17135.75,
   markupPct : 0.25,
@@ -18,32 +17,18 @@ const DEFAULT_CONFIG = {
   roundTo   : 100,
 };
 
-// ─── Ambil config dari Supabase ──────────────────────────────────────
 async function getMarkupConfig() {
   try {
-    const { data } = await db
-      .from('admin_settings')
-      .select('value')
-      .eq('key', 'markup_config')
-      .single();
+    const { data } = await db.from('admin_settings').select('value').eq('key', 'markup_config').single();
     return data?.value ?? DEFAULT_CONFIG;
-  } catch {
-    return DEFAULT_CONFIG;
-  }
+  } catch { return DEFAULT_CONFIG; }
 }
 
-// ─── Ambil price overrides ────────────────────────────────────────────
 async function getPriceOverrides(): Promise<Record<string, number>> {
   try {
-    const { data } = await db
-      .from('admin_settings')
-      .select('value')
-      .eq('key', 'price_overrides')
-      .single();
+    const { data } = await db.from('admin_settings').select('value').eq('key', 'price_overrides').single();
     return data?.value ?? {};
-  } catch {
-    return {};
-  }
+  } catch { return {}; }
 }
 
 function applyMarkup(
@@ -75,6 +60,12 @@ const SERVICE_NAME_MAP: Record<string, string> = {
   pb: 'PUBG Mobile', nv: 'NVIDIA',
 };
 
+// Parse response — aman dari plain text error
+async function safeJson(res: Response): Promise<any> {
+  const text = (await res.text()).trim();
+  try { return JSON.parse(text); } catch { return text; }
+}
+
 function extractNamesFlat(namesRaw: any): Record<string, string> {
   if (!namesRaw || typeof namesRaw !== 'object' || Array.isArray(namesRaw)) return {};
   const flat: Record<string, string> = {};
@@ -92,28 +83,43 @@ function extractNamesFlat(namesRaw: any): Record<string, string> {
   return flat;
 }
 
-function getOperator(val: any, opKey: string): { cost: number; count: number } {
-  if (typeof val?.cost === 'number') return { cost: val.cost, count: val.count ?? 0 };
-  if (typeof val === 'object' && val !== null) {
-    const op = val[opKey] ?? val['0'];
-    if (typeof op?.cost === 'number') return { cost: op.cost, count: op.count ?? 0 };
-    let fallback: { cost: number; count: number } | null = null;
-    for (const o of Object.values(val) as any[]) {
-      if (typeof o?.cost !== 'number') continue;
-      if (!fallback || o.count > fallback.count) fallback = { cost: o.cost, count: o.count ?? 0 };
-    }
-    if (fallback) return fallback;
+/**
+ * Selalu pilih operator dengan stok TERTINGGI.
+ * HeroSMS tiap negara punya operator berbeda (0, 3, 7, dll).
+ * Dengan ini semua negara tampil stok yang sebenarnya, bukan cuma operator 0.
+ */
+function getBestOperator(val: any): { cost: number; count: number } {
+  // Format flat: { cost, count } langsung
+  if (typeof val?.cost === 'number') {
+    return { cost: val.cost, count: val.count ?? 0 };
   }
+
+  // Format nested: { "0": { cost, count }, "3": { cost, count }, ... }
+  if (typeof val === 'object' && val !== null) {
+    let best: { cost: number; count: number } | null = null;
+    for (const op of Object.values(val) as any[]) {
+      if (typeof op?.cost !== 'number') continue;
+      const count = op.count ?? 0;
+      // Pilih yang stok paling banyak; kalau sama, pilih yang harga lebih murah
+      if (!best || count > best.count || (count === best.count && op.cost < best.cost)) {
+        best = { cost: op.cost, count };
+      }
+    }
+    if (best) return best;
+  }
+
   return { cost: 0, count: 0 };
 }
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const country  = searchParams.get('country')  ?? '6';
-  const operator = searchParams.get('operator') ?? '0';
+  const country = searchParams.get('country') ?? '6';
+
+  if (!API_KEY) {
+    return NextResponse.json({ error: 'API key belum dikonfigurasi.' }, { status: 500 });
+  }
 
   try {
-    // Ambil markup config + overrides + data HeroSMS secara paralel
     const [config, overrides, pricesRes, namesRes] = await Promise.all([
       getMarkupConfig(),
       getPriceOverrides(),
@@ -121,24 +127,39 @@ export async function GET(request: Request) {
       fetch(`${BASE_URL}?api_key=${API_KEY}&action=getServicesList`, { cache: 'no-store' }),
     ]);
 
-    if (!pricesRes.ok || !namesRes.ok) throw new Error('Upstream API error');
+    const pricesRaw = await safeJson(pricesRes);
+    const namesRaw  = await safeJson(namesRes);
 
-    const pricesRaw = await pricesRes.json();
-    const namesRaw  = await namesRes.json();
-    const namesFlat = extractNamesFlat(namesRaw);
-    const countryData: Record<string, any> = pricesRaw?.[country] ?? pricesRaw ?? {};
+    // Kalau HeroSMS return error string
+    if (typeof pricesRaw === 'string') {
+      console.error('[/api/services] HeroSMS prices error:', pricesRaw, 'country:', country);
+      return NextResponse.json([]);
+    }
+
+    const namesFlat = typeof namesRaw === 'object' && namesRaw !== null
+      ? extractNamesFlat(namesRaw)
+      : {};
+
+    // HeroSMS kadang nested di key negara, kadang langsung flat
+    // Coba string key dulu, fallback number key, fallback root object
+    const countryData: Record<string, any> =
+      pricesRaw?.[country] ??
+      pricesRaw?.[Number(country)] ??
+      (typeof pricesRaw === 'object' && !Array.isArray(pricesRaw) ? pricesRaw : {});
 
     const { idrRate, markupPct, minProfit, roundTo } = config;
 
     const result = Object.entries(countryData)
-      .map(([code, val]: any) => {
-        const { cost, count } = getOperator(val, operator);
+      .map(([code, val]: [string, any]) => {
+        // Selalu ambil operator dengan stok terbaik
+        const { cost, count } = getBestOperator(val);
 
-        const codeLower   = code.toLowerCase();
-        const nameFromAPI = namesFlat[code] ?? namesFlat[codeLower];
-        const nameFromMap = SERVICE_NAME_MAP[codeLower] ?? SERVICE_NAME_MAP[code];
+        const codeLower    = code.toLowerCase();
+        const nameFromAPI  = namesFlat[code] ?? namesFlat[codeLower];
+        const nameFromMap  = SERVICE_NAME_MAP[codeLower] ?? SERVICE_NAME_MAP[code];
         const resolvedName = nameFromAPI || nameFromMap || code.toUpperCase();
 
+        // Sembunyikan service yang benar-benar tidak ada di HeroSMS
         if (cost <= 0 && count <= 0) return null;
 
         const { price: defaultPrice, basePrice } = applyMarkup(
@@ -146,7 +167,6 @@ export async function GET(request: Request) {
           idrRate, markupPct, minProfit, roundTo
         );
 
-        // Cek override — gunakan harga override jika ada
         const overridePrice = overrides[code] ?? overrides[codeLower] ?? null;
         const price  = overridePrice ?? defaultPrice;
         const profit = price - basePrice;
@@ -163,7 +183,6 @@ export async function GET(request: Request) {
         };
       })
       .filter((s): s is NonNullable<typeof s> => s !== null)
-      // Urutkan: stok ada dulu, stok habis di bawah
       .sort((a, b) => {
         if (a.outOfStock && !b.outOfStock) return 1;
         if (!a.outOfStock && b.outOfStock) return -1;
@@ -171,6 +190,7 @@ export async function GET(request: Request) {
       });
 
     return NextResponse.json(result);
+
   } catch (err) {
     console.error('[/api/services]', err);
     return NextResponse.json({ error: 'Gagal mengambil data layanan' }, { status: 500 });

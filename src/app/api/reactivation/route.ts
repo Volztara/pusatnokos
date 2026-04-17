@@ -36,16 +36,28 @@ export async function GET(request: Request) {
   }
 
   try {
+    if (!API_KEY) {
+      return NextResponse.json({ error: 'API key belum dikonfigurasi.' }, { status: 500 });
+    }
+
     const res  = await fetch(
       `${BASE_URL}?api_key=${API_KEY}&action=getReactivationCost&id=${id}`,
       { cache: 'no-store' }
     );
     if (!res.ok) throw new Error(`Upstream HTTP ${res.status}`);
 
-    const raw = await res.json();
+    // HeroSMS kadang return plain text, bukan JSON
+    const text = (await res.text()).trim();
+    let raw: any = null;
+    try { raw = JSON.parse(text); } catch { raw = text; }
 
     if (typeof raw === 'string') {
-      return NextResponse.json({ error: `Gagal cek harga: ${raw}`, code: raw }, { status: 422 });
+      const ERROR_MAP: Record<string, string> = {
+        NO_BALANCE  : 'Saldo HeroSMS tidak cukup.',
+        NO_ACTIVATE : 'Aktivasi tidak ditemukan.',
+        BAD_KEY     : 'API key tidak valid.',
+      };
+      return NextResponse.json({ error: ERROR_MAP[raw] ?? `Gagal cek harga: ${raw}`, code: raw }, { status: 422 });
     }
 
     // Format: { cost: number } atau number langsung
@@ -90,6 +102,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Parameter "id" wajib diisi.' }, { status: 400 });
     }
 
+    if (!API_KEY) {
+      return NextResponse.json({ error: 'API key belum dikonfigurasi.' }, { status: 500 });
+    }
+
     // 1. Ambil harga reaktivasi dulu
     let priceIDR = 0;
     try {
@@ -97,7 +113,9 @@ export async function POST(request: Request) {
         `${BASE_URL}?api_key=${API_KEY}&action=getReactivationCost&id=${id}`,
         { cache: 'no-store' }
       );
-      const costRaw = await costRes.json();
+      const costText = (await costRes.text()).trim();
+      let costRaw: any = null;
+      try { costRaw = JSON.parse(costText); } catch { costRaw = costText; }
       const costUSD = typeof costRaw?.cost === 'number' ? costRaw.cost
         : typeof costRaw === 'number' ? costRaw : 0;
       priceIDR = applyMarkup(costUSD);

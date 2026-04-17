@@ -224,7 +224,7 @@ const SERVICE_LOGO_MAP: [string[], LogoCfg][] = [
   [['behance'],              { type:'si',  slug:'behance',       color:'1769FF', bg:'#dbeafe' }],
   // ── E-Commerce ────────────────────────────────────────────────────────
   [['shopee'],               { type:'si',  slug:'shopee',        color:'EE4D2D', bg:'#fee2e2' }],
-  [['amazon','amazon.com'],  { type:'si',  slug:'amazon',        color:'FF9900', bg:'#fef3c7' }],
+  [['amazon','amazon.com'],  { type:'fav', domain:'amazon.com',                   bg:'#fef3c7' }],
   [['ebay'],                 { type:'si',  slug:'ebay',          color:'E53238', bg:'#fee2e2' }],
   [['aliexpress'],           { type:'fav', domain:'aliexpress.com',          bg:'#fee2e2' }],
   [['tokopedia'],            { type:'fav', domain:'tokopedia.com',           bg:'#dcfce7' }],
@@ -273,9 +273,9 @@ const SERVICE_LOGO_MAP: [string[], LogoCfg][] = [
   [['metamask'],             { type:'fav', domain:'metamask.io',              bg:'#fef3c7' }],
   // ── Tech / Mail ───────────────────────────────────────────────────────
   [['google','gmail'],       { type:'si',  slug:'google',        color:'EA4335', bg:'#fee2e2' }],
-  [['microsoft','outlook','ms365','office 365'], { type:'si', slug:'microsoft', color:'00A4EF', bg:'#dbeafe' }],
+  [['microsoft','outlook','ms365','office 365'], { type:'fav', domain:'microsoft.com', bg:'#dbeafe' }],
   [['apple','icloud'],       { type:'si',  slug:'apple',         color:'000000', bg:'#f1f5f9' }],
-  [['yahoo','yahoo mail'],   { type:'si',  slug:'yahoo',         color:'720E9E', bg:'#ede9fe' }],
+  [['yahoo','yahoo mail'],   { type:'fav', domain:'yahoo.com',                    bg:'#ede9fe' }],
   [['proton'],               { type:'fav', domain:'proton.me',                bg:'#ede9fe' }],
   [['yandex'],               { type:'fav', domain:'yandex.com',               bg:'#fee2e2' }],
   [['mail.ru'],              { type:'fav', domain:'mail.ru',                  bg:'#dbeafe' }],
@@ -364,12 +364,12 @@ const SERVICE_LOGO_MAP: [string[], LogoCfg][] = [
   [['noon'],                 { type:'fav', domain:'noon.com',                  bg:'#fef9c3' }],
   [['vinted'],               { type:'fav', domain:'vinted.com',                bg:'#dcfce7' }],
   [['depop'],                { type:'fav', domain:'depop.com',                 bg:'#fee2e2' }],
-  [['rakuten'],              { type:'si',  slug:'rakuten',       color:'BF0000', bg:'#fee2e2' }],
+  [['rakuten'],              { type:'fav', domain:'rakuten.com',                  bg:'#fee2e2' }],
   [['zalora'],               { type:'fav', domain:'zalora.com',                bg:'#f1f5f9' }],
   [['jd id'],                { type:'fav', domain:'jd.id',                     bg:'#fee2e2' }],
   [['harbolnas','harbo'],    { type:'fav', domain:'harbolnas.com',             bg:'#fee2e2' }],
   // ── Finance Tambahan ──────────────────────────────────────────────────
-  [['wise','transferwise'],  { type:'si',  slug:'wise',          color:'9FE870', bg:'#dcfce7' }],
+  [['wise','transferwise'],  { type:'fav', domain:'wise.com',                     bg:'#dcfce7' }],
   [['alipay'],               { type:'fav', domain:'alipay.com',                bg:'#dbeafe' }],
   [['webmoney'],             { type:'fav', domain:'webmoney.ru',               bg:'#dbeafe' }],
   [['qiwi'],                 { type:'fav', domain:'qiwi.com',                  bg:'#fee2e2' }],
@@ -459,14 +459,28 @@ const SERVICE_LOGO_MAP: [string[], LogoCfg][] = [
   [['celcom'],               { type:'fav', domain:'celcom.com.my',             bg:'#dbeafe' }],
 ];
 
+// Cache icon yang gagal agar tidak terus-terusan retry → cegah QuotaExceededError
+const failedIconCache = new Set<string>();
+
 function getServiceIconByName(name: string): React.ReactNode {
   const n = name.toLowerCase();
   for (const [keys, cfg] of SERVICE_LOGO_MAP) {
     if (keys.some(k => n.includes(k))) {
+      // Simpleicons: hapus warna dari URL → pakai brand default color, tidak 404
       const src = cfg.type === 'si'
-        ? `https://cdn.simpleicons.org/${cfg.slug}/${cfg.color}`
+        ? `https://cdn.simpleicons.org/${cfg.slug}`
         : `https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${cfg.domain}&size=64`;
       const imgSize = cfg.type === 'si' ? 'w-6 h-6' : 'w-7 h-7';
+
+      // Kalau sudah pernah gagal, langsung tampilkan huruf
+      if (failedIconCache.has(src)) {
+        return (
+          <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-base font-black" style={{ background: cfg.bg, color: '#4f46e5' }}>
+            {name.charAt(0).toUpperCase()}
+          </div>
+        );
+      }
+
       return (
         <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden" style={{ background: cfg.bg }}>
           <img
@@ -475,15 +489,14 @@ function getServiceIconByName(name: string): React.ReactNode {
             className={`${imgSize} object-contain`}
             onError={(e) => {
               const el = e.currentTarget as HTMLImageElement;
-              // Coba fallback ke icon.horse
-              if (!el.dataset.fallback) {
+              failedIconCache.add(src);
+              // Satu kali fallback ke favicon CDN lain
+              if (!el.dataset.fallback && cfg.type === 'fav') {
                 el.dataset.fallback = '1';
-                if (cfg.type === 'fav') {
-                  el.src = `https://icon.horse/icon/${cfg.domain}`;
-                  return;
-                }
+                el.src = `https://icon.horse/icon/${cfg.domain}`;
+                return;
               }
-              // Fallback terakhir: huruf pertama
+              // Fallback terakhir: huruf pertama (tidak retry lagi)
               el.style.display = 'none';
               const parent = el.parentElement;
               if (parent) {
@@ -2000,7 +2013,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
   ];
 
   return (
-    <div className="min-h-screen bg-[#fafafa] dark:bg-[#020617] flex flex-col md:flex-row font-sans relative transition-colors duration-300" style={{minHeight:"100svh"}}>
+    <div suppressHydrationWarning className="min-h-screen bg-[#fafafa] dark:bg-[#020617] flex flex-col md:flex-row font-sans relative transition-colors duration-300" style={{minHeight:"100svh"}}>
       
       {/* SIDEBAR DESKTOP */}
       <div className="hidden md:flex flex-col w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 fixed h-full z-10 shadow-sm transition-colors duration-300">
@@ -2464,6 +2477,51 @@ function getCountryMeta(id: string) {
   return COUNTRY_META[id.toLowerCase()] ?? { flag: '🌐', dial: '' };
 }
 
+// ── Country ID → ISO2 untuk flagcdn.com ─────────────────────────────
+const COUNTRY_ID_TO_ISO2: Record<string, string> = {
+  '0':'ru','1':'ua','2':'kz','3':'cn','4':'ph','5':'mm','6':'id','7':'my',
+  '8':'ke','9':'tz','10':'vn','11':'kg','12':'us','13':'il','14':'hk','15':'pl',
+  '16':'gb','17':'mg','18':'cd','19':'ng','20':'mo','21':'eg','22':'in','23':'ie',
+  '24':'kh','25':'la','26':'ht','27':'ci','28':'gm','29':'rs','30':'ye','31':'za',
+  '32':'ro','33':'co','34':'ee','35':'az','36':'ca','37':'ma','38':'gh','39':'ar',
+  '40':'uz','41':'cm','42':'td','43':'de','44':'lt','45':'hr','46':'se','47':'iq',
+  '48':'nl','49':'lv','50':'at','51':'by','52':'th','53':'sa','54':'mx','55':'tw',
+  '56':'es','57':'ir','58':'dz','59':'si','60':'bd','61':'sn','62':'tr','63':'cz',
+  '64':'lk','65':'pe','66':'pk','67':'nz','68':'gn','69':'ml','70':'ve','71':'et',
+  '72':'mn','73':'br','74':'af','75':'ug','76':'ao','77':'cy','78':'fr','79':'pg',
+  '80':'mz','81':'np','82':'be','83':'bg','84':'hu','85':'md','86':'it','87':'py',
+  '88':'hn','89':'tn','90':'ni','91':'tl','92':'bo','93':'cr','94':'gt','95':'ae',
+  '96':'zw','97':'pr','98':'sd','99':'tg','100':'kw','101':'sv','102':'ly',
+  '103':'jm','104':'tt','105':'ec','106':'sz','107':'bh','108':'om','109':'bw',
+  '110':'mu','111':'bj','112':'bi','113':'jo','114':'bf','115':'zm','116':'fi',
+  '117':'so','118':'dk','119':'do','120':'sy','121':'qa','122':'pa','123':'cu',
+  '124':'mw','125':'sl','126':'lr','127':'sk','128':'no','129':'ch','130':'pt',
+  '131':'gr','132':'jp','133':'au','134':'kr','135':'sg','136':'tj','137':'am',
+  '138':'cl','139':'lb','140':'rw','141':'al','142':'ge','143':'tm','144':'bn',
+  '145':'ba','146':'mk',
+};
+
+// Pakai span + background-image agar tidak ada hydration mismatch
+function FlagImg({ countryId, size = 20 }: { countryId: string; size?: number }) {
+  const iso2 = COUNTRY_ID_TO_ISO2[countryId] ?? 'un';
+  return (
+    <span
+      suppressHydrationWarning
+      style={{
+        display: 'inline-block',
+        width: size,
+        height: Math.round(size * 0.75),
+        backgroundImage: `url(https://flagcdn.com/w${size * 2}/${iso2}.png)`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        borderRadius: 2,
+        flexShrink: 0,
+      }}
+      aria-label={iso2.toUpperCase()}
+    />
+  );
+}
+
 // ── Custom Country Dropdown ──────────────────────────────────────────
 function CountryDropdown({ countries, value, onChange }: {
   countries: Country[];
@@ -2499,7 +2557,7 @@ function CountryDropdown({ countries, value, onChange }: {
         onClick={() => { setOpen(v => !v); setSearch(''); }}
         className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm"
       >
-        <span className="text-xl leading-none">{meta.flag}</span>
+        <FlagImg countryId={value} size={20} />
         <span className="flex-1 text-left truncate">{selected?.name.replace(/^\p{Emoji_Presentation}+\s*/u, '') ?? 'Pilih Negara'}</span>
         <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -2533,7 +2591,7 @@ function CountryDropdown({ countries, value, onChange }: {
                   onClick={() => { onChange(c.id); setOpen(false); setSearch(''); }}
                   className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-left transition-colors ${isActive ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'}`}
                 >
-                  <span className="text-xl leading-none w-7 shrink-0">{m.flag}</span>
+                  <FlagImg countryId={c.id} size={20} />
                   <span className="flex-1 truncate">{c.name.replace(/^\p{Emoji_Presentation}+\s*/u, '')}</span>
                   {m.dial && <span className="text-xs text-slate-400 font-medium shrink-0">{m.dial}</span>}
                   {isActive && <Check className="w-4 h-4 text-indigo-600 shrink-0" />}
@@ -2620,7 +2678,7 @@ function MobileCountryChip({ countries, value, onChange }: { countries: Country[
     <div ref={ref} className="relative flex-1">
       <button type="button" onClick={() => { setOpen(v => !v); setSearch(''); }}
         className="w-full flex items-center gap-1.5 px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:border-indigo-400 outline-none transition-all">
-        <span className="text-base leading-none shrink-0">{meta.flag}</span>
+        <FlagImg countryId={value} size={18} />
         <span className="flex-1 text-left truncate text-xs">{selected?.name.replace(/^\p{Emoji_Presentation}+\s*/u, '') ?? 'Negara'}</span>
         <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -2635,7 +2693,7 @@ function MobileCountryChip({ countries, value, onChange }: { countries: Country[
               return (
                 <button key={c.id} type="button" onClick={() => { onChange(c.id); setOpen(false); setSearch(''); }}
                   className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm font-bold text-left transition-colors ${c.id === value ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'}`}>
-                  <span className="text-base w-6 shrink-0">{m.flag}</span>
+                  <FlagImg countryId={c.id} size={18} />
                   <span className="flex-1 truncate">{c.name.replace(/^\p{Emoji_Presentation}+\s*/u, '')}</span>
                   {m.dial && <span className="text-xs text-slate-400 shrink-0">{m.dial}</span>}
                   {c.id === value && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
@@ -3011,6 +3069,22 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         <SortDropdown value={sortOrder} onChange={setSortOrder} />
       </div>
 
+      {/* ── MOBILE: Floating pill pesanan aktif ── */}
+      {activeOrders.length > 0 && (
+        <div className="md:hidden sticky top-[80px] z-30 -mx-4 px-4 pt-2">
+          <button
+            onClick={() => document.getElementById('active-orders-mobile')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            className="w-full flex items-center justify-between bg-indigo-600 text-white px-4 py-2.5 rounded-2xl shadow-lg shadow-indigo-600/30 text-sm font-bold"
+          >
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-yellow-300" />
+              {activeOrders.length} Pesanan Aktif
+            </div>
+            <span className="text-indigo-200 text-xs">Lihat ↑</span>
+          </button>
+        </div>
+      )}
+
       {/* ── MOBILE: Filter + Kategori STICKY ────────────────────────── */}
       <div className="md:hidden sticky top-[80px] z-20 -mx-4 px-4 pt-2 pb-1 bg-[#fafafa] dark:bg-[#020617]">
         {/* Filter bar */}
@@ -3051,7 +3125,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         </div>
       </div>
 
-      <div className={`grid grid-cols-1 ${activeOrders.length > 0 ? 'xl:grid-cols-3' : ''} gap-8 items-start`}>
+      <div className={`flex flex-col-reverse xl:grid xl:items-start ${activeOrders.length > 0 ? 'xl:grid-cols-3' : ''} gap-8`}>
         
         <div className={"bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-700 rounded-[2rem] overflow-hidden flex flex-col transition-colors " + (activeOrders.length > 0 ? 'xl:col-span-2' : '')}>
 
@@ -3220,7 +3294,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         </div>
 
         {activeOrders.length > 0 && (
-          <div className="xl:col-span-1 space-y-4 sticky top-[104px]">
+          <div id="active-orders-mobile" className="xl:col-span-1 space-y-4 xl:sticky xl:top-[104px] order-first xl:order-last">
             <div className="bg-indigo-600 text-white rounded-[2rem] shadow-xl overflow-hidden border border-indigo-400/60 animate-in fade-in slide-in-from-right-8 duration-300">
               <div className="px-6 py-4 border-b border-indigo-500/50 flex items-center bg-indigo-700/60 font-bold">
                 <Zap className="w-5 h-5 mr-2 text-yellow-300" /> Pesanan Aktif ({activeOrders.length})
