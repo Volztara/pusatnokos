@@ -132,6 +132,55 @@ const formatTimeStr = (s: number): string => {
 };
 
 // ==========================================
+// ANIMATION UTILS
+// ==========================================
+function useInView(threshold = 0.15) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const io = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) setInView(true); },
+      { threshold }
+    );
+    if (ref.current) io.observe(ref.current);
+    return () => io.disconnect();
+  }, [threshold]);
+  return { ref, inView };
+}
+
+function useCountUp(end: number, duration = 1300, trigger = false) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!trigger) return;
+    let frame = 0;
+    const total = Math.round(duration / 16);
+    const t = setInterval(() => {
+      frame++;
+      const eased = 1 - Math.pow(1 - frame / total, 3);
+      setCount(Math.round(eased * end));
+      if (frame >= total) { setCount(end); clearInterval(t); }
+    }, 16);
+    return () => clearInterval(t);
+  }, [end, duration, trigger]);
+  return count;
+}
+
+function FadeInSection({ children, delay = 0, className = '' }: {
+  children: React.ReactNode; delay?: number; className?: string;
+}) {
+  const { ref, inView } = useInView(0.12);
+  return (
+    <div ref={ref} className={className} style={{
+      opacity: inView ? 1 : 0,
+      transform: inView ? 'translateY(0)' : 'translateY(26px)',
+      transition: `opacity 0.6s ease ${delay}ms, transform 0.6s ease ${delay}ms`,
+    }}>
+      {children}
+    </div>
+  );
+}
+
+// ==========================================
 // MODULE-LEVEL SERVICE ICON HELPER
 // Dual-source: simpleicons (verified slugs) + Google Favicon CDN (universal fallback)
 // Google Favicon API: no CORS, no auth, works dari localhost & production.
@@ -161,7 +210,7 @@ const SERVICE_LOGO_MAP: [string[], LogoCfg][] = [
   [['tiktok'],               { type:'si',  slug:'tiktok',        color:'010101', bg:'#f1f5f9' }],
   [['facebook'],             { type:'si',  slug:'facebook',      color:'1877F2', bg:'#dbeafe' }],
   [['twitter','x.com'],      { type:'si',  slug:'x',             color:'000000', bg:'#f1f5f9' }],
-  [['linkedin'],             { type:'si',  slug:'linkedin',      color:'0A66C2', bg:'#dbeafe' }],
+  [['linkedin','linked in'], { type:'si',  slug:'linkedin',      color:'0A66C2', bg:'#dbeafe' }],
   [['snapchat'],             { type:'si',  slug:'snapchat',      color:'FFFC00', bg:'#fef9c3' }],
   [['pinterest'],            { type:'si',  slug:'pinterest',     color:'E60023', bg:'#fee2e2' }],
   [['reddit'],               { type:'si',  slug:'reddit',        color:'FF4500', bg:'#fee2e2' }],
@@ -175,7 +224,7 @@ const SERVICE_LOGO_MAP: [string[], LogoCfg][] = [
   [['behance'],              { type:'si',  slug:'behance',       color:'1769FF', bg:'#dbeafe' }],
   // ── E-Commerce ────────────────────────────────────────────────────────
   [['shopee'],               { type:'si',  slug:'shopee',        color:'EE4D2D', bg:'#fee2e2' }],
-  [['amazon'],               { type:'si',  slug:'amazon',        color:'FF9900', bg:'#fef3c7' }],
+  [['amazon','amazon.com'],  { type:'si',  slug:'amazon',        color:'FF9900', bg:'#fef3c7' }],
   [['ebay'],                 { type:'si',  slug:'ebay',          color:'E53238', bg:'#fee2e2' }],
   [['aliexpress'],           { type:'fav', domain:'aliexpress.com',          bg:'#fee2e2' }],
   [['tokopedia'],            { type:'fav', domain:'tokopedia.com',           bg:'#dcfce7' }],
@@ -208,12 +257,12 @@ const SERVICE_LOGO_MAP: [string[], LogoCfg][] = [
   // ── Finance / Crypto ──────────────────────────────────────────────────
   [['paypal'],               { type:'si',  slug:'paypal',        color:'003087', bg:'#dbeafe' }],
   [['binance'],              { type:'si',  slug:'binance',        color:'F3BA2F', bg:'#fef9c3' }],
-  [['coinbase'],             { type:'si',  slug:'coinbase',       color:'0052FF', bg:'#dbeafe' }],
+  [['coinbase','coin base'], { type:'si',  slug:'coinbase',       color:'0052FF', bg:'#dbeafe' }],
   [['okx'],                  { type:'si',  slug:'okx',            color:'000000', bg:'#f1f5f9' }],
   [['dana'],                 { type:'fav', domain:'dana.id',                  bg:'#dbeafe' }],
-  [['ovo'],                  { type:'fav', domain:'ovo.id',                   bg:'#ede9fe' }],
+  [['ovo','ovo id'],         { type:'fav', domain:'ovo.id',                   bg:'#ede9fe' }],
   [['gopay'],                { type:'fav', domain:'gopay.co.id',              bg:'#dcfce7' }],
-  [['linkaja'],              { type:'fav', domain:'linkaja.id',               bg:'#fee2e2' }],
+  [['linkaja','link aja'],   { type:'fav', domain:'linkaja.id',               bg:'#fee2e2' }],
   [['shopeepay'],            { type:'fav', domain:'shopee.co.id',             bg:'#fee2e2' }],
   [['bybit'],                { type:'fav', domain:'bybit.com',                bg:'#fef9c3' }],
   [['cashapp'],              { type:'fav', domain:'cash.app',                 bg:'#dcfce7' }],
@@ -224,9 +273,9 @@ const SERVICE_LOGO_MAP: [string[], LogoCfg][] = [
   [['metamask'],             { type:'fav', domain:'metamask.io',              bg:'#fef3c7' }],
   // ── Tech / Mail ───────────────────────────────────────────────────────
   [['google','gmail'],       { type:'si',  slug:'google',        color:'EA4335', bg:'#fee2e2' }],
-  [['microsoft','outlook'],  { type:'si',  slug:'microsoft',     color:'00A4EF', bg:'#dbeafe' }],
+  [['microsoft','outlook','ms365','office 365'], { type:'si', slug:'microsoft', color:'00A4EF', bg:'#dbeafe' }],
   [['apple','icloud'],       { type:'si',  slug:'apple',         color:'000000', bg:'#f1f5f9' }],
-  [['yahoo'],                { type:'si',  slug:'yahoo',         color:'720E9E', bg:'#ede9fe' }],
+  [['yahoo','yahoo mail'],   { type:'si',  slug:'yahoo',         color:'720E9E', bg:'#ede9fe' }],
   [['proton'],               { type:'fav', domain:'proton.me',                bg:'#ede9fe' }],
   [['yandex'],               { type:'fav', domain:'yandex.com',               bg:'#fee2e2' }],
   [['mail.ru'],              { type:'fav', domain:'mail.ru',                  bg:'#dbeafe' }],
@@ -257,9 +306,9 @@ const SERVICE_LOGO_MAP: [string[], LogoCfg][] = [
   [['clash'],                { type:'fav', domain:'supercell.com',             bg:'#fef9c3' }],
   // ── Dating ────────────────────────────────────────────────────────────
   [['tinder'],               { type:'si',  slug:'tinder',        color:'FF6B6B', bg:'#fee2e2' }],
-  [['bumble'],               { type:'si',  slug:'bumble',        color:'F1AE14', bg:'#fef9c3' }],
+  [['bumble','bumble dating'],{ type:'si', slug:'bumble',        color:'F1AE14', bg:'#fef9c3' }],
   [['badoo'],                { type:'fav', domain:'badoo.com',                 bg:'#fce7f3' }],
-  [['hinge'],                { type:'fav', domain:'hinge.co',                  bg:'#fee2e2' }],
+  [['hinge','hinge dating'], { type:'fav', domain:'hinge.co',                  bg:'#fee2e2' }],
   // ── Travel ────────────────────────────────────────────────────────────
   [['airbnb'],               { type:'si',  slug:'airbnb',        color:'FF5A5F', bg:'#fee2e2' }],
   [['booking'],              { type:'fav', domain:'booking.com',               bg:'#dbeafe' }],
@@ -271,6 +320,143 @@ const SERVICE_LOGO_MAP: [string[], LogoCfg][] = [
   // ── Lainnya ───────────────────────────────────────────────────────────
   [['irctc'],                { type:'fav', domain:'irctc.co.in',               bg:'#fee2e2' }],
   [['shopify'],              { type:'si',  slug:'shopify',       color:'96BF48', bg:'#dcfce7' }],
+  // ── Chat Tambahan ─────────────────────────────────────────────────────
+  [['threads'],              { type:'si',  slug:'threads',       color:'000000', bg:'#f1f5f9' }],
+  [['bereal'],               { type:'fav', domain:'bereal.com',                bg:'#f1f5f9' }],
+  [['kik'],                  { type:'fav', domain:'kik.com',                   bg:'#dcfce7' }],
+  [['textfree','textnow'],   { type:'fav', domain:'textnow.com',               bg:'#dcfce7' }],
+  [['truecaller'],           { type:'fav', domain:'truecaller.com',            bg:'#dbeafe' }],
+  [['textplus'],             { type:'fav', domain:'textplus.com',              bg:'#dbeafe' }],
+  [['whatsapp business'],    { type:'si',  slug:'whatsapp',      color:'25D366', bg:'#dcfce7' }],
+  [['naver'],                { type:'fav', domain:'naver.com',                 bg:'#dcfce7' }],
+  [['kakaotalk'],            { type:'fav', domain:'kakao.com',                 bg:'#fef9c3' }],
+  // ── Social Tambahan ───────────────────────────────────────────────────
+  [['vimeo'],                { type:'si',  slug:'vimeo',         color:'1AB7EA', bg:'#dbeafe' }],
+  [['flickr'],               { type:'si',  slug:'flickr',        color:'FF0084', bg:'#fce7f3' }],
+  [['mastodon'],             { type:'si',  slug:'mastodon',      color:'6364FF', bg:'#ede9fe' }],
+  [['mewe'],                 { type:'fav', domain:'mewe.com',                  bg:'#dbeafe' }],
+  [['truth social'],         { type:'fav', domain:'truthsocial.com',           bg:'#dbeafe' }],
+  [['mix'],                  { type:'fav', domain:'mix.com',                   bg:'#fee2e2' }],
+  [['parler'],               { type:'fav', domain:'parler.com',                bg:'#fee2e2' }],
+  // ── Food Delivery ─────────────────────────────────────────────────────
+  [['gofood'],               { type:'fav', domain:'gofood.co.id',              bg:'#fee2e2' }],
+  [['grabfood'],             { type:'fav', domain:'grab.com',                  bg:'#dcfce7' }],
+  [['shopeefood'],           { type:'fav', domain:'shopee.co.id',              bg:'#fee2e2' }],
+  [['foodpanda','pandamart'],{ type:'fav', domain:'foodpanda.com',             bg:'#fce7f3' }],
+  [['ubereats','uber eats'], { type:'fav', domain:'ubereats.com',              bg:'#f1f5f9' }],
+  [['swiggy'],               { type:'fav', domain:'swiggy.com',                bg:'#fef3c7' }],
+  [['zomato'],               { type:'fav', domain:'zomato.com',                bg:'#fee2e2' }],
+  [['glovo','glovoapp'],     { type:'fav', domain:'glovoapp.com',              bg:'#fef9c3' }],
+  [['ifood'],                { type:'fav', domain:'ifood.com.br',              bg:'#fee2e2' }],
+  // ── Transport Tambahan ────────────────────────────────────────────────
+  [['bolt'],                 { type:'fav', domain:'bolt.eu',                   bg:'#dcfce7' }],
+  [['bluebird'],             { type:'fav', domain:'bluebirdgroup.com',         bg:'#dbeafe' }],
+  [['ola'],                  { type:'fav', domain:'olacabs.com',               bg:'#fef9c3' }],
+  [['pathao'],               { type:'fav', domain:'pathao.com',                bg:'#fee2e2' }],
+  [['tada'],                 { type:'fav', domain:'tada.global',               bg:'#dbeafe' }],
+  [['yandex taxi'],          { type:'fav', domain:'taxi.yandex.ru',            bg:'#fef9c3' }],
+  // ── E-Commerce Tambahan ───────────────────────────────────────────────
+  [['carousell'],            { type:'fav', domain:'carousell.com',             bg:'#fee2e2' }],
+  [['etsy'],                 { type:'si',  slug:'etsy',          color:'F16521', bg:'#fef3c7' }],
+  [['wish'],                 { type:'fav', domain:'wish.com',                  bg:'#dbeafe' }],
+  [['taobao'],               { type:'fav', domain:'taobao.com',                bg:'#fee2e2' }],
+  [['jumia'],                { type:'fav', domain:'jumia.com',                 bg:'#fee2e2' }],
+  [['noon'],                 { type:'fav', domain:'noon.com',                  bg:'#fef9c3' }],
+  [['vinted'],               { type:'fav', domain:'vinted.com',                bg:'#dcfce7' }],
+  [['depop'],                { type:'fav', domain:'depop.com',                 bg:'#fee2e2' }],
+  [['rakuten'],              { type:'si',  slug:'rakuten',       color:'BF0000', bg:'#fee2e2' }],
+  [['zalora'],               { type:'fav', domain:'zalora.com',                bg:'#f1f5f9' }],
+  [['jd id'],                { type:'fav', domain:'jd.id',                     bg:'#fee2e2' }],
+  [['harbolnas','harbo'],    { type:'fav', domain:'harbolnas.com',             bg:'#fee2e2' }],
+  // ── Finance Tambahan ──────────────────────────────────────────────────
+  [['wise','transferwise'],  { type:'si',  slug:'wise',          color:'9FE870', bg:'#dcfce7' }],
+  [['alipay'],               { type:'fav', domain:'alipay.com',                bg:'#dbeafe' }],
+  [['webmoney'],             { type:'fav', domain:'webmoney.ru',               bg:'#dbeafe' }],
+  [['qiwi'],                 { type:'fav', domain:'qiwi.com',                  bg:'#fee2e2' }],
+  [['perfectmoney'],         { type:'fav', domain:'perfectmoney.com',          bg:'#fef9c3' }],
+  [['skrill'],               { type:'fav', domain:'skrill.com',                bg:'#ede9fe' }],
+  [['neteller'],             { type:'fav', domain:'neteller.com',              bg:'#fee2e2' }],
+  [['paxful'],               { type:'fav', domain:'paxful.com',                bg:'#fef9c3' }],
+  [['crypto.com','cryptocom','crypto'],{ type:'fav', domain:'crypto.com',      bg:'#dbeafe' }],
+  [['kucoin'],               { type:'fav', domain:'kucoin.com',                bg:'#dcfce7' }],
+  [['huobi'],                { type:'fav', domain:'huobi.com',                 bg:'#fef3c7' }],
+  [['gate.io'],              { type:'fav', domain:'gate.io',                   bg:'#fee2e2' }],
+  [['bitfinex'],             { type:'fav', domain:'bitfinex.com',              bg:'#dcfce7' }],
+  [['kraken'],               { type:'fav', domain:'kraken.com',                bg:'#ede9fe' }],
+  [['freecash'],             { type:'fav', domain:'freecash.com',              bg:'#dcfce7' }],
+  [['akulaku'],              { type:'fav', domain:'akulaku.com',               bg:'#fef9c3' }],
+  [['kredivo'],              { type:'fav', domain:'kredivo.com',               bg:'#dbeafe' }],
+  // ── Gaming Tambahan ───────────────────────────────────────────────────
+  [['garena'],               { type:'fav', domain:'garena.com',                bg:'#fee2e2' }],
+  [['genshin','mihoyo'],     { type:'fav', domain:'mihoyo.com',               bg:'#dbeafe' }],
+  [['honor of kings','hok'], { type:'fav', domain:'honorofkings.com',         bg:'#fef9c3' }],
+  [['league of legends','lol'],{ type:'fav', domain:'leagueoflegends.com',    bg:'#dbeafe' }],
+  [['dota'],                 { type:'fav', domain:'dota2.com',                 bg:'#fee2e2' }],
+  [['brawl stars'],          { type:'fav', domain:'supercell.com',             bg:'#fef9c3' }],
+  [['call of duty','cod'],   { type:'fav', domain:'callofduty.com',            bg:'#f1f5f9' }],
+  [['stumble guys'],         { type:'fav', domain:'stumbleguys.com',           bg:'#ede9fe' }],
+  [['among us'],             { type:'fav', domain:'innersloth.com',            bg:'#ede9fe' }],
+  [['lifeafter'],            { type:'fav', domain:'lifeafter.163.com',         bg:'#fee2e2' }],
+  [['ragnarok'],             { type:'fav', domain:'ragnarokonline.com',        bg:'#dbeafe' }],
+  [['point blank','pb'],     { type:'fav', domain:'pointblank.co.id',          bg:'#fee2e2' }],
+  [['arena of valor','aov'], { type:'fav', domain:'arenaofvalor.com',          bg:'#fef9c3' }],
+  [['chess.com'],            { type:'fav', domain:'chess.com',                 bg:'#dcfce7' }],
+  [['8ball','8 ball pool'],  { type:'fav', domain:'miniclip.com',              bg:'#dbeafe' }],
+  // ── Freelance / Bisnis ────────────────────────────────────────────────
+  [['fiverr'],               { type:'si',  slug:'fiverr',        color:'1DBF73', bg:'#dcfce7' }],
+  [['upwork'],               { type:'si',  slug:'upwork',        color:'6FDA44', bg:'#dcfce7' }],
+  [['freelancer'],           { type:'fav', domain:'freelancer.com',            bg:'#dbeafe' }],
+  [['99designs'],            { type:'fav', domain:'99designs.com',             bg:'#ede9fe' }],
+  [['toptal'],               { type:'fav', domain:'toptal.com',                bg:'#dbeafe' }],
+  [['taskrabbit'],           { type:'fav', domain:'taskrabbit.com',            bg:'#fee2e2' }],
+  // ── Pendidikan ────────────────────────────────────────────────────────
+  [['coursera'],             { type:'fav', domain:'coursera.org',              bg:'#dbeafe' }],
+  [['udemy'],                { type:'fav', domain:'udemy.com',                 bg:'#ede9fe' }],
+  [['duolingo'],             { type:'fav', domain:'duolingo.com',              bg:'#dcfce7' }],
+  [['ruangguru'],            { type:'fav', domain:'ruangguru.com',             bg:'#dbeafe' }],
+  [['zenius'],               { type:'fav', domain:'zenius.net',                bg:'#ede9fe' }],
+  // ── Kesehatan ─────────────────────────────────────────────────────────
+  [['halodoc'],              { type:'fav', domain:'halodoc.com',               bg:'#dcfce7' }],
+  [['alodokter'],            { type:'fav', domain:'alodokter.com',             bg:'#dbeafe' }],
+  [['good doctor'],          { type:'fav', domain:'gooddoctor.co.id',          bg:'#dcfce7' }],
+  // ── Dating Tambahan ───────────────────────────────────────────────────
+  [['justdating','just dating'],    { type:'fav', domain:'justdating.com',     bg:'#fce7f3' }],
+  [['asiandating','asian dating'],  { type:'fav', domain:'asiandating.com',    bg:'#fce7f3' }],
+  [['lovoo'],                { type:'fav', domain:'lovoo.com',                 bg:'#fee2e2' }],
+  [['meetic'],               { type:'fav', domain:'meetic.com',                bg:'#fee2e2' }],
+  [['match'],                { type:'fav', domain:'match.com',                 bg:'#fee2e2' }],
+  [['okcupid'],              { type:'fav', domain:'okcupid.com',               bg:'#dbeafe' }],
+  [['grindr'],               { type:'fav', domain:'grindr.com',                bg:'#fef9c3' }],
+  [['zoosk'],                { type:'fav', domain:'zoosk.com',                 bg:'#dbeafe' }],
+  [['happn'],                { type:'fav', domain:'happn.com',                 bg:'#fee2e2' }],
+  [['mamba'],                { type:'fav', domain:'mamba.ru',                  bg:'#fce7f3' }],
+  // ── AI / Tech Tambahan ────────────────────────────────────────────────
+  [['claude','anthropic'],   { type:'fav', domain:'claude.ai',                 bg:'#fef3c7' }],
+  [['chatgpt','openai'],     { type:'fav', domain:'openai.com',                bg:'#dcfce7' }],
+  [['gemini','bard'],        { type:'fav', domain:'gemini.google.com',         bg:'#dbeafe' }],
+  [['github'],               { type:'si',  slug:'github',        color:'181717', bg:'#f1f5f9' }],
+  [['gitlab'],               { type:'si',  slug:'gitlab',        color:'FC6D26', bg:'#fef3c7' }],
+  [['dropbox'],              { type:'si',  slug:'dropbox',       color:'0061FF', bg:'#dbeafe' }],
+  [['notion'],               { type:'si',  slug:'notion',        color:'000000', bg:'#f1f5f9' }],
+  [['slack'],                { type:'si',  slug:'slack',         color:'4A154B', bg:'#ede9fe' }],
+  [['zoom'],                 { type:'si',  slug:'zoom',          color:'2D8CFF', bg:'#dbeafe' }],
+  [['figma'],                { type:'si',  slug:'figma',         color:'F24E1E', bg:'#fee2e2' }],
+  [['canva'],                { type:'fav', domain:'canva.com',                 bg:'#dbeafe' }],
+  [['adobe'],                { type:'si',  slug:'adobe',         color:'FF0000', bg:'#fee2e2' }],
+  [['wordpress'],            { type:'si',  slug:'wordpress',     color:'21759B', bg:'#dbeafe' }],
+  [['icloud'],               { type:'fav', domain:'icloud.com',                bg:'#f1f5f9' }],
+  [['onedrive'],             { type:'fav', domain:'onedrive.com',              bg:'#dbeafe' }],
+  [['googledrive','google drive'],{ type:'fav', domain:'drive.google.com',    bg:'#fee2e2' }],
+  // ── Telco / Operator ──────────────────────────────────────────────────
+  [['telkomsel','tsel'],     { type:'fav', domain:'telkomsel.com',             bg:'#fee2e2' }],
+  [['indosat','im3','ooredoo'],{ type:'fav', domain:'indosatooredoo.com',      bg:'#fef9c3' }],
+  [['xl','axiata'],          { type:'fav', domain:'xl.co.id',                  bg:'#dbeafe' }],
+  [['smartfren'],            { type:'fav', domain:'smartfren.com',             bg:'#fee2e2' }],
+  [['three','tri'],          { type:'fav', domain:'three.co.id',               bg:'#fef9c3' }],
+  [['airtel'],               { type:'fav', domain:'airtel.in',                 bg:'#fee2e2' }],
+  [['jio'],                  { type:'fav', domain:'jio.com',                   bg:'#dbeafe' }],
+  [['maxis'],                { type:'fav', domain:'maxis.com.my',              bg:'#dbeafe' }],
+  [['celcom'],               { type:'fav', domain:'celcom.com.my',             bg:'#dbeafe' }],
 ];
 
 function getServiceIconByName(name: string): React.ReactNode {
@@ -539,6 +725,12 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
   const [showSyarat, setShowSyarat] = useState(false);
   const [showPrivasi, setShowPrivasi] = useState(false);
 
+  // Animation hooks
+  const { ref: statsRef, inView: statsOn } = useInView(0.3);
+  const cnt500 = useCountUp(500, 1300, statsOn);
+  const cnt50  = useCountUp(50,  1200, statsOn);
+  const cnt99  = useCountUp(99,  1000, statsOn);
+
   useEffect(() => {
     if (isMenuOpen) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = 'unset';
@@ -563,6 +755,14 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
 
   return (
     <div className="min-h-screen bg-[#fafafa] dark:bg-[#020617] transition-colors duration-300 overflow-x-hidden" style={{minHeight:"100svh"}}>
+      <style>{`
+        @keyframes _heroIn { from { opacity:0; transform:translateY(22px); } to { opacity:1; transform:translateY(0); } }
+        ._h1{animation:_heroIn .55s ease .05s both}
+        ._h2{animation:_heroIn .55s ease .20s both}
+        ._h3{animation:_heroIn .55s ease .35s both}
+        ._h4{animation:_heroIn .55s ease .50s both}
+        ._h5{animation:_heroIn .55s ease .65s both}
+      `}</style>
       <a href={`https://wa.me/${CS_WA}?text=Halo%20CS%20Pusat%20Nokos%2C%20saya%20butuh%20bantuan.`} target="_blank" rel="noopener noreferrer" aria-label="Hubungi Customer Service via WhatsApp" className="fixed bottom-6 left-6 z-[90] bg-[#25D366] text-white px-4 py-3 rounded-full shadow-[0_8px_30px_rgba(37,211,102,0.4)] hover:bg-[#1ebd5a] hover:shadow-[0_8px_40px_rgba(37,211,102,0.6)] transition-all transform hover:scale-105 flex items-center gap-3 group">
         <svg viewBox="0 0 24 24" fill="white" className="w-6 h-6 shrink-0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
         <div className="text-left">
@@ -619,17 +819,17 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
           <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-[min(800px,100vw)] h-[600px] bg-indigo-500/15 dark:bg-indigo-500/10 blur-[120px] rounded-full"></div>
         </div>
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="inline-flex items-center px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-400 text-sm font-bold mb-8 shadow-sm">
+          <div className="inline-flex items-center px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-400 text-sm font-bold mb-8 shadow-sm _h1">
             <span className="flex h-2.5 w-2.5 rounded-full bg-indigo-600 mr-2.5 animate-pulse"></span> Dipercaya 50K+ Pengguna Aktif
           </div>
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-slate-900 dark:text-white mb-6 leading-tight">
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-slate-900 dark:text-white mb-6 leading-tight _h2">
             Verifikasi Akun <br className="hidden sm:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-500">Aman & Terpercaya.</span>
           </h1>
-          <p className="mt-4 text-lg sm:text-xl text-slate-500 dark:text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed">
+          <p className="mt-4 text-lg sm:text-xl text-slate-500 dark:text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed _h3">
             Platform Nomor Kosong (Nokos) Enterprise-level dengan jaminan Auto Refund 100% dan server stabil 24 Jam.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center _h4">
             <button onClick={() => onNavigate('register')} className="flex items-center justify-center px-8 py-4 text-base font-bold rounded-2xl text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 shadow-xl hover:shadow-indigo-500/30 transition-all hover:-translate-y-1">
               Buka Dashboard <ArrowRight className="ml-2 w-5 h-5"/>
             </button>
@@ -639,7 +839,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
           </div>
 
           {/* Floating app chips — pakai Google Favicon agar semua logo tampil */}
-          <div className="flex items-center justify-center gap-2 flex-wrap mt-10">
+          <div className="flex items-center justify-center gap-2 flex-wrap mt-10 _h5">
             {[
               { name: 'WhatsApp',  domain: 'whatsapp.com'   },
               { name: 'Telegram',  domain: 'telegram.org'   },
@@ -650,7 +850,13 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
               { name: 'TikTok',    domain: 'tiktok.com'     },
               { name: 'Facebook',  domain: 'facebook.com'   },
             ].map(app => (
-              <div key={app.name} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 flex items-center gap-1.5 shadow-sm text-xs font-bold text-slate-600 dark:text-slate-300 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors">
+              <div
+                key={app.name}
+                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 flex items-center gap-1.5 shadow-sm text-xs font-bold text-slate-600 dark:text-slate-300 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
+                style={{ transition: 'transform .2s ease, box-shadow .2s ease' }}
+                onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-3px)'; d.style.boxShadow = '0 6px 16px rgba(0,0,0,0.10)'; }}
+                onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; d.style.boxShadow = ''; }}
+              >
                 <img
                   src={`https://www.google.com/s2/favicons?domain=${app.domain}&sz=32`}
                   width={14} height={14}
@@ -661,21 +867,41 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
                 {app.name}
               </div>
             ))}
-            <div className="bg-indigo-50 dark:bg-slate-800 border border-indigo-100 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-indigo-500 dark:text-indigo-400">+500 lainnya</div>
+            <div
+              className="bg-indigo-50 dark:bg-slate-800 border border-indigo-100 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-indigo-500 dark:text-indigo-400"
+              style={{ transition: 'transform .2s ease' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = ''; }}
+            >+500 lainnya</div>
           </div>
 
-          {/* Stats strip — redesign lebih premium */}
-          <div className="mt-14 max-w-3xl mx-auto">
+          {/* Stats strip — animated count-up */}
+          <div ref={statsRef} className="mt-14 max-w-3xl mx-auto">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">
               <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-slate-100 dark:divide-slate-800">
                 {[
-                  { val: '500+',  label: 'Layanan Tersedia', icon: <Package className="w-5 h-5 text-indigo-600 dark:text-indigo-400"/>,   bg: 'bg-indigo-50 dark:bg-indigo-900/20', color: 'text-indigo-600 dark:text-indigo-400' },
-                  { val: '50K+',  label: 'Pengguna Aktif',   icon: <Users className="w-5 h-5 text-violet-600 dark:text-violet-400"/>,     bg: 'bg-violet-50 dark:bg-violet-900/20',  color: 'text-violet-600 dark:text-violet-400' },
-                  { val: '99%',   label: 'Tingkat Sukses',   icon: <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400"/>,  bg: 'bg-green-50 dark:bg-green-900/20',    color: 'text-green-600 dark:text-green-400' },
-                  { val: '24/7',  label: 'Server Online',    icon: <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400"/>,      bg: 'bg-blue-50 dark:bg-blue-900/20',      color: 'text-blue-600 dark:text-blue-400' },
+                  { val: statsOn ? `${cnt500}+` : '0+',  label: 'Layanan Tersedia', icon: <Package className="w-5 h-5 text-indigo-600 dark:text-indigo-400"/>,  bg: 'bg-indigo-50 dark:bg-indigo-900/20', color: 'text-indigo-600 dark:text-indigo-400', i: 0 },
+                  { val: statsOn ? `${cnt50}K+` : '0K+', label: 'Pengguna Aktif',   icon: <Users className="w-5 h-5 text-violet-600 dark:text-violet-400"/>,    bg: 'bg-violet-50 dark:bg-violet-900/20',  color: 'text-violet-600 dark:text-violet-400', i: 1 },
+                  { val: statsOn ? `${cnt99}%`  : '0%',  label: 'Tingkat Sukses',   icon: <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400"/>, bg: 'bg-green-50 dark:bg-green-900/20',    color: 'text-green-600 dark:text-green-400',   i: 2 },
+                  { val: '24/7',                          label: 'Server Online',    icon: <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400"/>,     bg: 'bg-blue-50 dark:bg-blue-900/20',      color: 'text-blue-600 dark:text-blue-400',     i: 3 },
                 ].map(s => (
-                  <div key={s.label} className="flex flex-col items-center justify-center py-7 px-4 text-center gap-2">
-                    <div className={`w-10 h-10 ${s.bg} rounded-2xl flex items-center justify-center`}>{s.icon}</div>
+                  <div
+                    key={s.label}
+                    className="flex flex-col items-center justify-center py-7 px-4 text-center gap-2"
+                    style={{
+                      opacity: statsOn ? 1 : 0,
+                      transform: statsOn ? 'translateY(0)' : 'translateY(14px)',
+                      transition: `opacity .5s ease ${s.i * 110}ms, transform .5s ease ${s.i * 110}ms`,
+                    }}
+                    onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-4px)'; }}
+                    onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = statsOn ? 'translateY(0)' : 'translateY(14px)'; }}
+                  >
+                    <div
+                      className={`w-10 h-10 ${s.bg} rounded-2xl flex items-center justify-center`}
+                      style={{ transition: 'transform .3s ease' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.18) rotate(8deg)'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = ''; }}
+                    >{s.icon}</div>
                     <div className={`text-3xl font-black ${s.color}`}>{s.val}</div>
                     <div className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-tight">{s.label}</div>
                   </div>
@@ -689,10 +915,12 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
       {/* CARA KERJA */}
       <div id="cara" className="py-24 bg-slate-50 dark:bg-slate-950 border-y border-slate-200 dark:border-slate-800/50">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-16">
-            <div className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest text-sm mb-3">Cara Kerja</div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">Hanya 3 Langkah Mudah</h2>
-          </div>
+          <FadeInSection>
+            <div className="text-center mb-16">
+              <div className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest text-sm mb-3">Cara Kerja</div>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">Hanya 3 Langkah Mudah</h2>
+            </div>
+          </FadeInSection>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
             <div className="hidden md:block absolute top-10 left-[18%] right-[18%] h-0.5 bg-gradient-to-r from-indigo-200 via-violet-200 to-indigo-200 dark:from-indigo-800 dark:via-violet-800 dark:to-indigo-800"/>
             {[
@@ -700,12 +928,19 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
               { step: '02', icon: <ShoppingCart className="w-7 h-7 text-violet-600 dark:text-violet-400"/>, title: 'Pilih & Beli Nomor', desc: 'Cari layanan yang kamu butuhkan, pilih negara, dan klik Beli Nomor. Nomor langsung aktif.' },
               { step: '03', icon: <CheckCircle className="w-7 h-7 text-green-600 dark:text-green-400"/>, title: 'Terima Kode OTP', desc: 'Kode OTP masuk otomatis ke dashboard kamu dalam hitungan detik. Salin & gunakan!' },
             ].map((s, i) => (
-              <div key={i} className="relative bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm text-center hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors">
-                <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-white dark:border-slate-900 shadow-md relative z-10">{s.icon}</div>
-                <div className="absolute top-6 right-6 text-6xl font-black text-slate-100 dark:text-slate-800 select-none">{s.step}</div>
-                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mb-3">{s.title}</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">{s.desc}</p>
-              </div>
+              <FadeInSection key={i} delay={i * 130}>
+                <div
+                  className="relative bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm text-center hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors"
+                  style={{ transition: 'transform .25s ease, box-shadow .25s ease, border-color .2s ease' }}
+                  onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-5px)'; d.style.boxShadow = '0 12px 30px rgba(0,0,0,0.08)'; }}
+                  onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; d.style.boxShadow = ''; }}
+                >
+                  <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-white dark:border-slate-900 shadow-md relative z-10">{s.icon}</div>
+                  <div className="absolute top-6 right-6 text-6xl font-black text-slate-100 dark:text-slate-800 select-none">{s.step}</div>
+                  <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mb-3">{s.title}</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">{s.desc}</p>
+                </div>
+              </FadeInSection>
             ))}
           </div>
         </div>
@@ -778,81 +1013,109 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
       {/* BENTO GRID (FITUR KEAMANAN) */}
       <div id="fitur" className="py-24 bg-[#fafafa] dark:bg-[#020617]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider mb-2 text-sm">Keamanan & Kepercayaan</h2>
-            <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white sm:text-4xl">Platform Enterprise-Level</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto auto-rows-[minmax(250px,auto)]">
-            
-            {/* Box 1: Auto Refund (Besar) */}
-            <div className="md:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-indigo-300 dark:hover:border-indigo-500 transition-colors">
-              <div className="relative z-10">
-                <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mb-5"><ShieldAlert className="w-7 h-7 text-indigo-600 dark:text-indigo-400"/></div>
-                <h4 className="text-xl font-bold mb-2 text-slate-900 dark:text-white">Auto Refund 100%</h4>
-                <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md leading-relaxed">Sistem pintar kami melacak setiap OTP secara real-time. Jika dalam waktu tunggu kode tidak masuk, saldo Anda dikembalikan utuh otomatis tanpa potongan.</p>
-              </div>
-              <RefreshCw className="absolute -right-4 -bottom-12 w-64 h-64 text-indigo-600 opacity-5 group-hover:opacity-10 transition-transform duration-700 group-hover:rotate-180" />
+          <FadeInSection>
+            <div className="text-center max-w-2xl mx-auto mb-16">
+              <h2 className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider mb-2 text-sm">Keamanan & Kepercayaan</h2>
+              <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white sm:text-4xl">Platform Enterprise-Level</h3>
             </div>
-            
-            {/* Box 2: Transaksi (Kecil Warna) */}
-            <div className="bg-indigo-600 text-white rounded-3xl p-8 shadow-xl flex flex-col justify-center relative overflow-hidden group">
-              <div className="relative z-10">
-                <Wallet className="w-12 h-12 text-green-400 mb-5"/>
-                <h4 className="text-xl font-bold mb-2">Transaksi Instan</h4>
-                <p className="text-indigo-100 text-sm leading-relaxed">Deposit via QRIS & VA diproses hitungan detik. Riwayat tercatat transparan.</p>
+          </FadeInSection>
+          <FadeInSection delay={100}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto auto-rows-[minmax(250px,auto)]">
+              {/* Box 1: Auto Refund (Besar) */}
+              <div
+                className="md:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-indigo-300 dark:hover:border-indigo-500 transition-colors"
+                style={{ transition: 'transform .25s ease, box-shadow .25s ease, border-color .2s ease' }}
+                onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-5px)'; d.style.boxShadow = '0 14px 32px rgba(0,0,0,0.07)'; }}
+                onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; d.style.boxShadow = ''; }}
+              >
+                <div className="relative z-10">
+                  <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mb-5"><ShieldAlert className="w-7 h-7 text-indigo-600 dark:text-indigo-400"/></div>
+                  <h4 className="text-xl font-bold mb-2 text-slate-900 dark:text-white">Auto Refund 100%</h4>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md leading-relaxed">Sistem pintar kami melacak setiap OTP secara real-time. Jika dalam waktu tunggu kode tidak masuk, saldo Anda dikembalikan utuh otomatis tanpa potongan.</p>
+                </div>
+                <RefreshCw className="absolute -right-4 -bottom-12 w-64 h-64 text-indigo-600 opacity-5 group-hover:opacity-10 transition-transform duration-700 group-hover:rotate-180" />
               </div>
-              <Zap className="w-40 h-40 text-white opacity-10 absolute -right-8 -bottom-8 group-hover:scale-110 transition-transform duration-500" />
-            </div>
-
-            {/* Box 3: Privasi (Kecil) */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-center relative overflow-hidden group hover:border-indigo-300 dark:hover:border-indigo-500 transition-colors">
-              <div className="relative z-10">
-                <div className="w-14 h-14 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl flex items-center justify-center mb-5"><EyeOff className="w-7 h-7 text-slate-700 dark:text-slate-300"/></div>
-                <h4 className="text-xl font-bold mb-2 text-slate-900 dark:text-white">Privasi Terjaga</h4>
-                <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Jauhkan nomor pribadi Anda dari ancaman spam, telemarketing, atau kebocoran data.</p>
+              {/* Box 2: Transaksi (Kecil Warna) */}
+              <div
+                className="bg-indigo-600 text-white rounded-3xl p-8 shadow-xl flex flex-col justify-center relative overflow-hidden group"
+                style={{ transition: 'transform .25s ease, box-shadow .25s ease' }}
+                onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-5px)'; d.style.boxShadow = '0 14px 32px rgba(79,70,229,0.35)'; }}
+                onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; d.style.boxShadow = ''; }}
+              >
+                <div className="relative z-10">
+                  <Wallet className="w-12 h-12 text-green-400 mb-5"/>
+                  <h4 className="text-xl font-bold mb-2">Transaksi Instan</h4>
+                  <p className="text-indigo-100 text-sm leading-relaxed">Deposit via QRIS & VA diproses hitungan detik. Riwayat tercatat transparan.</p>
+                </div>
+                <Zap className="w-40 h-40 text-white opacity-10 absolute -right-8 -bottom-8 group-hover:scale-110 transition-transform duration-500" />
+              </div>
+              {/* Box 3: Privasi (Kecil) */}
+              <div
+                className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-center relative overflow-hidden group hover:border-indigo-300 dark:hover:border-indigo-500 transition-colors"
+                style={{ transition: 'transform .25s ease, box-shadow .25s ease, border-color .2s ease' }}
+                onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-5px)'; d.style.boxShadow = '0 14px 32px rgba(0,0,0,0.07)'; }}
+                onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; d.style.boxShadow = ''; }}
+              >
+                <div className="relative z-10">
+                  <div className="w-14 h-14 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl flex items-center justify-center mb-5"><EyeOff className="w-7 h-7 text-slate-700 dark:text-slate-300"/></div>
+                  <h4 className="text-xl font-bold mb-2 text-slate-900 dark:text-white">Privasi Terjaga</h4>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Jauhkan nomor pribadi Anda dari ancaman spam, telemarketing, atau kebocoran data.</p>
+                </div>
+              </div>
+              {/* Box 4: Server Stabil (Besar Gelap) */}
+              <div
+                className="md:col-span-2 bg-slate-900 dark:bg-slate-950 text-white rounded-3xl p-8 shadow-xl flex items-center justify-between relative overflow-hidden border border-slate-800 group"
+                style={{ transition: 'transform .25s ease, box-shadow .25s ease' }}
+                onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-5px)'; d.style.boxShadow = '0 14px 32px rgba(0,0,0,0.25)'; }}
+                onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; d.style.boxShadow = ''; }}
+              >
+                <div className="w-full sm:w-2/3 relative z-10">
+                  <Server className="w-12 h-12 text-blue-400 mb-5"/>
+                  <h4 className="text-xl font-bold mb-2">Infrastruktur Stabil 99.9%</h4>
+                  <p className="text-slate-400 text-sm leading-relaxed">Kami menggunakan teknologi server mutakhir untuk menjamin platform tetap responsif dan dapat diakses 24 jam penuh tanpa hambatan.</p>
+                </div>
+                <Globe className="hidden sm:block w-48 h-48 text-white opacity-5 absolute -right-6 top-1/2 -translate-y-1/2 transition-transform duration-[20s] group-hover:rotate-180" />
               </div>
             </div>
-
-            {/* Box 4: Server Stabil (Besar Gelap) */}
-            <div className="md:col-span-2 bg-slate-900 dark:bg-slate-950 text-white rounded-3xl p-8 shadow-xl flex items-center justify-between relative overflow-hidden border border-slate-800 group">
-              <div className="w-full sm:w-2/3 relative z-10">
-                <Server className="w-12 h-12 text-blue-400 mb-5"/>
-                <h4 className="text-xl font-bold mb-2">Infrastruktur Stabil 99.9%</h4>
-                <p className="text-slate-400 text-sm leading-relaxed">Kami menggunakan teknologi server mutakhir untuk menjamin platform tetap responsif dan dapat diakses 24 jam penuh tanpa hambatan.</p>
-              </div>
-              <Globe className="hidden sm:block w-48 h-48 text-white opacity-5 absolute -right-6 top-1/2 -translate-y-1/2 transition-transform duration-[20s] group-hover:rotate-180" />
-            </div>
-
-          </div>
+          </FadeInSection>
         </div>
       </div>
 
       {/* TESTIMONIAL */}
       <div className="py-20 bg-white dark:bg-[#020617] border-t border-slate-200 dark:border-slate-800/50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12">
-            <div className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest text-sm mb-3">Testimoni</div>
-            <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white">Dipercaya Ribuan Pengguna</h2>
-          </div>
+          <FadeInSection>
+            <div className="text-center mb-12">
+              <div className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest text-sm mb-3">Testimoni</div>
+              <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white">Dipercaya Ribuan Pengguna</h2>
+            </div>
+          </FadeInSection>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {[
               { name: 'Andi R.', role: 'Reseller Online', text: 'Langsung berhasil buat akun marketplace baru. OTP masuk cepat banget, gak sampai 30 detik. Recommended!', rating: 5 },
               { name: 'Siti N.', role: 'Freelancer', text: 'Auto refund beneran jalan pas nomor saya gagal terima OTP. Saldo balik dalam hitungan detik. Jujur dan amanah!', rating: 5 },
               { name: 'Budi S.', role: 'Developer', text: 'Stok nomornya banyak dan variatif. Bisa pilih dari berbagai negara. Harga juga bersaing, paling murah yang pernah saya coba.', rating: 5 },
             ].map((t, i) => (
-              <div key={i} className="bg-white dark:bg-slate-900 rounded-3xl p-7 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors">
-                <div className="flex gap-1 mb-4">
-                  {[...Array(t.rating)].map((_, j) => <Star key={j} className="w-4 h-4 fill-yellow-400 text-yellow-400"/>)}
-                </div>
-                <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-6">"{t.text}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center font-black text-indigo-600 dark:text-indigo-400">{t.name[0]}</div>
-                  <div>
-                    <div className="font-bold text-slate-900 dark:text-white text-sm">{t.name}</div>
-                    <div className="text-xs text-slate-400 font-medium">{t.role}</div>
+              <FadeInSection key={i} delay={i * 120}>
+                <div
+                  className="bg-white dark:bg-slate-900 rounded-3xl p-7 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors"
+                  style={{ transition: 'transform .25s ease, box-shadow .25s ease, border-color .2s ease' }}
+                  onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-4px)'; d.style.boxShadow = '0 12px 28px rgba(0,0,0,0.08)'; }}
+                  onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; d.style.boxShadow = ''; }}
+                >
+                  <div className="flex gap-1 mb-4">
+                    {[...Array(t.rating)].map((_, j) => <Star key={j} className="w-4 h-4 fill-yellow-400 text-yellow-400"/>)}
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-6">"{t.text}"</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center font-black text-indigo-600 dark:text-indigo-400">{t.name[0]}</div>
+                    <div>
+                      <div className="font-bold text-slate-900 dark:text-white text-sm">{t.name}</div>
+                      <div className="text-xs text-slate-400 font-medium">{t.role}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </FadeInSection>
             ))}
           </div>
         </div>
@@ -861,18 +1124,22 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
       {/* FAQ */}
       <div id="faq" className="bg-[#fafafa] dark:bg-slate-950 py-24 border-t border-slate-200 dark:border-slate-800/50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12"><h2 className="text-3xl font-extrabold text-slate-900 dark:text-white">Pertanyaan yang Sering Diajukan</h2></div>
+          <FadeInSection>
+            <div className="text-center mb-12"><h2 className="text-3xl font-extrabold text-slate-900 dark:text-white">Pertanyaan yang Sering Diajukan</h2></div>
+          </FadeInSection>
           <div className="space-y-4">
             {faqs.map((faq, i) => (
-              <div key={i} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-                <button 
-                  onClick={() => setActiveFaq(activeFaq === i ? null : i)} 
-                  className="w-full px-6 py-5 text-left flex justify-between font-bold text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500 transition-colors"
-                >
-                  {faq.q} <ChevronDown className={"w-5 h-5 text-slate-400 transition-transform " + (activeFaq === i ? 'rotate-180' : '')} />
-                </button>
-                {activeFaq === i && <div className="px-6 pb-5 pt-1 text-slate-600 dark:text-slate-400 text-sm leading-relaxed animate-in slide-in-from-top-2">{faq.a}</div>}
-              </div>
+              <FadeInSection key={i} delay={i * 80}>
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+                  <button 
+                    onClick={() => setActiveFaq(activeFaq === i ? null : i)} 
+                    className="w-full px-6 py-5 text-left flex justify-between font-bold text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500 transition-colors"
+                  >
+                    {faq.q} <ChevronDown className={"w-5 h-5 text-slate-400 transition-transform " + (activeFaq === i ? 'rotate-180' : '')} />
+                  </button>
+                  {activeFaq === i && <div className="px-6 pb-5 pt-1 text-slate-600 dark:text-slate-400 text-sm leading-relaxed animate-in slide-in-from-top-2">{faq.a}</div>}
+                </div>
+              </FadeInSection>
             ))}
           </div>
         </div>
@@ -884,75 +1151,78 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
           <div className="absolute -top-20 -left-20 w-96 h-96 bg-violet-600/30 blur-[80px] rounded-full"/>
           <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-blue-600/30 blur-[80px] rounded-full"/>
         </div>
-        <div className="max-w-3xl mx-auto px-4 text-center relative z-10">
-          <h2 className="text-4xl sm:text-5xl font-black text-white mb-6 leading-tight">Siap Mulai Verifikasi<br/>Tanpa Ribet?</h2>
-          <p className="text-indigo-100 text-lg mb-10">Daftar gratis sekarang. Tidak perlu kartu kredit. Langsung bisa beli nomor OTP pertama kamu.</p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button onClick={() => onNavigate('register')} className="flex items-center justify-center gap-2 px-8 py-4 bg-white text-indigo-600 font-black text-base rounded-2xl hover:bg-indigo-50 shadow-xl transition-all hover:-translate-y-0.5 active:scale-95">
-              Daftar Gratis Sekarang <ArrowRight className="w-5 h-5"/>
-            </button>
-            <button onClick={() => onNavigate('login')} className="flex items-center justify-center gap-2 px-8 py-4 border-2 border-white/30 text-white font-bold text-base rounded-2xl hover:bg-white/10 transition-all">
-              Sudah punya akun? Masuk
-            </button>
+        <FadeInSection>
+          <div className="max-w-3xl mx-auto px-4 text-center relative z-10">
+            <h2 className="text-4xl sm:text-5xl font-black text-white mb-6 leading-tight">Siap Mulai Verifikasi<br/>Tanpa Ribet?</h2>
+            <p className="text-indigo-100 text-lg mb-10">Daftar gratis sekarang. Tidak perlu kartu kredit. Langsung bisa beli nomor OTP pertama kamu.</p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button onClick={() => onNavigate('register')} className="flex items-center justify-center gap-2 px-8 py-4 bg-white text-indigo-600 font-black text-base rounded-2xl hover:bg-indigo-50 shadow-xl transition-all hover:-translate-y-0.5 active:scale-95">
+                Daftar Gratis Sekarang <ArrowRight className="w-5 h-5"/>
+              </button>
+              <button onClick={() => onNavigate('login')} className="flex items-center justify-center gap-2 px-8 py-4 border-2 border-white/30 text-white font-bold text-base rounded-2xl hover:bg-white/10 transition-all">
+                Sudah punya akun? Masuk
+              </button>
+            </div>
           </div>
-        </div>
+        </FadeInSection>
       </div>
 
-      <footer className="bg-white dark:bg-slate-900 pt-16 pb-8 border-t border-slate-200 dark:border-slate-800 text-center sm:text-left">
-        <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
-          <div className="md:pr-8">
-            <div className="flex items-center justify-center sm:justify-start mb-6">
-              <img src="/logo.png" className="h-10 w-10 rounded-xl object-cover" alt="Pusat Nokos" />
-              <span className="ml-2 text-xl font-black text-slate-900 dark:text-white">Pusat Nokos.</span>
+      <footer className="bg-white dark:bg-slate-900 pt-10 pb-5 border-t border-slate-200 dark:border-slate-800">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+            <div className="col-span-2 md:col-span-1 md:pr-6">
+              <div className="flex items-center mb-3">
+                <img src="/logo.png" className="h-8 w-8 rounded-xl object-cover" alt="Pusat Nokos" />
+                <span className="ml-2 text-base font-black text-slate-900 dark:text-white">Pusat Nokos.</span>
+              </div>
+              <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">Platform Nomor Kosong (Nokos) otomatis nomor 1 di Indonesia untuk verifikasi OTP yang aman dan terpercaya.</p>
             </div>
-            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Platform penyedia Nomor Kosong (Nokos) otomatis nomor 1 di Indonesia untuk verifikasi OTP yang aman dan terpercaya.</p>
+            <div>
+              <h4 className="font-bold text-slate-900 dark:text-white mb-3 uppercase text-xs tracking-wider">Layanan</h4>
+              <ul className="space-y-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                <li><a href="#demo" onClick={(e)=>scrollToId(e as any, 'demo')} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Daftar Harga Realtime</a></li>
+                <li><a href="#" onClick={() => {onNavigate('login'); showToast("Login untuk melakukan deposit");}} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Deposit Saldo</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900 dark:text-white mb-3 uppercase text-xs tracking-wider">Perusahaan</h4>
+              <ul className="space-y-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                <li><a href="#" onClick={(e)=>{e.preventDefault(); setShowSyarat(true);}} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Syarat & Ketentuan</a></li>
+                <li><a href="#" onClick={(e)=>{e.preventDefault(); setShowPrivasi(true);}} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Kebijakan Privasi</a></li>
+                <li><a href="#faq" onClick={(e)=>scrollToId(e as any, 'faq')} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Bantuan FAQ</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900 dark:text-white mb-3 uppercase text-xs tracking-wider">Hubungi Kami</h4>
+              <ul className="space-y-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                <li>
+                  <a href={`https://wa.me/${CS_WA}?text=Halo%20CS%20Pusat%20Nokos%2C%20saya%20butuh%20bantuan.`} target="_blank" rel="noopener noreferrer" className="flex items-center hover:text-green-600 dark:hover:text-green-400 transition-colors gap-1.5">
+                    <div className="w-3.5 h-3.5 shrink-0"><svg viewBox="0 0 24 24" fill="currentColor" className="text-green-500"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
+                    087862306726
+                  </a>
+                </li>
+                <li>
+                  <a href={`https://t.me/${CS_TELEGRAM.replace("@","")}`} target="_blank" rel="noopener noreferrer" className="flex items-center hover:text-blue-500 dark:hover:text-blue-400 transition-colors gap-1.5">
+                    <Send className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                    {CS_TELEGRAM}
+                  </a>
+                </li>
+                <li>
+                  <a href="mailto:cs@pusatnokos.com" className="flex items-center hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                    cs@pusatnokos.com
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
-          <div>
-            <h4 className="font-bold text-slate-900 dark:text-white mb-5 uppercase text-sm tracking-wider">Layanan</h4>
-            <ul className="space-y-3 text-sm text-slate-500 dark:text-slate-400 font-medium">
-              <li><a href="#demo" onClick={(e)=>scrollToId(e as any, 'demo')} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Daftar Harga Realtime</a></li>
-              <li><a href="#" onClick={() => {onNavigate('login'); showToast("Login untuk melakukan deposit");}} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Deposit Saldo</a></li>
-
-            </ul>
+          <div className="border-t border-slate-100 dark:border-slate-800 pt-4 flex flex-row justify-between items-center gap-2">
+            <div className="text-slate-400 dark:text-slate-500 text-xs">&copy; {new Date().getFullYear()} Pusat Nokos. Hak cipta dilindungi.</div>
+            <div className="flex gap-2 shrink-0">
+              <span className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded text-[10px] font-bold text-slate-500 dark:text-slate-400">E2E</span>
+              <span className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded text-[10px] font-bold text-slate-500 dark:text-slate-400">QRIS / VA</span>
+            </div>
           </div>
-          <div>
-            <h4 className="font-bold text-slate-900 dark:text-white mb-5 uppercase text-sm tracking-wider">Perusahaan</h4>
-            <ul className="space-y-3 text-sm text-slate-500 dark:text-slate-400 font-medium">
-              <li><a href="#" onClick={(e)=>{e.preventDefault(); setShowSyarat(true);}} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Syarat & Ketentuan</a></li>
-              <li><a href="#" onClick={(e)=>{e.preventDefault(); setShowPrivasi(true);}} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Kebijakan Privasi</a></li>
-              <li><a href="#faq" onClick={(e)=>scrollToId(e as any, 'faq')} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Bantuan FAQ</a></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-bold text-slate-900 dark:text-white mb-5 uppercase text-sm tracking-wider">Hubungi Kami</h4>
-            <ul className="space-y-3 text-sm text-slate-500 dark:text-slate-400 font-medium">
-              <li>
-                <a href={`https://wa.me/${CS_WA}?text=Halo%20CS%20Pusat%20Nokos%2C%20saya%20butuh%20bantuan.`} target="_blank" rel="noopener noreferrer" className="flex justify-center sm:justify-start items-center hover:text-green-600 dark:hover:text-green-400 transition-colors gap-2">
-                  <div className="w-4 h-4 shrink-0"><svg viewBox="0 0 24 24" fill="currentColor" className="text-green-500"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
-                  WhatsApp: 087862306726
-                </a>
-              </li>
-              <li>
-                <a href={`https://t.me/${CS_TELEGRAM.replace("@","")}`} target="_blank" rel="noopener noreferrer" className="flex justify-center sm:justify-start items-center hover:text-blue-500 dark:hover:text-blue-400 transition-colors gap-2">
-                  <Send className="w-4 h-4 text-blue-400 shrink-0" />
-                  Telegram: {CS_TELEGRAM}
-                </a>
-              </li>
-              <li>
-                <a href="mailto:cs@pusatnokos.com" className="flex justify-center sm:justify-start items-center hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors gap-2">
-                  <Mail className="w-4 h-4 text-indigo-400 shrink-0" />
-                  cs@pusatnokos.com
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div className="border-t border-slate-100 dark:border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center">
-           <div className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-4 md:mb-0">&copy; {new Date().getFullYear()} Pusat Nokos. Seluruh hak cipta dilindungi.</div>
-           <div className="flex space-x-3">
-              <span className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1 rounded text-xs font-bold text-slate-600 dark:text-slate-300">Terenskripsi E2E</span>
-              <span className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1 rounded text-xs font-bold text-slate-600 dark:text-slate-300">QRIS / VA</span>
-           </div>
         </div>
       </footer>
       {/* ── Modal Syarat & Ketentuan ─────────────────────────────── */}
@@ -1080,7 +1350,64 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
   const [otpCode,      setOtpCode]      = useState('');
   const [countdown,    setCountdown]    = useState(0);
 
+  // Cloudflare Turnstile
+  const [turnstileToken,     setTurnstileToken]     = useState<string | null>(null);
+  const turnstileLoginRef    = useRef<HTMLDivElement>(null);
+  const turnstileRegisterRef = useRef<HTMLDivElement>(null);
+  const turnstileLoginId     = useRef<string | null>(null);
+  const turnstileRegisterId  = useRef<string | null>(null);
+
   const isLogin = type === 'login';
+
+  // Load Turnstile script sekali
+  useEffect(() => {
+    if (document.getElementById('cf-turnstile-script')) return;
+    const s = document.createElement('script');
+    s.id  = 'cf-turnstile-script';
+    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+    s.async = true; s.defer = true;
+    document.head.appendChild(s);
+  }, []);
+
+  // Render widget Turnstile setiap kali step = 'form'
+  useEffect(() => {
+    if (step !== 'form') return;
+    const sitekey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
+    if (!sitekey) return;
+
+    const tryRender = () => {
+      const w = (window as any).turnstile;
+      if (!w) { setTimeout(tryRender, 300); return; }
+
+      if (isLogin && turnstileLoginRef.current && !turnstileLoginId.current) {
+        turnstileLoginId.current = w.render(turnstileLoginRef.current, {
+          sitekey,
+          theme   : isDarkMode ? 'dark' : 'light',
+          callback: (token: string) => setTurnstileToken(token),
+          'expired-callback': () => setTurnstileToken(null),
+          'error-callback'  : () => setTurnstileToken(null),
+        });
+      }
+      if (!isLogin && turnstileRegisterRef.current && !turnstileRegisterId.current) {
+        turnstileRegisterId.current = w.render(turnstileRegisterRef.current, {
+          sitekey,
+          theme   : isDarkMode ? 'dark' : 'light',
+          callback: (token: string) => setTurnstileToken(token),
+          'expired-callback': () => setTurnstileToken(null),
+          'error-callback'  : () => setTurnstileToken(null),
+        });
+      }
+    };
+    tryRender();
+
+    return () => {
+      const w = (window as any).turnstile;
+      if (!w) return;
+      if (turnstileLoginId.current)    { w.remove(turnstileLoginId.current);    turnstileLoginId.current    = null; }
+      if (turnstileRegisterId.current) { w.remove(turnstileRegisterId.current); turnstileRegisterId.current = null; }
+      setTurnstileToken(null);
+    };
+  }, [step, isLogin, isDarkMode]);
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -1093,11 +1420,12 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
     e.preventDefault();
     setError('');
     if (!email || !password) { setError('Email dan password wajib diisi.'); return; }
+    if (!turnstileToken) { setError('Harap selesaikan verifikasi CAPTCHA.'); return; }
     setIsLoading(true);
     try {
       const res  = await fetch('/api/auth/login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, turnstileToken }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Email atau password salah.'); return; }
@@ -1114,11 +1442,12 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
     if (!name)  { setError('Nama wajib diisi.'); return; }
     if (password.length < 6) { setError('Password minimal 6 karakter.'); return; }
     if (password !== confirmPass) { setError('Konfirmasi password tidak cocok.'); return; }
+    if (!turnstileToken) { setError('Harap selesaikan verifikasi CAPTCHA.'); return; }
     setIsLoading(true);
     try {
       const res  = await fetch('/api/auth/register', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({ email, password, name, turnstileToken }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Gagal mendaftar.'); return; }
@@ -1285,7 +1614,9 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
               </div>
             </div>
             <ErrorBox />
-            <button type="submit" disabled={isLoading} className={btnCls(isLoading)}>
+            {/* Cloudflare Turnstile */}
+            <div ref={turnstileLoginRef} className="flex justify-center" />
+            <button type="submit" disabled={isLoading || !turnstileToken} className={btnCls(isLoading)}>
               {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2"/> : null}
               {isLoading ? "Memproses..." : "Masuk ke Dashboard"}
             </button>
@@ -1322,7 +1653,9 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
               </div>
             </div>
             <ErrorBox />
-            <button type="submit" disabled={isLoading} className={btnCls(isLoading)}>
+            {/* Cloudflare Turnstile */}
+            <div ref={turnstileRegisterRef} className="flex justify-center" />
+            <button type="submit" disabled={isLoading || !turnstileToken} className={btnCls(isLoading)}>
               {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2"/> : null}
               {isLoading ? "Mengirim Kode..." : "Daftar Sekarang"}
             </button>
@@ -1601,10 +1934,15 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
               o.id === order.id ? { ...o, status: 'cancelled', timeLeft: 0 } : o
             ));
             fetch('/api/user/orders', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activationId: order.activationId, status: 'cancelled' }) }).catch(() => {});
+            // Refund otomatis saat provider cancel
+            updateBalance(order.price, 'add');
+            setMutasi(prev => [{ id: Date.now(), date: new Date().toLocaleString('id-ID'), type: 'in', amount: order.price, desc: 'Refund Batal: ' + order.serviceName }, ...prev]);
+            showToast(`Nomor ${order.serviceName} dibatalkan provider. Saldo Rp ${order.price.toLocaleString('id-ID')} dikembalikan.`);
+            addNotif(`↩ Refund Rp ${order.price.toLocaleString('id-ID')} untuk ${order.serviceName} berhasil dikembalikan.`);
           }
         } catch { /* abaikan error jaringan sementara */ }
       }
-    }, 5000);
+    }, 3000);
 
     return () => {
       es?.close();
@@ -2673,33 +3011,43 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         <SortDropdown value={sortOrder} onChange={setSortOrder} />
       </div>
 
-      {/* ── MOBILE Filter (compact) ───────────────────────────────── */}
-      <div className="md:hidden bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2.5 z-10 transition-colors">
-        {/* Baris 1: Negara + Urutkan */}
-        <div className="flex gap-2">
-          <MobileCountryChip countries={countries} value={selectedCountry} onChange={setSelectedCountry} />
-          <MobileSortChip value={sortOrder} onChange={setSortOrder} />
+      {/* ── MOBILE: Filter + Kategori STICKY ────────────────────────── */}
+      <div className="md:hidden sticky top-[80px] z-20 -mx-4 px-4 pt-2 pb-1 bg-[#fafafa] dark:bg-[#020617]">
+        {/* Filter bar */}
+        <div className="bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2.5 mb-2">
+          <div className="flex gap-2">
+            <MobileCountryChip countries={countries} value={selectedCountry} onChange={setSelectedCountry} />
+            <MobileSortChip value={sortOrder} onChange={setSortOrder} />
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 dark:text-slate-500" />
+            <input type="text" placeholder="Cari layanan..." className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/50 outline-none text-sm font-medium transition-all dark:text-white" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          </div>
         </div>
-        {/* Baris 2: Search */}
+        {/* Kategori tabs */}
         <div className="relative">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 dark:text-slate-500" />
-          <input type="text" placeholder="Cari layanan..." className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/50 outline-none text-sm font-medium transition-all dark:text-white" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          <div className="pointer-events-none absolute right-0 top-0 bottom-2 w-10 bg-gradient-to-l from-[#fafafa] dark:from-[#020617] to-transparent z-10" />
+          <div className="flex overflow-x-auto gap-2 pb-2" style={{scrollbarWidth:'none', msOverflowStyle:'none', WebkitOverflowScrolling:'touch'}}>
+            {CATEGORIES.map(cat => (
+              <button key={cat} onClick={() => setActiveCategory(cat)}
+                className={"flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border-2 transition-all " + (activeCategory === cat ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700')}>
+                {cat}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="relative">
-        {/* Fade gradient right edge */}
+      {/* ── DESKTOP Kategori tabs ─────────────────────────────────── */}
+      <div className="hidden md:block relative">
         <div className="pointer-events-none absolute right-0 top-0 bottom-2 w-12 bg-gradient-to-l from-[#fafafa] dark:from-[#020617] to-transparent z-10" />
         <div className="flex overflow-x-auto gap-3 pb-2 px-1" style={{scrollbarWidth:'none', msOverflowStyle:'none', WebkitOverflowScrolling:'touch'}}>
-        {CATEGORIES.map(cat => (
-          <button 
-            key={cat} 
-            onClick={() => setActiveCategory(cat)} 
-            className={"flex-shrink-0 px-6 py-3 rounded-xl text-sm font-bold whitespace-nowrap border-2 transition-all " + (activeCategory === cat ? 'bg-indigo-600 dark:bg-indigo-600 text-white border-indigo-600 dark:border-indigo-600 shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500')}
-          >
-            {cat}
-          </button>
-        ))}
+          {CATEGORIES.map(cat => (
+            <button key={cat} onClick={() => setActiveCategory(cat)}
+              className={"flex-shrink-0 px-6 py-3 rounded-xl text-sm font-bold whitespace-nowrap border-2 transition-all " + (activeCategory === cat ? 'bg-indigo-600 dark:bg-indigo-600 text-white border-indigo-600 dark:border-indigo-600 shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500')}>
+              {cat}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -2802,7 +3150,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
           </div>
 
           {/* ===== MOBILE: Card layout ===== */}
-          <div className="md:hidden flex flex-col min-h-[400px] max-h-[70vh] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="md:hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
             {isLoadingData ? (
               [...Array(6)].map((_, i) => (
                 <div key={i} className="flex items-center gap-3 p-4 animate-pulse">
@@ -3715,18 +4063,18 @@ function HistoryView({ orders }: HistoryViewProps) {
       {/* Header + Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">Riwayat Transaksi</h1>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 overflow-x-auto pb-1" style={{scrollbarWidth:'none', msOverflowStyle:'none'}}>
           {[
-            { value: '',          label: 'Semua Status', color: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700' },
-            { value: 'success',   label: '✅ Berhasil',   color: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50' },
-            { value: 'waiting',   label: '⏳ Menunggu',   color: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800/50' },
-            { value: 'cancelled', label: '❌ Dibatalkan', color: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/50' },
-            { value: 'expired',   label: '🕐 Kadaluarsa', color: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-600' },
+            { value: '',          label: 'Semua',       color: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700' },
+            { value: 'success',   label: '✅ Berhasil',  color: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50' },
+            { value: 'waiting',   label: '⏳ Menunggu',  color: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800/50' },
+            { value: 'cancelled', label: '❌ Batal',     color: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/50' },
+            { value: 'expired',   label: '🕐 Kadaluarsa',color: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-600' },
           ].map(opt => (
             <button
               key={opt.value}
               onClick={() => setFilterStatus(opt.value)}
-              className={`px-4 py-2 rounded-xl text-xs font-black border-2 transition-all whitespace-nowrap ${
+              className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-black border-2 transition-all whitespace-nowrap ${
                 filterStatus === opt.value
                   ? opt.color + ' ring-2 ring-offset-1 ring-indigo-400'
                   : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'
@@ -3739,7 +4087,9 @@ function HistoryView({ orders }: HistoryViewProps) {
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
-        <div className="overflow-x-auto min-h-[300px]">
+
+        {/* ===== DESKTOP: Tabel ===== */}
+        <div className="hidden md:block overflow-x-auto min-h-[300px]">
           <table className="w-full text-left">
             <thead className="bg-slate-50/80 dark:bg-slate-950/80 border-b border-slate-100 dark:border-slate-800">
               <tr>
@@ -3750,121 +4100,42 @@ function HistoryView({ orders }: HistoryViewProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {/* Skeleton loading */}
               {isLoading && apiHistory.length === 0 ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td className="p-5 sm:px-6">
-                      <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded-lg w-32 mb-2"></div>
-                      <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-24"></div>
-                    </td>
-                    <td className="p-5 sm:px-6">
-                      <div className="h-8 bg-slate-100 dark:bg-slate-800 rounded-lg w-44"></div>
-                    </td>
-                    <td className="p-5 sm:px-6 text-right">
-                      <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-lg w-20 ml-auto"></div>
-                    </td>
-                    <td className="p-5 sm:px-6 text-right">
-                      <div className="h-8 bg-slate-100 dark:bg-slate-800 rounded-lg w-24 ml-auto"></div>
-                    </td>
+                    <td className="p-5 sm:px-6"><div className="h-5 bg-slate-200 dark:bg-slate-700 rounded-lg w-32 mb-2"></div><div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-24"></div></td>
+                    <td className="p-5 sm:px-6"><div className="h-8 bg-slate-100 dark:bg-slate-800 rounded-lg w-44"></div></td>
+                    <td className="p-5 sm:px-6 text-right"><div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-lg w-20 ml-auto"></div></td>
+                    <td className="p-5 sm:px-6 text-right"><div className="h-8 bg-slate-100 dark:bg-slate-800 rounded-lg w-24 ml-auto"></div></td>
                   </tr>
                 ))
               ) : localOnly.length === 0 && apiHistory.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="py-24 text-center">
-                    <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <History className="w-10 h-10 text-slate-300 dark:text-slate-500"/>
-                    </div>
-                    <p className="font-extrabold text-slate-800 dark:text-slate-200 text-lg">Belum ada riwayat.</p>
-                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">Transaksi yang Anda lakukan akan muncul di sini.</p>
-                  </td>
-                </tr>
+                <tr><td colSpan={4} className="py-24 text-center">
+                  <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-full flex items-center justify-center mx-auto mb-4"><History className="w-10 h-10 text-slate-300 dark:text-slate-500"/></div>
+                  <p className="font-extrabold text-slate-800 dark:text-slate-200 text-lg">Belum ada riwayat.</p>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">Transaksi yang Anda lakukan akan muncul di sini.</p>
+                </td></tr>
               ) : (
                 <>
-                  {/* Baris sesi ini (lokal, belum ada di API) — dengan filter status */}
-                  {localOnly
-                    .filter(o => !filterStatus || o.status === filterStatus)
-                    .map(o => (
+                  {localOnly.filter(o => !filterStatus || o.status === filterStatus).map(o => (
                     <tr key={'local-' + o.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                      <td className="p-5 sm:px-6">
-                        <div className="font-bold text-base text-slate-900 dark:text-white">{o.serviceName}</div>
-                        <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{o.date}</div>
-                      </td>
-                      <td className="p-5 sm:px-6">
-                        <span className="font-mono font-bold text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg dark:text-slate-300">{o.number}</span>
-                        {o.otpCode && (
-                          <span className="text-sm font-black text-green-700 dark:text-green-400 ml-3 inline-flex items-center">
-                            OTP: <span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 ml-1.5 tracking-widest">{o.otpCode}</span>
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-5 sm:px-6 text-right">
-                        <span className={"px-3.5 py-1.5 text-[11px] font-black rounded-lg border uppercase tracking-wider " + (STATUS_COLOR[o.status] ?? STATUS_COLOR['cancelled'])}>
-                          {o.status === 'cancelled' ? 'BATAL' : o.status === 'waiting' ? 'MENUNGGU' : o.status === 'success' ? 'BERHASIL' : 'KADALUARSA'}
-                        </span>
-                      </td>
+                      <td className="p-5 sm:px-6"><div className="font-bold text-base text-slate-900 dark:text-white">{o.serviceName}</div><div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{o.date}</div></td>
+                      <td className="p-5 sm:px-6"><span className="font-mono font-bold text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg dark:text-slate-300">{o.number}</span>{o.otpCode && <span className="text-sm font-black text-green-700 dark:text-green-400 ml-3 inline-flex items-center">OTP: <span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 ml-1.5 tracking-widest">{o.otpCode}</span></span>}</td>
+                      <td className="p-5 sm:px-6 text-right"><span className={"px-3.5 py-1.5 text-[11px] font-black rounded-lg border uppercase tracking-wider " + (STATUS_COLOR[o.status] ?? STATUS_COLOR['cancelled'])}>{o.status === 'cancelled' ? 'BATAL' : o.status === 'waiting' ? 'MENUNGGU' : o.status === 'success' ? 'BERHASIL' : 'KADALUARSA'}</span></td>
                       <td className="p-5 sm:px-6 text-right">—</td>
                     </tr>
                   ))}
-
-                  {/* Baris dari /api/history */}
                   {apiHistory.map(a => (
                     <tr key={'api-' + a.activationId} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                      <td className="p-5 sm:px-6">
-                        <div className="font-bold text-base text-slate-900 dark:text-white uppercase">{a.service}</div>
-                        <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{a.createdAt ?? '—'}</div>
-                      </td>
-                      <td className="p-5 sm:px-6">
-                        <span className="font-mono font-bold text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg dark:text-slate-300">{a.phone}</span>
-                        {a.otpCode && (
-                          <span className="text-sm font-black text-green-700 dark:text-green-400 ml-3 inline-flex items-center">
-                            OTP: <span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 ml-1.5 tracking-widest">{a.otpCode}</span>
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-5 sm:px-6 text-right">
-                        <div className="flex items-center justify-end gap-2 flex-wrap">
-                          <span className={"px-3.5 py-1.5 text-[11px] font-black rounded-lg border uppercase tracking-wider " + (STATUS_COLOR[a.status] ?? STATUS_COLOR['cancelled'])}>
-                            {a.statusLabel}
-                          </span>
-                        </div>
-                      </td>
+                      <td className="p-5 sm:px-6"><div className="font-bold text-base text-slate-900 dark:text-white uppercase">{a.service}</div><div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{a.createdAt ?? '—'}</div></td>
+                      <td className="p-5 sm:px-6"><span className="font-mono font-bold text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg dark:text-slate-300">{a.phone}</span>{a.otpCode && <span className="text-sm font-black text-green-700 dark:text-green-400 ml-3 inline-flex items-center">OTP: <span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 ml-1.5 tracking-widest">{a.otpCode}</span></span>}</td>
+                      <td className="p-5 sm:px-6 text-right"><span className={"px-3.5 py-1.5 text-[11px] font-black rounded-lg border uppercase tracking-wider " + (STATUS_COLOR[a.status] ?? STATUS_COLOR['cancelled'])}>{a.statusLabel}</span></td>
                       <td className="p-5 sm:px-6 text-right">
                         {a.status === 'success' && a.activationId && (
-                          <button
-                            disabled={reactivating === a.activationId}
-                            onClick={async () => {
-                              setReactivating(a.activationId);
-                              try {
-                                const costRes  = await fetch(`/api/reactivation?id=${a.activationId}`);
-                                const costData = await costRes.json();
-                                if (!costRes.ok) {
-                                  const e = typeof costData.error === 'string' ? costData.error.toLowerCase() : '';
-                                  const expired = e.includes('404') || e.includes('upstream') || e.includes('server') || e.includes('not found') || e.includes('invalid');
-                                  showHistoryToast(expired
-                                    ? 'Nomor ini sudah kadaluarsa di provider dan tidak bisa diaktifkan ulang. Beli nomor baru untuk layanan ini.'
-                                    : (costData.error ?? 'Gagal cek harga reaktivasi.'));
-                                  return;
-                                }
-                                const confirm = window.confirm(`Pakai nomor ${a.phone} lagi?\nBiaya: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`);
-                                if (!confirm) return;
-                                const res  = await fetch('/api/reactivation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: a.activationId, service: a.service }) });
-                                const data = await res.json();
-                                if (!res.ok) {
-                                  const e2 = typeof data.error === 'string' ? data.error.toLowerCase() : '';
-                                  showHistoryToast(e2.includes('upstream') || e2.includes('server')
-                                    ? 'Reaktivasi gagal — nomor sudah kadaluarsa. Beli nomor baru.'
-                                    : (data.error ?? 'Gagal reaktivasi.'));
-                                  return;
-                                }
-                                showHistoryToast(`Berhasil! Nomor ${data.phone} siap dipakai lagi.`);
-                              } catch { showHistoryToast('Kesalahan jaringan. Coba lagi.'); }
-                              finally { setReactivating(null); }
-                            }}
-                            className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 rounded-lg text-[11px] font-black hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 transition-colors disabled:opacity-50 flex items-center gap-1"
-                          >
-                            {reactivating === a.activationId ? <RefreshCw className="w-3 h-3 animate-spin" /> : null}
-                            Pakai Lagi
+                          <button disabled={reactivating === a.activationId}
+                            onClick={async () => { setReactivating(a.activationId); try { const costRes = await fetch(`/api/reactivation?id=${a.activationId}`); const costData = await costRes.json(); if (!costRes.ok) { const e = typeof costData.error === 'string' ? costData.error.toLowerCase() : ''; showHistoryToast(e.includes('404')||e.includes('upstream')||e.includes('server')||e.includes('not found')||e.includes('invalid') ? 'Nomor sudah kadaluarsa. Beli nomor baru.' : (costData.error ?? 'Gagal cek harga.')); return; } const confirm = window.confirm(`Pakai nomor ${a.phone} lagi?\nBiaya: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`); if (!confirm) return; const res = await fetch('/api/reactivation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: a.activationId, service: a.service }) }); const data = await res.json(); if (!res.ok) { const e2 = typeof data.error === 'string' ? data.error.toLowerCase() : ''; showHistoryToast(e2.includes('upstream')||e2.includes('server') ? 'Reaktivasi gagal — nomor kadaluarsa.' : (data.error ?? 'Gagal reaktivasi.')); return; } showHistoryToast(`Berhasil! Nomor ${data.phone} siap dipakai lagi.`); } catch { showHistoryToast('Kesalahan jaringan.'); } finally { setReactivating(null); } }}
+                            className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 rounded-lg text-[11px] font-black hover:bg-indigo-600 hover:text-white transition-colors disabled:opacity-50 flex items-center gap-1">
+                            {reactivating === a.activationId ? <RefreshCw className="w-3 h-3 animate-spin" /> : null}Pakai Lagi
                           </button>
                         )}
                       </td>
@@ -3875,13 +4146,61 @@ function HistoryView({ orders }: HistoryViewProps) {
             </tbody>
           </table>
         </div>
+
+        {/* ===== MOBILE: Card layout ===== */}
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800 min-h-[200px]">
+          {isLoading && apiHistory.length === 0 ? (
+            [...Array(4)].map((_, i) => (
+              <div key={i} className="p-4 animate-pulse space-y-2">
+                <div className="flex justify-between"><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-28"></div><div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-20"></div></div>
+                <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-20"></div>
+                <div className="h-7 bg-slate-100 dark:bg-slate-800 rounded-lg w-36"></div>
+              </div>
+            ))
+          ) : localOnly.length === 0 && apiHistory.length === 0 ? (
+            <div className="py-20 text-center px-4">
+              <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-full flex items-center justify-center mx-auto mb-3"><History className="w-8 h-8 text-slate-300 dark:text-slate-500"/></div>
+              <p className="font-extrabold text-slate-800 dark:text-slate-200">Belum ada riwayat.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Transaksi yang Anda lakukan akan muncul di sini.</p>
+            </div>
+          ) : (
+            <>
+              {localOnly.filter(o => !filterStatus || o.status === filterStatus).map(o => (
+                <div key={'m-local-' + o.id} className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div><div className="font-bold text-sm text-slate-900 dark:text-white">{o.serviceName}</div><div className="text-xs text-slate-400 mt-0.5">{o.date}</div></div>
+                    <span className={"px-2.5 py-1 text-[10px] font-black rounded-lg border uppercase shrink-0 " + (STATUS_COLOR[o.status] ?? STATUS_COLOR['cancelled'])}>{o.status === 'cancelled' ? 'BATAL' : o.status === 'waiting' ? 'MENUNGGU' : o.status === 'success' ? 'BERHASIL' : 'KADALUARSA'}</span>
+                  </div>
+                  <div className="font-mono text-xs bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 inline-block">{o.number}</div>
+                  {o.otpCode && <div className="flex items-center gap-1.5 text-xs font-black text-green-700 dark:text-green-400">OTP: <span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 tracking-widest">{o.otpCode}</span></div>}
+                </div>
+              ))}
+              {apiHistory.map(a => (
+                <div key={'m-api-' + a.activationId} className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div><div className="font-bold text-sm text-slate-900 dark:text-white uppercase">{a.service}</div><div className="text-xs text-slate-400 mt-0.5">{a.createdAt ?? '—'}</div></div>
+                    <span className={"px-2.5 py-1 text-[10px] font-black rounded-lg border uppercase shrink-0 " + (STATUS_COLOR[a.status] ?? STATUS_COLOR['cancelled'])}>{a.statusLabel}</span>
+                  </div>
+                  <div className="font-mono text-xs bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 inline-block">{a.phone}</div>
+                  {a.otpCode && <div className="flex items-center gap-1.5 text-xs font-black text-green-700 dark:text-green-400">OTP: <span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 tracking-widest">{a.otpCode}</span></div>}
+                  {a.status === 'success' && a.activationId && (
+                    <button disabled={reactivating === a.activationId}
+                      onClick={async () => { setReactivating(a.activationId); try { const costRes = await fetch(`/api/reactivation?id=${a.activationId}`); const costData = await costRes.json(); if (!costRes.ok) { const e = typeof costData.error === 'string' ? costData.error.toLowerCase() : ''; showHistoryToast(e.includes('404')||e.includes('upstream')||e.includes('server') ? 'Nomor sudah kadaluarsa. Beli nomor baru.' : (costData.error ?? 'Gagal cek harga.')); return; } const confirm = window.confirm(`Pakai nomor ${a.phone} lagi?\nBiaya: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`); if (!confirm) return; const res = await fetch('/api/reactivation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: a.activationId, service: a.service }) }); const data = await res.json(); if (!res.ok) { const e2 = typeof data.error === 'string' ? data.error.toLowerCase() : ''; showHistoryToast(e2.includes('upstream')||e2.includes('server') ? 'Reaktivasi gagal — nomor kadaluarsa.' : (data.error ?? 'Gagal reaktivasi.')); return; } showHistoryToast(`Berhasil! Nomor ${data.phone} siap dipakai lagi.`); } catch { showHistoryToast('Kesalahan jaringan.'); } finally { setReactivating(null); } }}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 rounded-xl text-xs font-black active:scale-95 transition-all disabled:opacity-50">
+                      {reactivating === a.activationId ? <RefreshCw className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}Pakai Lagi
+                    </button>
+                  )}
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+
         {/* Load more */}
         {hasMore && !isLoading && (
           <div className="p-5 border-t border-slate-100 dark:border-slate-800 text-center">
-            <button
-              onClick={() => { const next = page + 1; setPage(next); fetchHistory(next, filterStatus); }}
-              className="px-8 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl text-sm font-bold transition-colors border border-slate-200 dark:border-slate-700"
-            >
+            <button onClick={() => { const next = page + 1; setPage(next); fetchHistory(next, filterStatus); }}
+              className="px-8 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl text-sm font-bold transition-colors border border-slate-200 dark:border-slate-700">
               Muat Lebih Banyak
             </button>
           </div>
@@ -3960,34 +4279,34 @@ function MutasiView({ mutasi, user }: MutasiViewProps) {
           <table className="w-full text-left">
             <thead className="bg-slate-50/80 dark:bg-slate-950/80 border-b border-slate-100 dark:border-slate-800">
               <tr>
-                <th className="p-5 sm:px-6 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Waktu & Deskripsi</th>
-                <th className="p-5 sm:px-6 text-right text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Nominal Saldo</th>
+                <th className="p-3 sm:p-5 sm:px-6 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Waktu & Deskripsi</th>
+                <th className="p-3 sm:p-5 sm:px-6 text-right text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Nominal</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {isLoading && dbMutasi.length === 0 ? (
                 [...Array(4)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td className="p-5 sm:px-6"><div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-48 mb-2"></div><div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-24"></div></td>
-                    <td className="p-5 sm:px-6 text-right"><div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-full w-24 ml-auto"></div></td>
+                    <td className="p-3 sm:p-5 sm:px-6"><div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-48 mb-2"></div><div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-24"></div></td>
+                    <td className="p-3 sm:p-5 sm:px-6 text-right"><div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-full w-24 ml-auto"></div></td>
                   </tr>
                 ))
               ) : allMutasi.length === 0 ? (
                 <tr>
-                  <td colSpan={2} className="py-24 text-center">
-                    <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-full flex items-center justify-center mx-auto mb-4"><Receipt className="w-10 h-10 text-slate-300 dark:text-slate-500"/></div>
-                    <p className="font-extrabold text-slate-800 dark:text-slate-200 text-lg">Belum ada mutasi.</p>
-                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">Buku kas akan terisi saat Anda deposit atau membeli nomor.</p>
+                  <td colSpan={2} className="py-20 text-center">
+                    <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-full flex items-center justify-center mx-auto mb-3"><Receipt className="w-8 h-8 text-slate-300 dark:text-slate-500"/></div>
+                    <p className="font-extrabold text-slate-800 dark:text-slate-200">Belum ada mutasi.</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Buku kas akan terisi saat Anda deposit atau membeli nomor.</p>
                   </td>
                 </tr>
               ) : allMutasi.map((m, idx) => (
                 <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                  <td className="p-5 sm:px-6">
-                    <div className="font-bold text-base text-slate-900 dark:text-white">{m.desc}</div>
-                    <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{m.date}</div>
+                  <td className="p-3 sm:p-5 sm:px-6">
+                    <div className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">{m.desc}</div>
+                    <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">{m.date}</div>
                   </td>
-                  <td className="p-5 sm:px-6 text-right">
-                    <span className={"px-3.5 py-1.5 text-sm font-black rounded-lg border " + (m.type === 'in' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/50')}>
+                  <td className="p-3 sm:p-5 sm:px-6 text-right">
+                    <span className={"px-2.5 py-1 sm:px-3.5 sm:py-1.5 text-xs sm:text-sm font-black rounded-lg border whitespace-nowrap " + (m.type === 'in' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/50')}>
                       {m.type === 'in' ? '+' : '-'} Rp {m.amount.toLocaleString('id-ID')}
                     </span>
                   </td>
@@ -4029,6 +4348,34 @@ interface ProfileViewProps {
 function ProfileView({ user, showToast }: ProfileViewProps) {
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  // Info akun
+  const [accountInfo, setAccountInfo] = useState<{ joinedAt: string; totalOrders: number; totalSpend: number } | null>(null);
+  const [loadingInfo, setLoadingInfo] = useState(true);
+
+  // Ganti password
+  const [oldPass,     setOldPass]     = useState('');
+  const [newPass,     setNewPass]     = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [showOld,     setShowOld]     = useState(false);
+  const [showNew,     setShowNew]     = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [passLoading, setPassLoading] = useState(false);
+  const [passError,   setPassError]   = useState('');
+
+  useEffect(() => {
+    if (!user?.email) return;
+    const fetchInfo = async () => {
+      setLoadingInfo(true);
+      try {
+        const r = await fetch(`/api/user/account-info?email=${encodeURIComponent(user.email)}`);
+        const d = await r.json();
+        setAccountInfo(d);
+      } catch {}
+      finally { setLoadingInfo(false); }
+    };
+    fetchInfo();
+  }, [user?.email]);
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -4036,7 +4383,35 @@ function ProfileView({ user, showToast }: ProfileViewProps) {
       setIsLoading(false);
       showToast("Pengaturan profil berhasil disimpan!");
     }, 1000);
-  }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPassError('');
+    if (newPass.length < 8) { setPassError('Password baru minimal 8 karakter.'); return; }
+    if (newPass !== confirmPass) { setPassError('Konfirmasi password tidak cocok.'); return; }
+    setPassLoading(true);
+    try {
+      const r = await fetch('/api/user/change-password', {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ email: user?.email, oldPassword: oldPass, newPassword: newPass }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        showToast('Password berhasil diubah!');
+        setOldPass(''); setNewPass(''); setConfirmPass('');
+      } else {
+        setPassError(d.message ?? 'Gagal mengubah password.');
+      }
+    } catch {
+      setPassError('Terjadi kesalahan. Coba lagi.');
+    } finally {
+      setPassLoading(false);
+    }
+  };
+
+  const inputCls = "w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500/50 text-base transition-colors";
 
   return (
     <div className="max-w-3xl space-y-6 mx-auto pb-10">
@@ -4047,36 +4422,177 @@ function ProfileView({ user, showToast }: ProfileViewProps) {
         <h1 className="text-xl font-extrabold text-slate-900 dark:text-white">Pengaturan Akun</h1>
       </div>
       <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">Pengaturan Akun</h1>
-      
-      <div className="grid grid-cols-1 gap-8">
-        <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800 p-6 md:p-10 h-fit max-w-3xl transition-colors">
-          <div className="flex flex-col sm:flex-row items-center sm:space-x-8 mb-10 text-center sm:text-left">
-            <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-3xl flex items-center justify-center text-3xl font-black border-2 border-indigo-100 dark:border-indigo-800 shadow-sm mb-4 sm:mb-0">
-              {user?.name?.charAt(0).toUpperCase() || 'U'}
+
+      {/* ── Info Profil ── */}
+      <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800 p-6 md:p-10 transition-colors">
+        <div className="flex flex-col sm:flex-row items-center sm:space-x-8 mb-10 text-center sm:text-left">
+          <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-3xl flex items-center justify-center text-3xl font-black border-2 border-indigo-100 dark:border-indigo-800 shadow-sm mb-4 sm:mb-0">
+            {user?.name?.charAt(0).toUpperCase() || 'U'}
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white">{user?.name}</h2>
+            <p className="text-slate-500 dark:text-slate-400 font-bold flex items-center justify-center sm:justify-start mt-1.5 text-sm">
+              <Mail className="w-4 h-4 mr-2 text-slate-400 dark:text-slate-500"/> {user?.email}
+            </p>
+            <div className="flex gap-2 mt-3 justify-center sm:justify-start">
+              <span className="inline-flex items-center bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 text-green-700 dark:text-green-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md">
+                <CheckCircle className="w-3 h-3 mr-1"/> Verified
+              </span>
             </div>
-            <div>
-              <h2 className="text-2xl font-black text-slate-900 dark:text-white">{user?.name}</h2>
-              <p className="text-slate-500 dark:text-slate-400 font-bold flex items-center justify-center sm:justify-start mt-1.5 text-sm"><Mail className="w-4 h-4 mr-2 text-slate-400 dark:text-slate-500"/> {user?.email}</p>
-              <div className="flex gap-2 mt-3 justify-center sm:justify-start">
-                <span className="inline-flex items-center bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 text-green-700 dark:text-green-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md">
-                  <CheckCircle className="w-3 h-3 mr-1"/> Verified
-                </span>
+          </div>
+        </div>
+        <form className="space-y-6 pt-8 border-t border-slate-100 dark:border-slate-800" onSubmit={handleSave}>
+          <div>
+            <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">Nama Lengkap</label>
+            <input type="text" className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none font-bold text-slate-500 dark:text-slate-400 cursor-not-allowed text-base" defaultValue={user?.name} disabled />
+          </div>
+          <div className="pt-2">
+            <button type="submit" disabled={isLoading} className="bg-slate-900 dark:bg-indigo-600 text-white font-bold text-sm px-8 py-4 rounded-2xl hover:bg-indigo-600 dark:hover:bg-indigo-700 transition-all active:scale-95 shadow-lg w-full sm:w-auto flex justify-center items-center">
+              {isLoading ? <RefreshCw className="w-4 h-4 animate-spin mr-2"/> : null}
+              Perbarui Profil
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* ── Info Akun ── */}
+      <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800 p-6 md:p-10 transition-colors">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="bg-indigo-50 dark:bg-indigo-900/30 p-2.5 rounded-xl">
+            <Activity className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <h3 className="text-base font-black text-slate-900 dark:text-white">Informasi Akun</h3>
+        </div>
+        {loadingInfo ? (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5 animate-pulse">
+                <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-20 mb-3" />
+                <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-28" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5">
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Bergabung Sejak</div>
+              <div className="text-base font-black text-slate-900 dark:text-white">
+                {accountInfo?.joinedAt
+                  ? new Date(accountInfo.joinedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+                  : '—'}
+              </div>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5">
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Total Order</div>
+              <div className="text-base font-black text-slate-900 dark:text-white">
+                {accountInfo ? `${accountInfo.totalOrders} order` : '—'}
+              </div>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5">
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Total Pembelian</div>
+              <div className="text-base font-black text-indigo-600 dark:text-indigo-400">
+                {accountInfo ? `Rp ${accountInfo.totalSpend.toLocaleString('id-ID')}` : '—'}
               </div>
             </div>
           </div>
-          <form className="space-y-6 pt-8 border-t border-slate-100 dark:border-slate-800" onSubmit={handleSave}>
-            <div>
-              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">Nama Lengkap</label>
-              <input type="text" className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none font-bold text-slate-500 dark:text-slate-400 cursor-not-allowed text-base" defaultValue={user?.name} disabled />
-            </div>
-            <div className="pt-2">
-              <button type="submit" disabled={isLoading} className="bg-slate-900 dark:bg-indigo-600 text-white font-bold text-sm px-8 py-4 rounded-2xl hover:bg-indigo-600 dark:hover:bg-indigo-700 transition-all active:scale-95 shadow-lg w-full sm:w-auto flex justify-center items-center">
-                {isLoading ? <RefreshCw className="w-4 h-4 animate-spin mr-2"/> : null}
-                Perbarui Profil
+        )}
+      </div>
+
+      {/* ── Ganti Password ── */}
+      <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800 p-6 md:p-10 transition-colors">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="bg-amber-50 dark:bg-amber-900/30 p-2.5 rounded-xl">
+            <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+          </div>
+          <h3 className="text-base font-black text-slate-900 dark:text-white">Ganti Password</h3>
+        </div>
+        <form className="space-y-4" onSubmit={handleChangePassword}>
+          {/* Password Lama */}
+          <div>
+            <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">Password Saat Ini</label>
+            <div className="relative">
+              <input
+                type={showOld ? 'text' : 'password'}
+                value={oldPass}
+                onChange={e => setOldPass(e.target.value)}
+                placeholder="••••••••"
+                required
+                className={inputCls + ' pr-12'}
+              />
+              <button type="button" onClick={() => setShowOld(v => !v)} className="absolute right-4 top-4 text-slate-400 hover:text-indigo-600 transition-colors">
+                {showOld ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
-          </form>
-        </div>
+          </div>
+          {/* Password Baru */}
+          <div>
+            <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">Password Baru</label>
+            <div className="relative">
+              <input
+                type={showNew ? 'text' : 'password'}
+                value={newPass}
+                onChange={e => setNewPass(e.target.value)}
+                placeholder="Min. 8 karakter"
+                required
+                className={inputCls + ' pr-12'}
+              />
+              <button type="button" onClick={() => setShowNew(v => !v)} className="absolute right-4 top-4 text-slate-400 hover:text-indigo-600 transition-colors">
+                {showNew ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+            {/* Strength indicator */}
+            {newPass.length > 0 && (
+              <div className="mt-2 flex gap-1.5">
+                {[1,2,3,4].map(i => (
+                  <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${
+                    newPass.length >= i * 3
+                      ? i <= 1 ? 'bg-red-400' : i <= 2 ? 'bg-amber-400' : i <= 3 ? 'bg-blue-400' : 'bg-green-500'
+                      : 'bg-slate-200 dark:bg-slate-700'
+                  }`} />
+                ))}
+                <span className="text-[10px] font-bold text-slate-400 ml-1 self-center">
+                  {newPass.length < 4 ? 'Lemah' : newPass.length < 7 ? 'Sedang' : newPass.length < 10 ? 'Kuat' : 'Sangat Kuat'}
+                </span>
+              </div>
+            )}
+          </div>
+          {/* Konfirmasi */}
+          <div>
+            <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">Konfirmasi Password Baru</label>
+            <div className="relative">
+              <input
+                type={showConfirm ? 'text' : 'password'}
+                value={confirmPass}
+                onChange={e => setConfirmPass(e.target.value)}
+                placeholder="Ulangi password baru"
+                required
+                className={inputCls + ' pr-12' + (confirmPass && confirmPass !== newPass ? ' border-red-400 focus:ring-red-400/30' : '')}
+              />
+              <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-4 top-4 text-slate-400 hover:text-indigo-600 transition-colors">
+                {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+            {confirmPass && confirmPass !== newPass && (
+              <p className="text-xs text-red-500 font-bold mt-1.5">Password tidak cocok.</p>
+            )}
+          </div>
+          {/* Error */}
+          {passError && (
+            <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 text-red-600 dark:text-red-400 text-sm font-bold px-4 py-3 rounded-2xl">
+              <AlertCircle className="w-4 h-4 shrink-0" /> {passError}
+            </div>
+          )}
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={passLoading || !oldPass || !newPass || !confirmPass}
+              className="bg-slate-900 dark:bg-indigo-600 text-white font-bold text-sm px-8 py-4 rounded-2xl hover:bg-indigo-600 dark:hover:bg-indigo-700 transition-all active:scale-95 shadow-lg w-full sm:w-auto flex justify-center items-center disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {passLoading ? <RefreshCw className="w-4 h-4 animate-spin mr-2"/> : <Lock className="w-4 h-4 mr-2"/>}
+              {passLoading ? 'Menyimpan...' : 'Ubah Password'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

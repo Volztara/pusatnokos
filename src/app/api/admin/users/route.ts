@@ -16,10 +16,14 @@ export async function GET(req: Request) {
 
   const { data: users, count } = await query;
 
-  // Ambil total order & spending per user
+  // Ambil total order & spending per user (exclude cancelled)
   const enriched = await Promise.all((users ?? []).map(async (u: any) => {
-    const { count: orderCount } = await db.from('orders').select('*', { count: 'exact', head: true }).eq('user_id', u.id);
-    const { data: spending }   = await db.from('mutations').select('amount').eq('user_id', u.id).eq('type', 'out');
+    const { count: orderCount } = await db.from('orders').select('*', { count: 'exact', head: true }).eq('user_id', u.id).neq('status', 'cancelled');
+    const { data: spending }   = await db.from('mutations')
+      .select('amount, orders!inner(status)')
+      .eq('user_id', u.id)
+      .eq('type', 'out')
+      .neq('orders.status', 'cancelled');
     const totalSpend = (spending ?? []).reduce((s: number, m: any) => s + (m.amount ?? 0), 0);
     return { ...u, orderCount: orderCount ?? 0, totalSpend };
   }));

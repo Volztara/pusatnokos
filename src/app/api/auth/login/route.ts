@@ -12,12 +12,34 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+async function verifyTurnstile(token: string): Promise<boolean> {
+  try {
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({
+        secret  : process.env.TURNSTILE_SECRET_KEY,
+        response: token,
+      }),
+    });
+    const data = await res.json();
+    return data.success === true;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
+    const { email, password, turnstileToken } = await request.json();
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Email dan password wajib diisi.' }, { status: 400 });
+    }
+
+    // Verifikasi Turnstile
+    if (!turnstileToken || !(await verifyTurnstile(turnstileToken))) {
+      return NextResponse.json({ error: 'Verifikasi CAPTCHA gagal. Coba lagi.' }, { status: 400 });
     }
 
     // Login via Supabase Auth

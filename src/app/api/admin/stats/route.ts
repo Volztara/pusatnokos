@@ -21,8 +21,15 @@ export async function GET() {
     db.from('orders').select('*', { count: 'exact', head: true }).in('status', ['waiting', 'success']),
     db.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', todayISO).in('status', ['waiting', 'success']),
     db.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'waiting'),
-    db.from('mutations').select('amount').eq('type', 'out'),
-    db.from('mutations').select('amount').eq('type', 'out').gte('created_at', todayISO),
+    db.from('mutations')
+      .select('amount, orders!inner(status)')
+      .eq('type', 'out')
+      .neq('orders.status', 'cancelled'),
+    db.from('mutations')
+      .select('amount, orders!inner(status)')
+      .eq('type', 'out')
+      .gte('created_at', todayISO)
+      .neq('orders.status', 'cancelled'),
     db.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', todayISO),
   ]);
 
@@ -34,7 +41,12 @@ export async function GET() {
   for (let i = 6; i >= 0; i--) {
     const d = new Date(); d.setDate(d.getDate() - i); d.setHours(0,0,0,0);
     const next = new Date(d); next.setDate(next.getDate() + 1);
-    const { data } = await db.from('mutations').select('amount').eq('type', 'out').gte('created_at', d.toISOString()).lt('created_at', next.toISOString());
+    const { data } = await db.from('mutations')
+      .select('amount, orders!inner(status)')
+      .eq('type', 'out')
+      .neq('orders.status', 'cancelled')
+      .gte('created_at', d.toISOString())
+      .lt('created_at', next.toISOString());
     days7.push({ date: d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' }), revenue: (data ?? []).reduce((s: number, m: any) => s + (m.amount ?? 0), 0) });
   }
 

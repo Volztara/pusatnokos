@@ -17,15 +17,37 @@ function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+async function verifyTurnstile(token: string): Promise<boolean> {
+  try {
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({
+        secret  : process.env.TURNSTILE_SECRET_KEY,
+        response: token,
+      }),
+    });
+    const data = await res.json();
+    return data.success === true;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: Request) {
   try {
-    const { email, password, name } = await request.json();
+    const { email, password, name, turnstileToken } = await request.json();
 
     if (!email || !password || !name) {
       return NextResponse.json({ error: 'Semua field wajib diisi.' }, { status: 400 });
     }
     if (password.length < 6) {
       return NextResponse.json({ error: 'Password minimal 6 karakter.' }, { status: 400 });
+    }
+
+    // Verifikasi Turnstile
+    if (!turnstileToken || !(await verifyTurnstile(turnstileToken))) {
+      return NextResponse.json({ error: 'Verifikasi CAPTCHA gagal. Coba lagi.' }, { status: 400 });
     }
 
     // Cek email sudah terdaftar
@@ -58,7 +80,7 @@ export async function POST(request: Request) {
 
     // Kirim email verifikasi
     const { error: sendErr } = await resend.emails.send({
-      from   : 'Pusat Nokos <noreply@pusatnokos.com>',  // ganti setelah domain verified
+      from   : 'Pusat Nokos <noreply@pusatnokos.com>',
       to     : email,
       subject: 'Aktivasi Akun Pusat Nokos',
       html   : `
