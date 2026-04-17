@@ -9,6 +9,11 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+// Shared map untuk SSE clients — di-import oleh stream/route.ts
+// ⚠️  Catatan: di serverless (Netlify), map ini hanya hidup per-invocation.
+//    Untuk real-time cross-request, stream/route.ts sebaiknya polling Supabase.
+export const sseClients = new Set<ReadableStreamDefaultController>();
+
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
