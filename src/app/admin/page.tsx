@@ -7,7 +7,7 @@ import {
   Copy, Check, ShieldAlert, Activity, Zap, RotateCcw, Signal, Ban,
   Moon, Sun, Users, TrendingUp, ShoppingCart, DollarSign, Download,
   Settings, FileText, Search, ChevronDown, BarChart2, Sliders,
-  UserX, UserCheck, XCircle, Eye, EyeOff, Package, LogOut, Lock, Mail
+  UserX, UserCheck, XCircle, Eye, EyeOff, Package, LogOut, Lock, Mail, Megaphone, Bell, ClipboardList
 } from 'lucide-react';
 
 // ─── TYPES ───────────────────────────────────────────────────────────
@@ -123,6 +123,8 @@ const TABS = [
   { id: 'deposit',      label: 'Deposit',       icon: <DollarSign className="w-4 h-4" /> },
   { id: 'admins',       label: 'Role Admin',    icon: <ShieldAlert className="w-4 h-4" /> },
   { id: 'logs',         label: 'Log Aktivitas', icon: <FileText className="w-4 h-4" /> },
+  { id: 'broadcast',    label: 'Broadcast',     icon: <Megaphone className="w-4 h-4" /> },
+  { id: 'notice',       label: 'Papan Info',    icon: <ClipboardList className="w-4 h-4" /> },
 ];
 
 // ─── MAIN ─────────────────────────────────────────────────────────────
@@ -482,7 +484,7 @@ export default function AdminPage() {
   const handleActivationAction = async (id: string, action: 'cancel' | 'done') => {
     setActionLoading(id + action);
     try {
-      const r = await fetch('/api/order', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action }) });
+      const r = await authFetch('/api/order', { method: 'PATCH', body: JSON.stringify({ id, action }) });
       const d = await r.json();
       if (d.success) { showToast(d.message); fetchActivations(); }
     } catch { showToast('Gagal.'); }
@@ -883,6 +885,8 @@ export default function AdminPage() {
 
         {/* ── ROLE ADMIN ── */}
         {tab === 'admins' && <AdminRolesTab showToast={showToast} />}
+        {tab === 'broadcast' && <BroadcastTab showToast={showToast} />}
+        {tab === 'notice' && <NoticeBoardTab showToast={showToast} />}
 
         {tab === 'logs' && (
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
@@ -1821,6 +1825,360 @@ function AdminRolesTab({ showToast }: { showToast: (msg: string) => void }) {
               </button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+// ─── BROADCAST TAB ────────────────────────────────────────────────────
+function BroadcastTab({ showToast }: { showToast: (msg: string) => void }) {
+
+  const authFetch = (url: string, options: RequestInit = {}) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') ?? '' : '';
+    return fetch(url, { ...options, headers: { ...(options.headers ?? {}), 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } });
+  };
+
+  const [title,    setTitle]    = useState('');
+  const [message,  setMessage]  = useState('');
+  const [type,     setType]     = useState<'info' | 'warning' | 'promo' | 'maintenance'>('info');
+  const [sending,  setSending]  = useState(false);
+  const [history,  setHistory]  = useState<any[]>([]);
+  const [loadHist, setLoadHist] = useState(true);
+
+  const TYPE_CFG = {
+    info        : { label: 'Info',        emoji: 'ℹ️',  color: 'bg-blue-50 border-blue-200 text-blue-700' },
+    promo       : { label: 'Promo',       emoji: '🎉',  color: 'bg-green-50 border-green-200 text-green-700' },
+    warning     : { label: 'Peringatan',  emoji: '⚠️',  color: 'bg-amber-50 border-amber-200 text-amber-700' },
+    maintenance : { label: 'Maintenance', emoji: '🔧',  color: 'bg-red-50 border-red-200 text-red-700' },
+  };
+
+  const fetchHistory = async () => {
+    setLoadHist(true);
+    try {
+      const r = await authFetch('/api/admin/broadcast');
+      const d = await r.json();
+      setHistory(Array.isArray(d) ? d : []);
+    } catch {}
+    finally { setLoadHist(false); }
+  };
+
+  useEffect(() => { fetchHistory(); }, []);
+
+  const handleSend = async () => {
+    if (!title.trim() || !message.trim()) { showToast('Judul dan pesan wajib diisi.'); return; }
+    setSending(true);
+    try {
+      const r = await authFetch('/api/admin/broadcast', {
+        method: 'POST',
+        body: JSON.stringify({ title: title.trim(), message: message.trim(), type }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        showToast(`✅ Broadcast terkirim ke ${d.count ?? 'semua'} user!`);
+        setTitle('');
+        setMessage('');
+        setType('info');
+        fetchHistory();
+      } else {
+        showToast(d.error ?? 'Gagal mengirim broadcast.');
+      }
+    } catch { showToast('Terjadi kesalahan jaringan.'); }
+    finally { setSending(false); }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await authFetch('/api/admin/broadcast', { method: 'DELETE', body: JSON.stringify({ id }) });
+      showToast('Broadcast dihapus.');
+      fetchHistory();
+    } catch { showToast('Gagal menghapus.'); }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-black text-slate-900 dark:text-white">Broadcast Notifikasi</h2>
+        <p className="text-xs text-slate-400 mt-1">Kirim pengumuman ke semua user. Notifikasi akan muncul di halaman user saat mereka login.</p>
+      </div>
+
+      {/* Form kirim broadcast */}
+      <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6 space-y-5">
+        <h3 className="font-black text-slate-900 dark:text-white flex items-center gap-2">
+          <Megaphone className="w-5 h-5 text-indigo-600" /> Buat Broadcast Baru
+        </h3>
+
+        {/* Tipe */}
+        <div>
+          <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-2">Tipe Notifikasi</label>
+          <div className="flex flex-wrap gap-2">
+            {(Object.entries(TYPE_CFG) as any[]).map(([k, v]) => (
+              <button key={k} onClick={() => setType(k as any)}
+                className={"px-4 py-2 rounded-xl text-xs font-black border-2 transition-all " + (type === k ? v.color + ' border-current' : 'border-slate-200 dark:border-slate-700 text-slate-400 hover:border-slate-300 dark:bg-slate-800')}>
+                {v.emoji} {v.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Judul */}
+        <div>
+          <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-2">Judul</label>
+          <input
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="Contoh: Promo Deposit Bonus 10%!"
+            maxLength={100}
+            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white"
+          />
+          <div className="text-right text-[10px] text-slate-400 mt-1">{title.length}/100</div>
+        </div>
+
+        {/* Pesan */}
+        <div>
+          <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-2">Pesan</label>
+          <textarea
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            placeholder="Tulis isi pengumuman di sini..."
+            maxLength={500}
+            rows={4}
+            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white resize-none"
+          />
+          <div className="text-right text-[10px] text-slate-400 mt-1">{message.length}/500</div>
+        </div>
+
+        {/* Preview */}
+        {(title || message) && (
+          <div className={`rounded-2xl border p-4 ${TYPE_CFG[type].color}`}>
+            <div className="font-black text-sm mb-1">{TYPE_CFG[type].emoji} {title || 'Judul broadcast...'}</div>
+            <div className="text-sm opacity-90">{message || 'Isi pesan...'}</div>
+          </div>
+        )}
+
+        <button
+          onClick={handleSend}
+          disabled={sending || !title.trim() || !message.trim()}
+          className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-2xl transition-colors flex items-center justify-center gap-2"
+        >
+          {sending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
+          {sending ? 'Mengirim...' : 'Kirim ke Semua User'}
+        </button>
+      </div>
+
+      {/* Riwayat broadcast */}
+      <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6">
+        <h3 className="font-black text-slate-900 dark:text-white mb-4">Riwayat Broadcast</h3>
+        {loadHist ? (
+          <div className="flex justify-center py-8"><RefreshCw className="w-6 h-6 animate-spin text-slate-400" /></div>
+        ) : history.length === 0 ? (
+          <div className="text-center py-8 text-slate-400 font-bold">Belum ada broadcast dikirim.</div>
+        ) : (
+          <div className="space-y-3">
+            {history.map((b: any) => {
+              const cfg = TYPE_CFG[b.type as keyof typeof TYPE_CFG] ?? TYPE_CFG.info;
+              return (
+                <div key={b.id} className="flex items-start gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
+                  <div className="text-2xl shrink-0">{cfg.emoji}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-black text-sm text-slate-900 dark:text-white">{b.title}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">{b.message}</div>
+                    <div className="text-[10px] text-slate-400 mt-1">
+                      {new Date(b.created_at).toLocaleString('id-ID')} · {b.recipient_count ?? 'semua'} user
+                    </div>
+                  </div>
+                  <button onClick={() => handleDelete(b.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors shrink-0">
+                    <XCircle className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+// ─── PAPAN INFO TAB ───────────────────────────────────────────────────
+function NoticeBoardTab({ showToast }: { showToast: (msg: string) => void }) {
+
+  const authFetch = (url: string, options: RequestInit = {}) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') ?? '' : '';
+    return fetch(url, { ...options, headers: { ...(options.headers ?? {}), 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } });
+  };
+
+  const [notices,  setNotices]  = useState<any[]>([]);
+  const [loading,  setLoading]  = useState(true);
+  const [saving,   setSaving]   = useState(false);
+  const [editId,   setEditId]   = useState<number | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [form,     setForm]     = useState({ title: '', content: '', type: 'info', is_active: true });
+
+  const TYPE_CFG: Record<string, { label: string; emoji: string; color: string }> = {
+    info     : { label: 'Info',        emoji: 'ℹ️',  color: 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800/50 dark:text-blue-400' },
+    promo    : { label: 'Promo',       emoji: '🎉',  color: 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800/50 dark:text-green-400' },
+    warning  : { label: 'Peringatan',  emoji: '⚠️',  color: 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/20 dark:border-amber-800/50 dark:text-amber-400' },
+    maintenance: { label: 'Maintenance', emoji: '🔧', color: 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800/50 dark:text-red-400' },
+  };
+
+  const fetchNotices = async () => {
+    setLoading(true);
+    try {
+      const r = await authFetch('/api/admin/notice');
+      const d = await r.json();
+      setNotices(Array.isArray(d) ? d : []);
+    } catch {}
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchNotices(); }, []);
+
+  const resetForm = () => { setForm({ title: '', content: '', type: 'info', is_active: true }); setEditId(null); setShowForm(false); };
+
+  const handleEdit = (n: any) => {
+    setForm({ title: n.title, content: n.content, type: n.type, is_active: n.is_active });
+    setEditId(n.id);
+    setShowForm(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.title.trim() || !form.content.trim()) { showToast('Judul dan isi wajib diisi.'); return; }
+    setSaving(true);
+    try {
+      const r = await authFetch('/api/admin/notice', {
+        method: editId ? 'PATCH' : 'POST',
+        body: JSON.stringify(editId ? { ...form, id: editId } : form),
+      });
+      const d = await r.json();
+      if (d.success) { showToast(editId ? 'Papan info diperbarui!' : 'Papan info ditambahkan!'); resetForm(); fetchNotices(); }
+      else showToast(d.error ?? 'Gagal menyimpan.');
+    } catch { showToast('Terjadi kesalahan.'); }
+    finally { setSaving(false); }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Hapus papan info ini?')) return;
+    await authFetch('/api/admin/notice', { method: 'DELETE', body: JSON.stringify({ id }) });
+    showToast('Dihapus.');
+    fetchNotices();
+  };
+
+  const handleToggle = async (id: number, is_active: boolean) => {
+    await authFetch('/api/admin/notice', { method: 'PATCH', body: JSON.stringify({ id, is_active: !is_active }) });
+    fetchNotices();
+  };
+
+  const inputCls = "w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white";
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-black text-slate-900 dark:text-white">Papan Info</h2>
+          <p className="text-xs text-slate-400 mt-1">Pengumuman yang tampil permanen di halaman utama user.</p>
+        </div>
+        <button onClick={() => { resetForm(); setShowForm(v => !v); }}
+          className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors">
+          + Tambah Info
+        </button>
+      </div>
+
+      {/* Form */}
+      {showForm && (
+        <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6 space-y-5">
+          <h3 className="font-black text-slate-900 dark:text-white">{editId ? 'Edit Papan Info' : 'Tambah Papan Info'}</h3>
+
+          {/* Tipe */}
+          <div>
+            <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-2">Tipe</label>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(TYPE_CFG).map(([k, v]) => (
+                <button key={k} onClick={() => setForm(p => ({ ...p, type: k }))}
+                  className={"px-4 py-2 rounded-xl text-xs font-black border-2 transition-all " + (form.type === k ? v.color + ' border-current' : 'border-slate-200 dark:border-slate-700 text-slate-400 hover:border-slate-300 dark:bg-slate-800')}>
+                  {v.emoji} {v.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Judul */}
+          <div>
+            <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-2">Judul</label>
+            <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+              placeholder="Contoh: Server sedang maintenance..." maxLength={100} className={inputCls} />
+          </div>
+
+          {/* Isi */}
+          <div>
+            <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-2">Isi Pengumuman</label>
+            <textarea value={form.content} onChange={e => setForm(p => ({ ...p, content: e.target.value }))}
+              placeholder="Tulis detail pengumuman di sini..." maxLength={500} rows={4} className={inputCls + ' resize-none'} />
+          </div>
+
+          {/* Status aktif */}
+          <div className="flex items-center gap-3">
+            <button onClick={() => setForm(p => ({ ...p, is_active: !p.is_active }))}
+              className={"w-11 h-6 rounded-full transition-colors " + (form.is_active ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700')}>
+              <div className={"w-5 h-5 bg-white rounded-full shadow transition-transform mx-0.5 " + (form.is_active ? 'translate-x-5' : 'translate-x-0')} />
+            </button>
+            <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
+              {form.is_active ? 'Aktif (tampil ke user)' : 'Nonaktif (tersembunyi)'}
+            </span>
+          </div>
+
+          {/* Preview */}
+          {(form.title || form.content) && (
+            <div className={`rounded-2xl border p-4 ${TYPE_CFG[form.type]?.color}`}>
+              <div className="font-black text-sm mb-1">{TYPE_CFG[form.type]?.emoji} {form.title || 'Judul...'}</div>
+              <div className="text-sm opacity-90">{form.content || 'Isi pengumuman...'}</div>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button onClick={resetForm} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-bold text-sm hover:bg-slate-200 transition-colors">Batal</button>
+            <button onClick={handleSave} disabled={saving} className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl font-bold text-sm hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2">
+              {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
+              {saving ? 'Menyimpan...' : editId ? 'Simpan Perubahan' : 'Tambahkan'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Daftar papan info */}
+      {loading ? (
+        <div className="flex justify-center py-12"><RefreshCw className="w-6 h-6 animate-spin text-slate-400" /></div>
+      ) : notices.length === 0 ? (
+        <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-12 text-center text-slate-400 font-bold">
+          Belum ada papan info. Klik "+ Tambah Info" untuk mulai.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {notices.map((n: any) => {
+            const cfg = TYPE_CFG[n.type] ?? TYPE_CFG.info;
+            return (
+              <div key={n.id} className={`rounded-[2rem] border p-5 flex items-start gap-4 ${n.is_active ? cfg.color : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 opacity-50'}`}>
+                <div className="text-2xl shrink-0">{cfg.emoji}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-black text-sm mb-1">{n.title}</div>
+                  <div className="text-sm opacity-80 line-clamp-2">{n.content}</div>
+                  <div className="text-[10px] opacity-60 mt-1">{new Date(n.created_at).toLocaleString('id-ID')}</div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* Toggle aktif */}
+                  <button onClick={() => handleToggle(n.id, n.is_active)}
+                    className={"w-10 h-5 rounded-full transition-colors " + (n.is_active ? 'bg-current opacity-70' : 'bg-slate-300 dark:bg-slate-600')}
+                    title={n.is_active ? 'Nonaktifkan' : 'Aktifkan'}>
+                    <div className={"w-4 h-4 bg-white rounded-full shadow transition-transform mx-0.5 " + (n.is_active ? 'translate-x-5' : 'translate-x-0')} />
+                  </button>
+                  <button onClick={() => handleEdit(n)} className="p-2 hover:bg-white/30 rounded-xl transition-colors">
+                    <Settings className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleDelete(n.id)} className="p-2 hover:bg-white/30 rounded-xl transition-colors">
+                    <XCircle className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

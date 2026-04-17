@@ -1809,23 +1809,74 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       .catch(() => {});
   }, [user?.email]);
 
+  // ── Fetch papan info dari admin ──────────────────────────────────────
+  const [notices, setNotices] = useState<{ id: number; title: string; content: string; type: string }[]>([]);
+
+  useEffect(() => {
+    fetch('/api/notice')
+      .then(r => r.json())
+      .then((data: any[]) => { if (Array.isArray(data)) setNotices(data); })
+      .catch(() => {});
+  }, []);
+
+  // ── Fetch broadcast dari admin saat login ─────────────────────────
+  useEffect(() => {
+    if (!user?.email) return;
+    fetch('/api/broadcast')
+      .then(r => r.json())
+      .then((data: any[]) => {
+        if (!Array.isArray(data) || data.length === 0) return;
+        const TYPE_EMOJI: Record<string, string> = {
+          info: 'ℹ️', promo: '🎉', warning: '⚠️', maintenance: '🔧'
+        };
+        const broadcastNotifs = data.map(b => ({
+          id     : Date.now() + b.id,
+          msg    : `${TYPE_EMOJI[b.type] ?? 'ℹ️'} ${b.title}: ${b.message}`,
+          time   : new Date(b.created_at).toLocaleString('id-ID'),
+          read   : false,
+        }));
+        setNotifItems(prev => [...broadcastNotifs, ...prev].slice(0, 20));
+        setNotifCount(c => c + broadcastNotifs.length);
+      })
+      .catch(() => {});
+  }, [user?.email]);
+
   // ── Helper: update saldo di Supabase + state ───────────────────────
-  const updateBalance = async (amount: number, type: 'add' | 'subtract') => {
+  // ✅ Fetch saldo terbaru dari DB
+  const refreshBalance = async () => {
+    if (!user?.email) return;
+    try {
+      const res = await fetch(`/api/user/balance?email=${encodeURIComponent(user.email)}`);
+      const d = await res.json();
+      if (typeof d.balance === 'number') setBalance(d.balance);
+    } catch {}
+  };
+
+  const updateBalance = async (amount: number, type: 'add' | 'subtract', activationId?: string) => {
     const newBal = type === 'add' ? balance + amount : Math.max(0, balance - amount);
     setBalance(newBal);
     if (!user?.email) return;
     try {
-      await fetch('/api/user/balance', {
+      const res = await fetch('/api/user/balance', {
         method : 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body   : JSON.stringify({ email: user.email, amount, type }),
+        body   : JSON.stringify({ email: user.email, amount, type, activationId }),
       });
+      // Jika 409 = sudah pernah di-refund, rollback balance lokal
+      if (res.status === 409) {
+        setBalance(balance);
+      }
     } catch { /* update lokal sudah cukup jika gagal */ }
   };
 
   const handleCancelOrder = async (orderId: number) => {
     const orderToCancel = orders.find(o => o.id === orderId);
     if (!orderToCancel || orderToCancel.status !== 'waiting') return;
+
+    // ✅ Tandai di ref SEGERA — cegah polling refund lagi sebelum React re-render
+    ordersRef.current = ordersRef.current.map(o =>
+      o.id === orderId ? { ...o, status: 'cancelled' as Order['status'], timeLeft: 0 } : o
+    );
 
     if (orderToCancel.activationId) {
       try {
@@ -1837,8 +1888,8 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       } catch { /* lanjutkan refund meski API gagal */ }
     }
 
-    // Update saldo di Supabase
-    await updateBalance(orderToCancel.price, 'add');
+    // ✅ Kirim activationId → backend cegah double refund via idempotency check
+    await updateBalance(orderToCancel.price, 'add', orderToCancel.activationId);
     // Update status order di Supabase
     fetch('/api/user/orders', {
       method : 'PATCH',
@@ -1851,6 +1902,8 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
     ));
     setMutasi(prev => [{ id: Date.now(), date: new Date().toLocaleString('id-ID'), type: 'in', amount: orderToCancel.price, desc: 'Refund Batal: ' + orderToCancel.serviceName }, ...prev]);
     showToast('Pesanan dibatalkan. Saldo Rp ' + orderToCancel.price.toLocaleString('id-ID') + ' dikembalikan.');
+    // ✅ Refresh saldo dari DB agar tampilan selalu akurat
+    setTimeout(() => refreshBalance(), 1000);
   };
 
   const [notifCount,  setNotifCount]  = useState(0);
@@ -1945,15 +1998,21 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
               }, 60000);
             }
           } else if (data.status === 'cancel') {
+            // ✅ Update ref dulu — cegah polling berikutnya refund lagi
+            ordersRef.current = ordersRef.current.map(o =>
+              o.id === order.id ? { ...o, status: 'cancelled' as Order['status'], timeLeft: 0 } : o
+            );
             setOrders(current => current.map(o =>
               o.id === order.id ? { ...o, status: 'cancelled', timeLeft: 0 } : o
             ));
             fetch('/api/user/orders', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activationId: order.activationId, status: 'cancelled' }) }).catch(() => {});
-            // Refund otomatis saat provider cancel
-            updateBalance(order.price, 'add');
+            // ✅ Kirim activationId → backend cegah double refund via idempotency check
+            updateBalance(order.price, 'add', order.activationId);
             setMutasi(prev => [{ id: Date.now(), date: new Date().toLocaleString('id-ID'), type: 'in', amount: order.price, desc: 'Refund Batal: ' + order.serviceName }, ...prev]);
             showToast(`Nomor ${order.serviceName} dibatalkan provider. Saldo Rp ${order.price.toLocaleString('id-ID')} dikembalikan.`);
             addNotif(`↩ Refund Rp ${order.price.toLocaleString('id-ID')} untuk ${order.serviceName} berhasil dikembalikan.`);
+            // ✅ Refresh saldo dari DB
+            setTimeout(() => refreshBalance(), 1000);
           }
         } catch { /* abaikan error jaringan sementara */ }
       }
@@ -1983,10 +2042,12 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
         if (expiredOrders.length > 0) {
           setTimeout(() => {
             expiredOrders.forEach(order => {
-              updateBalance(order.price, 'add');
-              fetch('/api/user/orders', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activationId: order.activationId, status: 'expired' }) }).catch(() => {});
+              // ✅ Kirim activationId → backend cegah double refund dengan idempotency check
+              // Cron job juga refund, tapi atomic check di DB pastikan hanya 1 yang berhasil
+              updateBalance(order.price, 'add', order.activationId);
+              // Tidak perlu update status order di sini — cron job sudah handle
               setMutasi(prev => [{ id: Date.now(), date: new Date().toLocaleString('id-ID'), type: 'in', amount: order.price, desc: "Refund Kadaluarsa: " + order.serviceName }, ...prev]);
-              showToast(`⏱ Nomor ${order.serviceName} kadaluarsa. Mencari nomor baru otomatis...`);
+              showToast(`⏱ Nomor ${order.serviceName} kadaluarsa. Saldo dikembalikan.`);
               if (order.number) failedNumbers.current.add(order.number);
               setAutoRetryQueue(prev => [...prev, {
                 serviceName: order.serviceName,
@@ -2132,7 +2193,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
         )}
 
         <main className="flex-1 p-4 sm:p-8 md:!pb-8" style={{paddingBottom:"calc(6.5rem + env(safe-area-inset-bottom,0px))"}}>
-          {activeTab === 'dashboard' && <UserDashboardView user={user} balance={balance} orders={orders} mutasi={mutasi} setActiveTab={setActiveTab} />}
+          {activeTab === 'dashboard' && <UserDashboardView user={user} balance={balance} orders={orders} mutasi={mutasi} setActiveTab={setActiveTab} notices={notices} />}
           {activeTab === 'buy' && <BuyView balance={balance} setBalance={setBalance} orders={orders} setOrders={setOrders} showToast={showToast} onCancelOrder={handleCancelOrder} favorites={favorites} setFavorites={setFavorites} setMutasi={setMutasi} activeServices={activeServices} serviceError={serviceError} countries={countries} selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry} user={user} updateBalance={updateBalance} autoRetryQueue={autoRetryQueue} setAutoRetryQueue={setAutoRetryQueue} failedNumbers={failedNumbers} />}
           {activeTab === 'topup' && <TopupView balance={balance} setBalance={setBalance} showToast={showToast} setActiveTab={setActiveTab} setMutasi={setMutasi} updateBalance={updateBalance} user={user} />}
           {activeTab === 'history' && <HistoryView orders={orders} />}
@@ -2329,12 +2390,13 @@ interface BuyViewProps {
 // ==========================================
 // TAB: DASHBOARD RINGKASAN USER
 // ==========================================
-function UserDashboardView({ user, balance, orders, mutasi, setActiveTab }: {
+function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notices }: {
   user: UserData | null;
   balance: number;
   orders: Order[];
   mutasi: Mutasi[];
   setActiveTab: (tab: string) => void;
+  notices: { id: number; title: string; content: string; type: string }[];
 }) {
   const fmtIDR = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 
@@ -2355,6 +2417,30 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab }: {
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Selamat datang di Pusat Nokos</p>
       </div>
+
+      {/* Papan Info dari admin */}
+      {notices.length > 0 && (
+        <div className="space-y-2">
+          {notices.map(n => {
+            const TYPE_STYLE: Record<string, { emoji: string; cls: string }> = {
+              info        : { emoji: 'ℹ️',  cls: 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800/50 dark:text-blue-300' },
+              promo       : { emoji: '🎉',  cls: 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800/50 dark:text-green-300' },
+              warning     : { emoji: '⚠️',  cls: 'bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-800/50 dark:text-amber-300' },
+              maintenance : { emoji: '🔧',  cls: 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800/50 dark:text-red-300' },
+            };
+            const s = TYPE_STYLE[n.type] ?? TYPE_STYLE.info;
+            return (
+              <div key={n.id} className={`rounded-2xl border px-4 py-3 flex items-start gap-3 ${s.cls}`}>
+                <span className="text-lg shrink-0">{s.emoji}</span>
+                <div>
+                  <div className="font-black text-sm">{n.title}</div>
+                  <div className="text-xs mt-0.5 opacity-80">{n.content}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Saldo card — horizontal di mobile, vertikal di desktop */}
       <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl md:rounded-[2rem] p-4 md:p-6 text-white">
@@ -2854,7 +2940,8 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         return;
       }
 
-      setBalance(prev => prev - bundleTotalPrice);
+      // ✅ Update saldo di DB (bukan hanya local state)
+      await updateBalance(bundleTotalPrice, 'subtract');
       const newOrder: Order = {
         id             : Date.now(),
         activationId   : data.activationId,
@@ -2872,6 +2959,13 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
       };
       setOrders(prev => [newOrder, ...prev]);
       setMutasi(prev => [{ id: Date.now(), date: new Date().toLocaleString('id-ID'), type: 'out', amount: bundleTotalPrice, desc: 'Bundle: ' + newOrder.serviceName }, ...prev]);
+      // Simpan order bundle ke Supabase
+      if (user?.email) {
+        fetch('/api/user/orders', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: user.email, activationId: data.activationId, serviceCode: primary.code, serviceName: newOrder.serviceName, phone: data.phone, price: bundleTotalPrice, country: selectedCountry, isV2: true }),
+        }).catch(() => {});
+      }
       showToast(`Bundle dipesan! Nomor: ${data.phone}`);
       setBundleSelected(new Set());
       setIsBundleMode(false);
@@ -3313,19 +3407,30 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                   <Zap className="w-5 h-5 mr-2 text-yellow-300" />
                   <span>Pesanan Aktif</span>
                 </div>
-                {activeOrders.length > 1 && (
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setActiveOrderIndex(i => Math.max(0, i - 1))} disabled={activeOrderIndex === 0}
-                      className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/30 disabled:opacity-30 flex items-center justify-center transition-colors">
-                      <ChevronDown className="w-4 h-4 rotate-90" />
-                    </button>
-                    <span className="text-xs text-indigo-200 min-w-[40px] text-center">{activeOrderIndex + 1} / {activeOrders.length}</span>
-                    <button onClick={() => setActiveOrderIndex(i => Math.min(activeOrders.length - 1, i + 1))} disabled={activeOrderIndex === activeOrders.length - 1}
-                      className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/30 disabled:opacity-30 flex items-center justify-center transition-colors">
-                      <ChevronDown className="w-4 h-4 -rotate-90" />
-                    </button>
-                  </div>
-                )}
+                <div className="flex items-center gap-2">
+                  {/* Tombol kembali ke atas */}
+                  <button
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white/15 hover:bg-white/30 text-xs font-bold transition-colors"
+                    title="Kembali ke atas"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5 rotate-180" />
+                    <span>Atas</span>
+                  </button>
+                  {activeOrders.length > 1 && (
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setActiveOrderIndex(i => Math.max(0, i - 1))} disabled={activeOrderIndex === 0}
+                        className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/30 disabled:opacity-30 flex items-center justify-center transition-colors">
+                        <ChevronDown className="w-4 h-4 rotate-90" />
+                      </button>
+                      <span className="text-xs text-indigo-200 min-w-[40px] text-center">{activeOrderIndex + 1} / {activeOrders.length}</span>
+                      <button onClick={() => setActiveOrderIndex(i => Math.min(activeOrders.length - 1, i + 1))} disabled={activeOrderIndex === activeOrders.length - 1}
+                        className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/30 disabled:opacity-30 flex items-center justify-center transition-colors">
+                        <ChevronDown className="w-4 h-4 -rotate-90" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Dot indicators */}

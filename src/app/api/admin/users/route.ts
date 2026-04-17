@@ -45,9 +45,34 @@ export async function PATCH(req: Request) {
   }
 
   if (action === 'set_balance') {
+    // Ambil saldo lama untuk hitung selisih mutasi
+    const { data: profile } = await db.from('profiles').select('balance, email').eq('id', userId).single();
+    const oldBalance = profile?.balance ?? 0;
+    const diff = value - oldBalance;
+
+    // Update saldo
     await db.from('profiles').update({ balance: value }).eq('id', userId);
+
+    // ✅ Catat mutasi agar riwayat user tercatat
+    if (diff !== 0) {
+      try {
+        await db.from('mutations').insert({
+          user_id    : userId,
+          type       : diff > 0 ? 'in' : 'out',
+          amount     : Math.abs(diff),
+          description: diff > 0
+            ? `Penambahan saldo oleh admin (set ke ${value.toLocaleString('id-ID')})`
+            : `Pengurangan saldo oleh admin (set ke ${value.toLocaleString('id-ID')})`,
+        });
+      } catch {}
+    }
+
     try {
-      await db.from('admin_logs').insert({ action: 'set_balance', target_id: userId, details: `Saldo diset ke ${value}` });
+      await db.from('admin_logs').insert({
+        action   : 'set_balance',
+        target_id: userId,
+        details  : `Saldo diubah dari ${oldBalance} → ${value} (selisih: ${diff >= 0 ? '+' : ''}${diff})`,
+      });
     } catch {}
     return NextResponse.json({ success: true });
   }

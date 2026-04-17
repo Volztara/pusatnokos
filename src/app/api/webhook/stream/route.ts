@@ -1,72 +1,131 @@
 // src/app/api/webhook/stream/route.ts
 //
 // Server-Sent Events (SSE) endpoint.
-// Frontend connect ke sini untuk terima notifikasi OTP secara real-time
-// tanpa perlu polling setiap 5 detik.
-//
-// Cara pakai di frontend:
-//   const es = new EventSource('/api/webhook/stream');
-//   es.onmessage = (e) => {
-//     const event = JSON.parse(e.data);
-//     // event.activationId, event.smsCode, event.phone, dst
-//   };
+// Polling langsung ke Supabase — kompatibel dengan serverless (Netlify/Vercel).
+// Tidak bergantung pada shared in-memory state antar invocation.
 
-import { sseClients } from '../route';
+import { createClient } from '@supabase/supabase-js';
 
-export const runtime = 'nodejs'; // SSE butuh Node.js runtime, bukan Edge
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+const db = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 /**
- * GET /api/webhook/stream
+ * GET /api/webhook/stream?ids=id1,id2,id3
  *
- * Buka koneksi SSE. Client akan terima event setiap kali OTP masuk.
- * Koneksi otomatis tutup setelah 5 menit (timeout) untuk hemat resource.
+ * Buka koneksi SSE. Client kirim activation IDs yang sedang ditunggu.
+ * Server polling Supabase setiap 3 detik dan kirim event jika OTP masuk.
+ * Koneksi otomatis tutup setelah 5 menit.
  */
-export async function GET() {
-  let controller: ReadableStreamDefaultController;
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const idsParam = searchParams.get('ids') ?? '';
+  const watchIds = idsParam.split(',').map(s => s.trim()).filter(Boolean);
+
+  const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
-    start(c) {
-      controller = c;
-      sseClients.add(controller);
-
-      // Kirim comment awal agar koneksi tidak langsung timeout di beberapa browser
-      controller.enqueue(new TextEncoder().encode(': connected\n\n'));
-
-      // Heartbeat setiap 30 detik supaya koneksi tidak putus
-      const heartbeat = setInterval(() => {
+    async start(controller) {
+      const send = (data: object) => {
         try {
-          controller.enqueue(new TextEncoder().encode(': ping\n\n'));
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        } catch { /* client disconnect */ }
+      };
+
+      // Kirim comment awal agar koneksi tidak langsung timeout
+      try {
+        controller.enqueue(encoder.encode(': connected\n\n'));
+      } catch { return; }
+
+      // Kalau tidak ada IDs, langsung tutup
+      if (watchIds.length === 0) {
+        controller.close();
+        return;
+      }
+
+      const notified = new Set<string>(); // track yang sudah dikirim notifnya
+      let closed = false;
+
+      // Heartbeat setiap 25 detik
+      const heartbeat = setInterval(() => {
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(': ping\n\n'));
         } catch {
+          closed = true;
           clearInterval(heartbeat);
         }
-      }, 30_000);
+      }, 25_000);
+
+      // Polling Supabase setiap 3 detik
+      const poll = setInterval(async () => {
+        if (closed) return;
+
+        const remaining = watchIds.filter(id => !notified.has(id));
+        if (remaining.length === 0) {
+          closed = true;
+          clearInterval(poll);
+          clearInterval(heartbeat);
+          try { controller.close(); } catch { /* sudah tertutup */ }
+          return;
+        }
+
+        try {
+          const { data: orders } = await db
+            .from('orders')
+            .select('activation_id, otp_code, status, service_name')
+            .in('activation_id', remaining)
+            .in('status', ['success', 'cancelled']);
+
+          for (const order of orders ?? []) {
+            if (notified.has(order.activation_id)) continue;
+            notified.add(order.activation_id);
+
+            if (order.status === 'success' && order.otp_code) {
+              send({
+                activationId: order.activation_id,
+                smsCode     : order.otp_code,
+                service     : order.service_name,
+              });
+            } else if (order.status === 'cancelled') {
+              send({
+                activationId: order.activation_id,
+                status      : 'cancel',
+                service     : order.service_name,
+              });
+            }
+          }
+        } catch { /* abaikan error jaringan sementara */ }
+      }, 3_000);
 
       // Auto-close setelah 5 menit
       const timeout = setTimeout(() => {
+        closed = true;
+        clearInterval(poll);
         clearInterval(heartbeat);
-        sseClients.delete(controller);
         try { controller.close(); } catch { /* sudah tertutup */ }
       }, 5 * 60 * 1000);
 
       // Cleanup saat client disconnect
       return () => {
+        closed = true;
+        clearInterval(poll);
         clearInterval(heartbeat);
         clearTimeout(timeout);
-        sseClients.delete(controller);
       };
-    },
-    cancel() {
-      sseClients.delete(controller);
     },
   });
 
   return new Response(stream, {
     headers: {
-      'Content-Type'                : 'text/event-stream',
-      'Cache-Control'               : 'no-cache, no-transform',
-      'Connection'                  : 'keep-alive',
-      'X-Accel-Buffering'           : 'no',   // matikan buffering di Nginx
-      'Access-Control-Allow-Origin' : '*',
+      'Content-Type'     : 'text/event-stream',
+      'Cache-Control'    : 'no-cache, no-transform',
+      'Connection'       : 'keep-alive',
+      'X-Accel-Buffering': 'no',
     },
   });
 }

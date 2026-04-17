@@ -10,18 +10,33 @@ const db = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// ─── KONFIGURASI MARKUP ────────────────────────────────────────────────
-const IDR_RATE   = 17135.75;
-const MARKUP_PCT = 0.25;
-const MIN_PROFIT = 200;
-const ROUND_TO   = 100;
+// ─── KONFIGURASI MARKUP — baca dari DB ────────────────────────────────
+const DEFAULT_CONFIG = {
+  idrRate   : 17135.75,
+  markupPct : 0.25,
+  minProfit : 200,
+  roundTo   : 100,
+};
 
-function applyMarkup(costUSD: number): number {
-  const modal  = costUSD * IDR_RATE;
-  const profit = Math.max(modal * MARKUP_PCT, MIN_PROFIT);
-  return Math.ceil((modal + profit) / ROUND_TO) * ROUND_TO;
+async function getMarkupConfig() {
+  try {
+    const { data } = await db.from('admin_settings').select('value').eq('key', 'markup_config').single();
+    return data?.value ?? DEFAULT_CONFIG;
+  } catch { return DEFAULT_CONFIG; }
 }
-// ─────────────────────────────────────────────────────────────────────
+
+function applyMarkup(
+  costUSD  : number,
+  idrRate  : number,
+  markupPct: number,
+  minProfit: number,
+  roundTo  : number
+): number {
+  const modal  = costUSD * idrRate;
+  const profit = Math.max(modal * markupPct, minProfit);
+  return Math.ceil((modal + profit) / roundTo) * roundTo;
+}
+// ──────────────────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
   try {
@@ -51,6 +66,10 @@ export async function POST(request: Request) {
       }
     }
 
+    // Fetch config markup dari DB (sama dengan /api/services)
+    const config = await getMarkupConfig();
+    const { idrRate, markupPct, minProfit, roundTo } = config;
+
     const priceRes = await fetch(
       `${BASE_URL}?api_key=${API_KEY}&action=getPrices&country=${country}&service=${service}`,
       { cache: 'no-store' }
@@ -65,7 +84,7 @@ export async function POST(request: Request) {
         typeof serviceData?.cost === 'number'
           ? serviceData
           : (serviceData?.[operator] ?? serviceData?.['0'] ?? null);
-      if (opData?.cost) priceIDR = applyMarkup(opData.cost);
+      if (opData?.cost) priceIDR = applyMarkup(opData.cost, idrRate, markupPct, minProfit, roundTo);
     } catch { /* harga tidak kritis */ }
 
     const orderUrl =

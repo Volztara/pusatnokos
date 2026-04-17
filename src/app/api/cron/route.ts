@@ -73,11 +73,14 @@ export async function GET(request: Request) {
         }
       }
 
-      // ── 3. Update status order → expired ──────────────────────────
-      const { error: updateErr } = await db
+      // ── 3. Update status order → expired (atomic, hanya jika masih waiting)
+      // ✅ Idempotency: .eq('status', 'waiting') pastikan tidak di-update 2x
+      const { data: updated, error: updateErr } = await db
         .from('orders')
         .update({ status: 'expired' })
-        .eq('id', order.id);
+        .eq('id', order.id)
+        .eq('status', 'waiting') // ← atomic check
+        .select('id');
 
       if (updateErr) {
         console.error(`[cron] Supabase update failed for order ${order.id}:`, updateErr);
@@ -85,24 +88,30 @@ export async function GET(request: Request) {
         continue;
       }
 
-      // ── 4. Refund saldo user via user_id ──────────────────────────
+      // Kalau 0 rows updated → order sudah di-handle sebelumnya, skip refund
+      if (!updated || updated.length === 0) {
+        skipped++;
+        console.log(`[cron] Order ${order.id} sudah diproses sebelumnya, skip.`);
+        continue;
+      }
+
+      // ── 4. Refund saldo user via atomic RPC ───────────────────────
       if (user_id && price > 0) {
+        // Cari email user untuk RPC
         const { data: profile } = await db
           .from('profiles')
-          .select('balance')
+          .select('email')
           .eq('id', user_id)
           .single();
 
-        if (profile) {
-          const newBalance = (profile.balance ?? 0) + price;
+        if (profile?.email) {
+          // ✅ Atomic update via RPC — tidak pakai read-then-write
+          const { error: rpcErr } = await db.rpc('update_balance', {
+            p_email : profile.email,
+            p_amount: price,
+          });
 
-          const { error: balErr } = await db
-            .from('profiles')
-            .update({ balance: newBalance })
-            .eq('id', user_id);
-
-          if (!balErr) {
-            // Catat mutasi refund pakai user_id
+          if (!rpcErr) {
             await db.from('mutations').insert({
               user_id    : user_id,
               type       : 'in',
@@ -113,7 +122,7 @@ export async function GET(request: Request) {
             refunded++;
             console.log(`[cron] Refunded Rp${price} to user ${user_id}`);
           } else {
-            console.error(`[cron] Refund failed for user ${user_id}:`, balErr);
+            console.error(`[cron] RPC refund failed for user ${user_id}:`, rpcErr);
             errors++;
           }
         } else {
