@@ -1764,8 +1764,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
   const [favorites, setFavorites] = useState<number[]>([1, 2]);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [autoRetryQueue, setAutoRetryQueue] = useState<{serviceName: string; serviceCode: string; price: number; icon: React.ReactNode}[]>([]);
-  const [activeOrderIndex, setActiveOrderIndex] = useState(0);
-  const carouselTouchStart = useRef<number | null>(null);
+
   const [showGuide, setShowGuide] = useState<boolean>(true);
   const [showSyaratDash, setShowSyaratDash] = useState<boolean>(false);
   // Blacklist nomor yang pernah gagal/expired (shared ke BuyView)
@@ -1869,10 +1868,6 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
   const ordersRef = useRef(orders);
   useEffect(() => { ordersRef.current = orders; }, [orders]);
 
-  useEffect(() => {
-    const activeLen = orders.filter(o => o.status === 'waiting' || o.status === 'success').length;
-    if (activeOrderIndex >= activeLen && activeLen > 0) setActiveOrderIndex(activeLen - 1);
-  }, [orders, activeOrderIndex]);
 
   // ── Polling OTP setiap 5 detik ─────────────────────────────────────
   useEffect(() => {
@@ -2758,6 +2753,14 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
   const [isRefreshingStok, setIsRefreshingStok] = useState<boolean>(false);
+  const [activeOrderIndex, setActiveOrderIndex] = useState(0);
+  const carouselTouchStart = useRef<number | null>(null);
+
+  // Clamp carousel index saat order berkurang
+  useEffect(() => {
+    const activeLen = orders.filter(o => o.status === 'waiting' || o.status === 'success').length;
+    if (activeOrderIndex >= activeLen && activeLen > 0) setActiveOrderIndex(activeLen - 1);
+  }, [orders, activeOrderIndex]);
 
   // Hitung success rate per service dari riwayat order
   const serviceSuccessRates = useMemo(() => {
