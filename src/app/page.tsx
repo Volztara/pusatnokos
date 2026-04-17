@@ -1985,27 +1985,31 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab }: {
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Selamat datang di Pusat Nokos</p>
       </div>
 
-      {/* Saldo card */}
-      <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-[2rem] p-6 text-white">
-        <div className="text-xs font-bold uppercase tracking-widest opacity-70 mb-2">Total Saldo</div>
-        <div className="text-4xl font-black mb-4">{fmtIDR(balance)}</div>
-        <button onClick={() => setActiveTab('topup')} className="bg-white/20 hover:bg-white/30 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors border border-white/20">
-          + Deposit Saldo
-        </button>
+      {/* Saldo card — horizontal di mobile, vertikal di desktop */}
+      <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl md:rounded-[2rem] p-4 md:p-6 text-white">
+        <div className="flex items-center justify-between md:block">
+          <div>
+            <div className="text-[10px] md:text-xs font-bold uppercase tracking-widest opacity-70 mb-1 md:mb-2">Total Saldo</div>
+            <div className="text-2xl md:text-4xl font-black">{fmtIDR(balance)}</div>
+          </div>
+          <button onClick={() => setActiveTab('topup')} className="bg-white/20 hover:bg-white/30 text-white text-xs md:text-sm font-bold px-4 py-2 md:px-5 md:py-2.5 rounded-xl transition-colors border border-white/20 shrink-0 md:mt-4">
+            + Deposit
+          </button>
+        </div>
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      {/* Stats grid — 2x2 compact di mobile, 4 kolom di desktop */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4">
         {[
-          { label: 'Total Order',     value: totalOrder,          icon: <Package className="w-5 h-5 text-indigo-600" />,  bg: 'bg-indigo-50 dark:bg-indigo-900/30' },
-          { label: 'Order Sukses',    value: successOrder,        icon: <CheckCircle2 className="w-5 h-5 text-green-600" />, bg: 'bg-green-50 dark:bg-green-900/30' },
-          { label: 'Sedang Aktif',    value: activeOrder,         icon: <Activity className="w-5 h-5 text-amber-600" />,  bg: 'bg-amber-50 dark:bg-amber-900/30' },
-          { label: 'Sukses Rate',     value: successRate + '%',   icon: <TrendingUp className="w-5 h-5 text-blue-600" />, bg: 'bg-blue-50 dark:bg-blue-900/30' },
+          { label: 'Total Order',  value: totalOrder,        icon: <Package className="w-4 h-4 md:w-5 md:h-5 text-indigo-600" />,   bg: 'bg-indigo-50 dark:bg-indigo-900/30' },
+          { label: 'Order Sukses', value: successOrder,      icon: <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-green-600" />, bg: 'bg-green-50 dark:bg-green-900/30' },
+          { label: 'Sedang Aktif', value: activeOrder,       icon: <Activity className="w-4 h-4 md:w-5 md:h-5 text-amber-600" />,    bg: 'bg-amber-50 dark:bg-amber-900/30' },
+          { label: 'Sukses Rate',  value: successRate + '%', icon: <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />,   bg: 'bg-blue-50 dark:bg-blue-900/30' },
         ].map(s => (
-          <div key={s.label} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-            <div className={`${s.bg} p-2.5 rounded-xl w-fit mb-3`}>{s.icon}</div>
-            <div className="text-xl font-black text-slate-900 dark:text-white">{s.value}</div>
-            <div className="text-xs font-bold text-slate-400 mt-0.5">{s.label}</div>
+          <div key={s.label} className="bg-white dark:bg-slate-900 rounded-xl md:rounded-2xl border border-slate-200 dark:border-slate-800 p-3 md:p-4">
+            <div className={`${s.bg} p-2 md:p-2.5 rounded-lg md:rounded-xl w-fit mb-2 md:mb-3`}>{s.icon}</div>
+            <div className="text-lg md:text-xl font-black text-slate-900 dark:text-white">{s.value}</div>
+            <div className="text-[10px] md:text-xs font-bold text-slate-400 mt-0.5">{s.label}</div>
           </div>
         ))}
       </div>
@@ -2140,7 +2144,7 @@ function CountryDropdown({ countries, value, onChange }: {
         className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm"
       >
         <span className="text-xl leading-none">{meta.flag}</span>
-        <span className="flex-1 text-left truncate">{selected?.name ?? 'Pilih Negara'}</span>
+        <span className="flex-1 text-left truncate">{selected?.name.replace(/^\p{Emoji_Presentation}+\s*/u, '') ?? 'Pilih Negara'}</span>
         <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -2174,7 +2178,7 @@ function CountryDropdown({ countries, value, onChange }: {
                   className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-left transition-colors ${isActive ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'}`}
                 >
                   <span className="text-xl leading-none w-7 shrink-0">{m.flag}</span>
-                  <span className="flex-1 truncate">{c.name}</span>
+                  <span className="flex-1 truncate">{c.name.replace(/^\p{Emoji_Presentation}+\s*/u, '')}</span>
                   {m.dial && <span className="text-xs text-slate-400 font-medium shrink-0">{m.dial}</span>}
                   {isActive && <Check className="w-4 h-4 text-indigo-600 shrink-0" />}
                 </button>
@@ -2231,6 +2235,93 @@ function SortDropdown({ value, onChange }: { value: string; onChange: (v: string
               <span className="w-5 text-center">{opt.icon}</span>
               <span className="flex-1">{opt.label}</span>
               {opt.value === value && <Check className="w-4 h-4 text-indigo-600 shrink-0" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Mobile Compact Chips ─────────────────────────────────────────────
+function MobileCountryChip({ countries, value, onChange }: { countries: Country[]; value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = countries.find(c => c.id === value);
+  const meta = COUNTRY_META[value] ?? COUNTRY_META['6'];
+  const filtered = countries.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) { setOpen(false); setSearch(''); }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative flex-1">
+      <button type="button" onClick={() => { setOpen(v => !v); setSearch(''); }}
+        className="w-full flex items-center gap-1.5 px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:border-indigo-400 outline-none transition-all">
+        <span className="text-base leading-none shrink-0">{meta.flag}</span>
+        <span className="flex-1 text-left truncate text-xs">{selected?.name.replace(/^\p{Emoji_Presentation}+\s*/u, '') ?? 'Negara'}</span>
+        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute top-full mt-1 left-0 w-64 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+          <div className="p-2 border-b border-slate-100 dark:border-slate-800">
+            <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari negara..." className="w-full px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none dark:text-white" />
+          </div>
+          <div className="overflow-y-auto max-h-52">
+            {filtered.map(c => {
+              const m = COUNTRY_META[c.id] ?? { flag: '🌐', dial: '' };
+              return (
+                <button key={c.id} type="button" onClick={() => { onChange(c.id); setOpen(false); setSearch(''); }}
+                  className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm font-bold text-left transition-colors ${c.id === value ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'}`}>
+                  <span className="text-base w-6 shrink-0">{m.flag}</span>
+                  <span className="flex-1 truncate">{c.name.replace(/^\p{Emoji_Presentation}+\s*/u, '')}</span>
+                  {m.dial && <span className="text-xs text-slate-400 shrink-0">{m.dial}</span>}
+                  {c.id === value && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MobileSortChip({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = SORT_OPTIONS.find(o => o.value === value) ?? SORT_OPTIONS[0];
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative flex-1">
+      <button type="button" onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center gap-1.5 px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:border-indigo-400 outline-none transition-all">
+        <span className="text-sm shrink-0">{selected.icon}</span>
+        <span className="flex-1 text-left truncate text-xs">{selected.label}</span>
+        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute top-full mt-1 right-0 w-52 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+          {SORT_OPTIONS.map(opt => (
+            <button key={opt.value} type="button" onClick={() => { onChange(opt.value); setOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-left transition-colors ${opt.value === value ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'}`}>
+              <span className="w-4 text-center">{opt.icon}</span>
+              <span className="flex-1">{opt.label}</span>
+              {opt.value === value && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
             </button>
           ))}
         </div>
@@ -2542,38 +2633,40 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         </div>
       )}
 
-      <div className="bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 rounded-3xl p-5 md:p-6 flex flex-col xl:flex-row gap-5 justify-between items-end z-10 transition-colors">
+      {/* ── DESKTOP Filter ────────────────────────────────────────── */}
+      <div className="hidden md:flex bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 rounded-3xl p-5 md:p-6 xl:flex-row gap-5 justify-between items-end z-10 transition-colors">
         {/* Country Dropdown */}
         <div className="w-full xl:w-auto flex items-end space-x-3">
           <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-2xl border border-indigo-100 dark:border-indigo-800 shrink-0 mb-0.5">
             <Globe className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <CountryDropdown
-            countries={countries}
-            value={selectedCountry}
-            onChange={setSelectedCountry}
-          />
+          <CountryDropdown countries={countries} value={selectedCountry} onChange={setSelectedCountry} />
         </div>
-
         <div className="hidden xl:block w-px h-12 bg-slate-200 dark:bg-slate-800 mx-2 mb-0.5"></div>
-
         {/* Search */}
         <div className="flex-1 w-full relative">
           <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Pencarian</label>
           <div className="relative">
             <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 dark:text-slate-500" />
-            <input
-              type="text"
-              placeholder="Cari layanan..."
-              className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/50 outline-none text-base font-bold transition-all shadow-sm dark:text-white"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+            <input type="text" placeholder="Cari layanan..." className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/50 outline-none text-base font-bold transition-all shadow-sm dark:text-white" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
         </div>
-
-        {/* Sort Dropdown */}
+        {/* Sort */}
         <SortDropdown value={sortOrder} onChange={setSortOrder} />
+      </div>
+
+      {/* ── MOBILE Filter (compact) ───────────────────────────────── */}
+      <div className="md:hidden bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2.5 z-10 transition-colors">
+        {/* Baris 1: Negara + Urutkan */}
+        <div className="flex gap-2">
+          <MobileCountryChip countries={countries} value={selectedCountry} onChange={setSelectedCountry} />
+          <MobileSortChip value={sortOrder} onChange={setSortOrder} />
+        </div>
+        {/* Baris 2: Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 dark:text-slate-500" />
+          <input type="text" placeholder="Cari layanan..." className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/50 outline-none text-sm font-medium transition-all dark:text-white" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+        </div>
       </div>
 
       <div className="relative">
