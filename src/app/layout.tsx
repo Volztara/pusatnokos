@@ -2,6 +2,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -33,7 +34,7 @@ export const viewport: Viewport = {
   themeColor           : '#4f46e5',
   width                : 'device-width',
   initialScale         : 1,
-  maximumScale         : 5,        // izinkan zoom untuk aksesibilitas
+  maximumScale         : 5,
   userScalable         : true,
   viewportFit          : 'cover',
 };
@@ -56,19 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         style={{ overflowX: 'hidden', WebkitOverflowScrolling: 'touch' }}
       >
         {children}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('SW registered:', reg.scope))
-                    .catch(err => console.log('SW error:', err));
-                });
-              }
-            `,
-          }}
-        />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

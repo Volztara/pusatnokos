@@ -1,98 +1,58 @@
 // src/app/api/webhook/route.ts
 //
 // Menerima notifikasi OTP dari HeroSMS secara real-time.
-// HeroSMS akan POST ke URL ini setiap kali SMS masuk ke nomor yang aktif.
+// OTP disimpan ke tabel orders di Supabase (persistent, works on Netlify).
 //
 // Setup di HeroSMS:
-//   Dashboard → Settings → Webhook URL → https://yourdomain.com/api/webhook
-//
-// ⚠️  Event disimpan in-memory — akan hilang saat server restart.
-//     Untuk production, ganti dengan database (Redis, Postgres, dll).
+//   Dashboard → Settings → Webhook URL → https://pusatnokos.com/api/webhook
 
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
-// ─── IN-MEMORY EVENT STORE ────────────────────────────────────────────
-// Map: activationId → OTP event terbaru
-// Dibaca oleh /api/webhook/stream (SSE)
+const db = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-export const webhookEvents = new Map<string, WebhookEvent>();
-
-export interface WebhookEvent {
-  activationId : string;
-  phone        : string;
-  service      : string;
-  smsCode      : string;
-  smsText      : string;
-  receivedAt   : string;   // ISO timestamp
-}
-
-// SSE subscribers: Set of ReadableStream controllers
-export const sseClients = new Set<ReadableStreamDefaultController>();
-// ─────────────────────────────────────────────────────────────────────
-
-/**
- * POST /api/webhook
- *
- * Dipanggil oleh HeroSMS saat OTP masuk.
- *
- * HeroSMS body (form-encoded atau JSON):
- *   activationId | id  — ID aktivasi
- *   phone               — nomor HP
- *   smsCode | code      — kode OTP
- *   service             — kode layanan
- *   smsText | text      — isi SMS lengkap
- *
- * Response: "OK" (HeroSMS expect string "OK")
- */
 export async function POST(request: Request) {
   try {
     let body: Record<string, string> = {};
 
     const contentType = request.headers.get('content-type') ?? '';
-
     if (contentType.includes('application/json')) {
       body = await request.json();
     } else {
-      // form-urlencoded
-      const text   = await request.text();
-      const params = new URLSearchParams(text);
-      params.forEach((v, k) => { body[k] = v; });
+      const text = await request.text();
+      new URLSearchParams(text).forEach((v, k) => { body[k] = v; });
     }
 
-    const activationId = body.activationId ?? body.id          ?? '';
-    const phone        = body.phone                            ?? '';
-    const smsCode      = body.smsCode      ?? body.code        ?? '';
-    const service      = body.service                          ?? '';
-    const smsText      = body.smsText      ?? body.text        ?? smsCode;
+    const activationId = body.activationId ?? body.id    ?? '';
+    const smsCode      = body.smsCode      ?? body.code  ?? '';
+    const smsText      = body.smsText      ?? body.text  ?? smsCode;
+
+    console.log('[webhook] OTP masuk — id:', activationId, 'code:', smsCode);
 
     if (!activationId || !smsCode) {
-      // Kembalikan OK tetap agar HeroSMS tidak retry
       return new Response('OK', { status: 200 });
     }
 
-    const event: WebhookEvent = {
-      activationId,
-      phone,
-      service,
-      smsCode,
-      smsText,
-      receivedAt: new Date().toISOString(),
-    };
+    // Update otp_code & status di tabel orders berdasarkan activation_id
+    const { error } = await db
+      .from('orders')
+      .update({
+        otp_code  : smsCode,
+        status    : 'success',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('activation_id', activationId)
+      .eq('status', 'waiting'); // hanya update yang masih waiting
 
-    // Simpan ke store
-    webhookEvents.set(activationId, event);
-
-    // Broadcast ke semua SSE client yang terhubung
-    const payload = `data: ${JSON.stringify(event)}\n\n`;
-    for (const controller of sseClients) {
-      try {
-        controller.enqueue(new TextEncoder().encode(payload));
-      } catch {
-        sseClients.delete(controller);
-      }
+    if (error) {
+      console.error('[webhook] gagal update orders:', error);
+    } else {
+      console.log('[webhook] OTP tersimpan untuk activation_id:', activationId);
     }
 
-    console.log(`[webhook] OTP masuk — id: ${activationId}, code: ${smsCode}`);
     return new Response('OK', { status: 200 });
 
   } catch (err) {
@@ -103,9 +63,7 @@ export async function POST(request: Request) {
 
 /**
  * GET /api/webhook?id={activationId}
- *
- * Ambil event terakhir untuk activationId tertentu (one-shot, bukan SSE).
- * Berguna sebagai fallback jika SSE tidak tersedia.
+ * Ambil OTP dari Supabase — fallback jika SSE tidak tersedia.
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -115,10 +73,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Parameter "id" wajib diisi.' }, { status: 400 });
   }
 
-  const event = webhookEvents.get(id);
-  if (!event) {
+  const { data: order } = await db
+    .from('orders')
+    .select('otp_code, status, updated_at')
+    .eq('activation_id', id)
+    .single();
+
+  if (!order?.otp_code) {
     return NextResponse.json({ status: 'waiting' });
   }
 
-  return NextResponse.json({ status: 'ok', ...event });
+  return NextResponse.json({
+    status   : 'ok',
+    smsCode  : order.otp_code,
+    receivedAt: order.updated_at,
+  });
 }

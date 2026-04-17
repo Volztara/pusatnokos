@@ -70,8 +70,8 @@ interface Activation {
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────
-const fmtIDR = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
-const fmtUSD = (n: number) => '$ ' + n.toFixed(2);
+const fmtIDR = (n: number | undefined | null) => n == null ? '—' : 'Rp ' + n.toLocaleString('id-ID');
+const fmtUSD = (n: number | undefined | null) => n == null ? '—' : '$ ' + n.toFixed(2);
 
 const STATUS_CFG: Record<string, { color: string; bg: string; border: string }> = {
   waiting    : { color: 'text-amber-600', bg: 'bg-amber-50',  border: 'border-amber-200' },
@@ -161,8 +161,18 @@ export default function AdminPage() {
   const [txnPage,     setTxnPage]     = useState(1);
   const [txnStatus,   setTxnStatus]   = useState('');
   const [txnSearch,   setTxnSearch]   = useState('');
+  const [txnDateFrom, setTxnDateFrom] = useState('');
+  const [txnDateTo,   setTxnDateTo]   = useState('');
   const [loadingTxns, setLoadingTxns] = useState(false);
   const [actionLoading,setActionLoading] = useState<string | null>(null);
+
+  // Bulk action users
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [bulkLoading,   setBulkLoading]   = useState(false);
+
+  // Deposit notifikasi real-time
+  const [depositNotifCount, setDepositNotifCount] = useState(0);
+  const [lastDepositCheck,  setLastDepositCheck]  = useState(Date.now());
 
   // Pricing
   const [pricing,     setPricing]     = useState<PricingConfig>({ idrRate: 17135.75, markupPct: 0.25, minProfit: 200, roundTo: 100 });
@@ -194,11 +204,19 @@ export default function AdminPage() {
     return next;
   });
 
-  // Auth check
+  // Auth check — verifikasi token ke server, bukan cuma cek localStorage
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setIsAuthed(localStorage.getItem('admin_authed') === 'true');
-    }
+    if (typeof window === 'undefined') return;
+    const token = localStorage.getItem('admin_token');
+    if (!token) return;
+    fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    }).then(r => r.json()).then(d => {
+      if (d.success) setIsAuthed(true);
+      else localStorage.removeItem('admin_token');
+    }).catch(() => localStorage.removeItem('admin_token'));
   }, []);
 
   // ── Fetchers ────────────────────────────────────────────────────────
@@ -213,23 +231,26 @@ export default function AdminPage() {
   }, []);
 
   const fetchStats = useCallback(async () => {
-    try { const r = await fetch('/api/admin/stats'); setStats(await r.json()); } catch {}
+    try { const r = await authFetch('/api/admin/stats'); setStats(await r.json()); } catch {}
   }, []);
 
   const fetchUsers = useCallback(async (p: number, s: string) => {
     setLoadingUsers(true);
     try {
-      const r = await fetch(`/api/admin/users?page=${p}&search=${encodeURIComponent(s)}`);
+      const r = await authFetch(`/api/admin/users?page=${p}&search=${encodeURIComponent(s)}`);
       const d = await r.json();
       setUsers(d.users ?? []); setUserTotal(d.total ?? 0);
     } catch {}
     finally { setLoadingUsers(false); }
   }, []);
 
-  const fetchTxns = useCallback(async (p: number, status: string, search: string) => {
+  const fetchTxns = useCallback(async (p: number, status: string, search: string, dateFrom = '', dateTo = '') => {
     setLoadingTxns(true);
     try {
-      const r = await fetch(`/api/admin/transactions?page=${p}&status=${status}&search=${encodeURIComponent(search)}`);
+      const params = new URLSearchParams({ page: String(p), status, search });
+      if (dateFrom) params.set('dateFrom', dateFrom);
+      if (dateTo)   params.set('dateTo',   dateTo);
+      const r = await authFetch(`/api/admin/transactions?${params}`);
       const d = await r.json();
       setTxns(d.transactions ?? []); setTxnTotal(d.total ?? 0);
     } catch {}
@@ -237,12 +258,12 @@ export default function AdminPage() {
   }, []);
 
   const fetchPricing = useCallback(async () => {
-    try { const r = await fetch('/api/admin/pricing'); setPricing(await r.json()); } catch {}
+    try { const r = await authFetch('/api/admin/pricing'); setPricing(await r.json()); } catch {}
   }, []);
 
   const fetchLogs = useCallback(async (p: number) => {
     try {
-      const r = await fetch(`/api/admin/logs?page=${p}`);
+      const r = await authFetch(`/api/admin/logs?page=${p}`);
       const d = await r.json();
       setLogs(d.logs ?? []); setLogTotal(d.total ?? 0);
     } catch {}
@@ -253,9 +274,48 @@ export default function AdminPage() {
     setLastRefresh(new Date());
   }, [fetchBalance, fetchActivations, fetchStats]);
 
+  // ── Deposit notifikasi real-time (poll setiap 30 detik) ─────────
+  useEffect(() => {
+    if (!isAuthed) return;
+    const checkDeposit = async () => {
+      try {
+        const r = await authFetch('/api/admin/deposit?page=1&status=pending');
+        const d = await r.json();
+        const count = d.total ?? 0;
+        if (count > depositNotifCount && depositNotifCount !== 0) {
+          showToast(`🔔 Ada ${count - depositNotifCount} deposit baru masuk!`);
+        }
+        setDepositNotifCount(count);
+        setLastDepositCheck(Date.now());
+      } catch {}
+    };
+    checkDeposit();
+    const t = setInterval(checkDeposit, 30000);
+    return () => clearInterval(t);
+  }, [isAuthed]);
+
+  // ── Bulk action users ────────────────────────────────────────────
+  const handleBulkAction = async (action: 'blacklist' | 'unblacklist') => {
+    if (selectedUsers.size === 0) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all([...selectedUsers].map(userId =>
+        authFetch('/api/admin/users', {
+          method : 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body   : JSON.stringify({ userId, action, value: true }),
+        })
+      ));
+      showToast(`${selectedUsers.size} user berhasil di-${action === 'blacklist' ? 'blokir' : 'aktifkan'}.`);
+      setSelectedUsers(new Set());
+      fetchUsers(userPage, userSearch);
+    } catch { showToast('Gagal bulk action.'); }
+    finally { setBulkLoading(false); }
+  };
+
   useEffect(() => { if (!isAuthed) return; refreshAll(); const t = setInterval(refreshAll, 15000); return () => clearInterval(t); }, [refreshAll, isAuthed]);
   useEffect(() => { if (!isAuthed) return; if (tab === 'users') fetchUsers(userPage, userSearch); }, [tab, userPage, isAuthed]);
-  useEffect(() => { if (!isAuthed) return; if (tab === 'transactions') fetchTxns(txnPage, txnStatus, txnSearch); }, [tab, txnPage, txnStatus, isAuthed]);
+  useEffect(() => { if (!isAuthed) return; if (tab === 'transactions') fetchTxns(txnPage, txnStatus, txnSearch, txnDateFrom, txnDateTo); }, [tab, txnPage, txnStatus, isAuthed]);
   useEffect(() => { if (!isAuthed) return; if (tab === 'pricing') fetchPricing(); }, [tab, isAuthed]);
   useEffect(() => { if (!isAuthed) return; if (tab === 'logs') fetchLogs(logPage); }, [tab, logPage, isAuthed]);
 
@@ -271,7 +331,7 @@ export default function AdminPage() {
       });
       const d = await r.json();
       if (d.success) {
-        localStorage.setItem('admin_authed', 'true');
+        localStorage.setItem('admin_token', d.token ?? 'authed');
         setIsAuthed(true);
       } else {
         setLoginErr(d.message ?? 'Username atau password salah.');
@@ -282,6 +342,25 @@ export default function AdminPage() {
       setLoginLoading(false);
     }
   };
+
+  // Helper fetch yang otomatis kirim token — pakai ini untuk semua /api/admin/*
+  const authFetch = useCallback((url: string, options: RequestInit = {}) => {
+    const token = localStorage.getItem('admin_token') ?? '';
+    return fetch(url, {
+      ...options,
+      headers: {
+        ...(options.headers ?? {}),
+        'Authorization': `Bearer ${token}`,
+      },
+    }).then(r => {
+      if (r.status === 401) {
+        // Token expired/invalid — logout
+        localStorage.removeItem('admin_token');
+        setIsAuthed(false);
+      }
+      return r;
+    });
+  }, []);
 
   // ── Login Screen ─────────────────────────────────────────────────────
   if (!isAuthed) {
@@ -372,7 +451,7 @@ export default function AdminPage() {
   const handleTxnAction = async (txn: Transaction, action: 'cancel' | 'done') => {
     setActionLoading(txn.id + action);
     try {
-      const r = await fetch('/api/admin/transactions', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activationId: txn.activation_id, action, orderId: txn.id }) });
+      const r = await authFetch('/api/admin/transactions', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activationId: txn.activation_id, action, orderId: txn.id }) });
       if ((await r.json()).success) { showToast(action === 'cancel' ? 'Order dibatalkan, saldo user direfund.' : 'Order selesai.'); fetchTxns(txnPage, txnStatus, txnSearch); }
     } catch { showToast('Gagal.'); }
     finally { setActionLoading(null); }
@@ -380,7 +459,7 @@ export default function AdminPage() {
 
   const handleUserAction = async (userId: string, action: 'blacklist' | 'unblacklist' | 'set_balance', value?: any) => {
     try {
-      await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, action: action === 'unblacklist' ? 'blacklist' : action, value: action === 'unblacklist' ? false : (value ?? true) }) });
+      await authFetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, action: action === 'unblacklist' ? 'blacklist' : action, value: action === 'unblacklist' ? false : (value ?? true) }) });
       showToast(action === 'blacklist' ? 'User diblokir.' : action === 'unblacklist' ? 'User dibuka blokir.' : 'Saldo diperbarui.');
       fetchUsers(userPage, userSearch);
     } catch { showToast('Gagal.'); }
@@ -389,7 +468,7 @@ export default function AdminPage() {
   const handleSavePricing = async () => {
     setSavingPrice(true);
     try {
-      await fetch('/api/admin/pricing', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pricing) });
+      await authFetch('/api/admin/pricing', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pricing) });
       showToast('Konfigurasi harga disimpan!');
     } catch { showToast('Gagal menyimpan.'); }
     finally { setSavingPrice(false); }
@@ -433,7 +512,7 @@ export default function AdminPage() {
           <button onClick={toggleDark} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors">
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
-          <button onClick={() => { localStorage.removeItem('admin_authed'); window.location.href = '/'; }} className="font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 px-4 py-2 rounded-2xl flex items-center gap-2 transition-colors">
+          <button onClick={() => { localStorage.removeItem('admin_token'); window.location.href = '/'; }} className="font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 px-4 py-2 rounded-2xl flex items-center gap-2 transition-colors">
             <LogOut className="w-4 h-4"/> Keluar
           </button>
         </div>
@@ -455,14 +534,19 @@ export default function AdminPage() {
                 )}
               >
                 <span className={tab === t.id ? 'text-white' : 'text-slate-400'}>{t.icon}</span>
-                {t.label}
+                <span className="flex-1">{t.label}</span>
+                {t.id === 'deposit' && depositNotifCount > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                    {depositNotifCount}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
 
           {/* Sidebar footer */}
           <div className="p-3 border-t border-slate-100 dark:border-slate-800 space-y-1">
-            <button onClick={() => { localStorage.removeItem('admin_authed'); window.location.href = '/'; }} className="w-full font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 py-3 px-4 rounded-2xl flex justify-center items-center transition-colors gap-2">
+            <button onClick={() => { localStorage.removeItem('admin_token'); window.location.href = '/'; }} className="w-full font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 py-3 px-4 rounded-2xl flex justify-center items-center transition-colors gap-2">
               <LogOut className="w-4 h-4"/> Keluar Akun
             </button>
           </div>
@@ -569,18 +653,32 @@ export default function AdminPage() {
         {/* ── TRANSAKSI ── */}
         {tab === 'transactions' && (
           <>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
+            <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+              <div className="relative flex-1 min-w-40">
                 <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                <input value={txnSearch} onChange={e => setTxnSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && fetchTxns(1, txnStatus, txnSearch)} placeholder="Cari nomor HP..." className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white" />
+                <input value={txnSearch} onChange={e => setTxnSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && fetchTxns(1, txnStatus, txnSearch, txnDateFrom, txnDateTo)} placeholder="Cari nomor HP..." className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white" />
               </div>
-              <select value={txnStatus} onChange={e => { setTxnStatus(e.target.value); fetchTxns(1, e.target.value, txnSearch); }} className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold outline-none dark:text-white">
+              <select value={txnStatus} onChange={e => { setTxnStatus(e.target.value); fetchTxns(1, e.target.value, txnSearch, txnDateFrom, txnDateTo); }} className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold outline-none dark:text-white">
                 <option value="">Semua Status</option>
                 <option value="waiting">Menunggu</option>
                 <option value="success">Berhasil</option>
                 <option value="cancelled">Dibatalkan</option>
                 <option value="expired">Kadaluarsa</option>
               </select>
+              {/* Filter tanggal */}
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <input type="date" value={txnDateFrom} onChange={e => setTxnDateFrom(e.target.value)} className="px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold outline-none dark:text-white dark:[color-scheme:dark]" title="Dari tanggal" />
+                </div>
+                <span className="text-slate-400 text-xs font-bold shrink-0">s/d</span>
+                <div className="relative">
+                  <input type="date" value={txnDateTo} onChange={e => setTxnDateTo(e.target.value)} className="px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold outline-none dark:text-white dark:[color-scheme:dark]" title="Sampai tanggal" />
+                </div>
+                <button onClick={() => fetchTxns(1, txnStatus, txnSearch, txnDateFrom, txnDateTo)} className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors shrink-0">Filter</button>
+                {(txnDateFrom || txnDateTo) && (
+                  <button onClick={() => { setTxnDateFrom(''); setTxnDateTo(''); fetchTxns(1, txnStatus, txnSearch, '', ''); }} className="px-3 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors shrink-0">Reset</button>
+                )}
+              </div>
             </div>
 
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
@@ -629,24 +727,59 @@ export default function AdminPage() {
         {/* ── USERS ── */}
         {tab === 'users' && (
           <>
-            <div className="flex gap-3">
-              <div className="relative flex-1">
+            <div className="flex gap-3 flex-wrap">
+              <div className="relative flex-1 min-w-40">
                 <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                 <input value={userSearch} onChange={e => setUserSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && fetchUsers(1, userSearch)} placeholder="Cari email..." className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white" />
               </div>
               <button onClick={() => fetchUsers(1, userSearch)} className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors">Cari</button>
             </div>
 
+            {/* Bulk action bar */}
+            {selectedUsers.size > 0 && (
+              <div className="flex items-center gap-3 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-2xl px-4 py-3">
+                <span className="text-sm font-bold text-indigo-700 dark:text-indigo-300 flex-1">{selectedUsers.size} user dipilih</span>
+                <button onClick={() => handleBulkAction('blacklist')} disabled={bulkLoading} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-50 flex items-center gap-1">
+                  {bulkLoading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <UserX className="w-3 h-3" />} Blokir Semua
+                </button>
+                <button onClick={() => handleBulkAction('unblacklist')} disabled={bulkLoading} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-50 flex items-center gap-1">
+                  {bulkLoading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <UserCheck className="w-3 h-3" />} Aktifkan Semua
+                </button>
+                <button onClick={() => setSelectedUsers(new Set())} className="px-3 py-2 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-xl hover:bg-slate-300 transition-colors">Batal</button>
+              </div>
+            )}
+
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
               {loadingUsers ? <div className="p-12 text-center text-slate-400"><RefreshCw className="w-6 h-6 animate-spin mx-auto" /></div> : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-[10px] uppercase tracking-widest text-slate-400 font-black">
-                      <tr>{['User','Saldo','Order','Total Spend','Status','Terdaftar','Aksi'].map(h => <th key={h} className="px-5 py-4">{h}</th>)}</tr>
+                      <tr>
+                        <th className="px-5 py-4 w-10">
+                          <input type="checkbox" className="rounded"
+                            checked={users.length > 0 && users.every(u => selectedUsers.has(u.id))}
+                            onChange={e => {
+                              if (e.target.checked) setSelectedUsers(new Set(users.map(u => u.id)));
+                              else setSelectedUsers(new Set());
+                            }}
+                          />
+                        </th>
+                        {['User','Saldo','Order','Total Spend','Status','Terdaftar','Aksi'].map(h => <th key={h} className="px-5 py-4">{h}</th>)}
+                      </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {users.length === 0 ? <tr><td colSpan={7} className="py-16 text-center text-slate-400 font-bold">Tidak ada user</td></tr> : users.map(u => (
-                        <tr key={u.id} className={"hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors " + (u.is_blacklisted ? 'opacity-50' : '')}>
+                      {users.length === 0 ? <tr><td colSpan={8} className="py-16 text-center text-slate-400 font-bold">Tidak ada user</td></tr> : users.map(u => (
+                        <tr key={u.id} className={"hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors " + (u.is_blacklisted ? 'opacity-50' : '') + (selectedUsers.has(u.id) ? ' bg-indigo-50/50 dark:bg-indigo-900/10' : '')}>
+                          <td className="px-5 py-4">
+                            <input type="checkbox" className="rounded"
+                              checked={selectedUsers.has(u.id)}
+                              onChange={e => {
+                                const next = new Set(selectedUsers);
+                                if (e.target.checked) next.add(u.id); else next.delete(u.id);
+                                setSelectedUsers(next);
+                              }}
+                            />
+                          </td>
                           <td className="px-5 py-4"><div className="font-bold text-sm dark:text-white">{u.name}</div><div className="text-xs text-slate-400">{u.email}</div></td>
                           <td className="px-5 py-4 font-bold text-sm dark:text-white">{fmtIDR(u.balance)}</td>
                           <td className="px-5 py-4 font-bold text-sm dark:text-white">{u.orderCount}</td>
@@ -732,10 +865,10 @@ export default function AdminPage() {
         )}
 
         {/* ── DEPOSIT ── */}
-        {tab === 'deposit' && <DepositTab showToast={showToast} />}
+        {tab === 'deposit' && <DepositTab showToast={showToast} isAuthed={isAuthed} />}
 
         {/* ── REVENUE ── */}
-        {tab === 'revenue' && <RevenueTab />}
+        {tab === 'revenue' && <RevenueTab isAuthed={isAuthed} />}
 
         {/* ── OVERRIDE HARGA ── */}
         {tab === 'override' && <OverridePricingTab showToast={showToast} />}
@@ -855,7 +988,12 @@ export default function AdminPage() {
 }
 
 // ─── DEPOSIT TAB ──────────────────────────────────────────────────────
-function DepositTab({ showToast }: { showToast: (msg: string) => void }) {
+function DepositTab({ showToast, isAuthed }: { showToast: (msg: string) => void; isAuthed: boolean }) {
+
+  const authFetch = (url: string, options: RequestInit = {}) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') ?? '' : '';
+    return fetch(url, { ...options, headers: { ...(options.headers ?? {}), 'Authorization': `Bearer ${token}` } });
+  };
   const [requests,     setRequests]     = useState<any[]>([]);
   const [total,        setTotal]        = useState(0);
   const [page,         setPage]         = useState(1);
@@ -869,7 +1007,7 @@ function DepositTab({ showToast }: { showToast: (msg: string) => void }) {
   const fetchRequests = async (p: number, status: string) => {
     setLoading(true);
     try {
-      const r = await fetch(`/api/admin/deposit?page=${p}&status=${status}`);
+      const r = await authFetch(`/api/admin/deposit?page=${p}&status=${status}`);
       const d = await r.json();
       setRequests(d.requests ?? []);
       setTotal(d.total ?? 0);
@@ -877,12 +1015,12 @@ function DepositTab({ showToast }: { showToast: (msg: string) => void }) {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchRequests(page, statusFilter); }, [page, statusFilter]);
+  useEffect(() => { if (!isAuthed) return; fetchRequests(page, statusFilter); }, [page, statusFilter, isAuthed]);
 
   const handleAction = async (requestId: number, action: 'approve' | 'reject') => {
     setActionLoading(requestId);
     try {
-      const r = await fetch('/api/admin/deposit', {
+      const r = await authFetch('/api/admin/deposit', {
         method : 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body   : JSON.stringify({
@@ -1090,7 +1228,12 @@ function DepositTab({ showToast }: { showToast: (msg: string) => void }) {
   );
 }
 // ─── REVENUE TAB ──────────────────────────────────────────────────────
-function RevenueTab() {
+function RevenueTab({ isAuthed }: { isAuthed: boolean }) {
+
+  const authFetch = (url: string, options: RequestInit = {}) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') ?? '' : '';
+    return fetch(url, { ...options, headers: { ...(options.headers ?? {}), 'Authorization': `Bearer ${token}` } });
+  };
   const [period,   setPeriod]   = useState<'7d' | '30d' | '90d'>('30d');
   const [data,     setData]     = useState<{ date: string; revenue: number; orders: number }[]>([]);
   const [summary,  setSummary]  = useState({ total: 0, avgPerDay: 0, bestDay: '', bestAmount: 0, totalOrders: 0 });
@@ -1102,7 +1245,7 @@ function RevenueTab() {
   const fetchRevenue = async (p: string) => {
     setLoading(true);
     try {
-      const r = await fetch(`/api/admin/revenue?period=${p}`);
+      const r = await authFetch(`/api/admin/revenue?period=${p}`);
       const d = await r.json();
       setData(d.chart ?? []);
       setSummary(d.summary ?? { total: 0, avgPerDay: 0, bestDay: '', bestAmount: 0, totalOrders: 0 });
@@ -1111,7 +1254,7 @@ function RevenueTab() {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchRevenue(period); }, [period]);
+  useEffect(() => { if (!isAuthed) return; fetchRevenue(period); }, [period, isAuthed]);
 
   const maxRev = Math.max(...data.map(d => d.revenue), 1);
 
@@ -1198,6 +1341,11 @@ function RevenueTab() {
 
 // ─── OVERRIDE HARGA TAB ───────────────────────────────────────────────
 function OverridePricingTab({ showToast }: { showToast: (msg: string) => void }) {
+
+  const authFetch = (url: string, options: RequestInit = {}) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') ?? '' : '';
+    return fetch(url, { ...options, headers: { ...(options.headers ?? {}), 'Authorization': `Bearer ${token}` } });
+  };
   const [overrides,  setOverrides]  = useState<Record<string, number>>({});
   const [allServices,setAllServices]= useState<{ code: string; name: string; price: number }[]>([]);
   const [search,     setSearch]     = useState('');
@@ -1213,7 +1361,7 @@ function OverridePricingTab({ showToast }: { showToast: (msg: string) => void })
       try {
         const [svcRes, ovRes] = await Promise.all([
           fetch('/api/services?country=6&operator=0'),
-          fetch('/api/admin/pricing/overrides'),
+          authFetch('/api/admin/pricing/overrides'),
         ]);
         const svcs = await svcRes.json();
         const ovs  = await ovRes.json();
@@ -1233,7 +1381,7 @@ function OverridePricingTab({ showToast }: { showToast: (msg: string) => void })
   const handleSave = async () => {
     setSaving(true);
     try {
-      const r = await fetch('/api/admin/pricing/overrides', {
+      const r = await authFetch('/api/admin/pricing/overrides', {
         method : 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body   : JSON.stringify({ overrides: { ...overrides, ...edited } }),
@@ -1255,7 +1403,7 @@ function OverridePricingTab({ showToast }: { showToast: (msg: string) => void })
     const newEd = { ...edited };
     delete newEd[code];
     setEdited(newEd);
-    await fetch('/api/admin/pricing/overrides', {
+    await authFetch('/api/admin/pricing/overrides', {
       method : 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body   : JSON.stringify({ overrides: newOv }),
@@ -1344,6 +1492,11 @@ function OverridePricingTab({ showToast }: { showToast: (msg: string) => void })
 
 // ─── ADMIN ROLES TAB ──────────────────────────────────────────────────
 function AdminRolesTab({ showToast }: { showToast: (msg: string) => void }) {
+
+  const authFetch = (url: string, options: RequestInit = {}) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') ?? '' : '';
+    return fetch(url, { ...options, headers: { ...(options.headers ?? {}), 'Authorization': `Bearer ${token}` } });
+  };
   const [admins,     setAdmins]     = useState<any[]>([]);
   const [users,      setUsers]      = useState<any[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -1352,6 +1505,7 @@ function AdminRolesTab({ showToast }: { showToast: (msg: string) => void }) {
   const [form,       setForm]       = useState({ email: '', name: '', role: 'moderator', password: '' });
   const [userSearch, setUserSearch] = useState('');
   const [saving,     setSaving]     = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
 
   const ROLES: Record<string, { label: string; color: string; bg: string; border: string; perms: string[] }> = {
     superadmin: { label: 'Super Admin', color: 'text-purple-700 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800/50', perms: ['Semua akses'] },
@@ -1363,7 +1517,7 @@ function AdminRolesTab({ showToast }: { showToast: (msg: string) => void }) {
   const fetchAdmins = async () => {
     setLoading(true);
     try {
-      const r = await fetch('/api/admin/roles');
+      const r = await authFetch('/api/admin/roles');
       const d = await r.json();
       setAdmins(d ?? []);
     } catch {}
@@ -1372,7 +1526,7 @@ function AdminRolesTab({ showToast }: { showToast: (msg: string) => void }) {
 
   const fetchUsers = async () => {
     try {
-      const r = await fetch('/api/admin/users?limit=100');
+      const r = await authFetch('/api/admin/users?limit=100');
       const d = await r.json();
       setUsers(d.users ?? []);
     } catch {}
@@ -1389,7 +1543,7 @@ function AdminRolesTab({ showToast }: { showToast: (msg: string) => void }) {
   const handleAddExisting = async (user: any) => {
     setSaving(true);
     try {
-      const r = await fetch('/api/admin/roles', {
+      const r = await authFetch('/api/admin/roles', {
         method : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body   : JSON.stringify({ id: user.id, email: user.email, name: user.name, role: form.role, fromExisting: true }),
@@ -1406,7 +1560,7 @@ function AdminRolesTab({ showToast }: { showToast: (msg: string) => void }) {
     if (form.password.length < 8) { showToast('Password minimal 8 karakter.'); return; }
     setSaving(true);
     try {
-      const r = await fetch('/api/admin/roles', {
+      const r = await authFetch('/api/admin/roles', {
         method : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body   : JSON.stringify({ ...form, fromExisting: false }),
@@ -1419,14 +1573,14 @@ function AdminRolesTab({ showToast }: { showToast: (msg: string) => void }) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Hapus admin ini?')) return;
-    await fetch('/api/admin/roles', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    await authFetch('/api/admin/roles', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
     showToast('Admin dihapus.');
+    setDeleteConfirm(null);
     fetchAdmins();
   };
 
   const handleChangeRole = async (id: string, role: string) => {
-    await fetch('/api/admin/roles', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, role }) });
+    await authFetch('/api/admin/roles', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, role }) });
     showToast('Role diubah.');
     fetchAdmins();
   };
@@ -1557,7 +1711,7 @@ function AdminRolesTab({ showToast }: { showToast: (msg: string) => void }) {
                     {Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                   </select>
                   {a.role !== 'superadmin' && (
-                    <button onClick={() => handleDelete(a.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors">
+                    <button onClick={() => setDeleteConfirm({ id: a.id, name: a.name })} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors">
                       <XCircle className="w-4 h-4" />
                     </button>
                   )}
@@ -1567,6 +1721,34 @@ function AdminRolesTab({ showToast }: { showToast: (msg: string) => void }) {
           </div>
         )}
       </div>
+
+      {/* ── Modal Konfirmasi Hapus Admin ─────────────────────────── */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setDeleteConfirm(null)}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-4 mb-5">
+              <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-2xl shrink-0">
+                <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-900 dark:text-white">Hapus Admin</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Aksi ini tidak dapat dibatalkan</p>
+              </div>
+            </div>
+            <p className="text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 rounded-2xl px-4 py-3 mb-5">
+              Yakin ingin menghapus <span className="font-bold text-slate-900 dark:text-white">{deleteConfirm.name}</span> dari daftar admin?
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 transition-colors text-sm">
+                Batal
+              </button>
+              <button onClick={() => handleDelete(deleteConfirm.id)} className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-2xl transition-colors text-sm">
+                Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -79,22 +79,14 @@ interface NavItem {
 }
 
 // ==========================================
-// MOCK DATA & CONSTANTS
+// CONSTANTS
 // ==========================================
-const ALL_SERVICES: Service[] = [
-  { id: 1,  code: 'wa',  name: 'WhatsApp',  category: 'Chat',       price: 3500, basePrice: 2800, profit: 700,  stock: 1240, outOfStock: false, icon: <div className="w-10 h-10 rounded-2xl flex items-center justify-center overflow-hidden shrink-0" style={{background:'#dcfce7'}}><img src="https://cdn.simpleicons.org/whatsapp/25D366" width={24} height={24} className="w-6 h-6" alt="WhatsApp"/></div> },
-  { id: 2,  code: 'tg',  name: 'Telegram',  category: 'Chat',       price: 2500, basePrice: 2000, profit: 500,  stock: 850,  outOfStock: false, icon: <div className="w-10 h-10 rounded-2xl flex items-center justify-center overflow-hidden shrink-0" style={{background:'#dbeafe'}}><img src="https://cdn.simpleicons.org/telegram/26A5E4" className="w-6 h-6" alt="Telegram"/></div> },
-  { id: 3,  code: 'li',  name: 'Line',      category: 'Chat',       price: 1500, basePrice: 1200, profit: 300,  stock: 420,  outOfStock: false, icon: <div className="w-10 h-10 rounded-2xl flex items-center justify-center overflow-hidden shrink-0" style={{background:'#dcfce7'}}><img src="https://cdn.simpleicons.org/line/00C300" className="w-6 h-6" alt="Line"/></div> },
-  { id: 4,  code: 'gj',  name: 'Gojek',     category: 'Transport',  price: 1500, basePrice: 1200, profit: 300,  stock: 430,  outOfStock: false, icon: <div className="w-10 h-10 rounded-2xl flex items-center justify-center overflow-hidden shrink-0" style={{background:'#dcfce7'}}><img src="https://cdn.simpleicons.org/gojek/00AA13" className="w-6 h-6" alt="Gojek"/></div> },
-  { id: 5,  code: 'gr',  name: 'Grab',      category: 'Transport',  price: 1500, basePrice: 1200, profit: 300,  stock: 320,  outOfStock: false, icon: <div className="w-10 h-10 rounded-2xl flex items-center justify-center overflow-hidden shrink-0" style={{background:'#dcfce7'}}><img src="https://cdn.simpleicons.org/grab/00B14F" className="w-6 h-6" alt="Grab"/></div> },
-  { id: 6,  code: 'mx',  name: 'Maxim',     category: 'Transport',  price: 1200, basePrice: 900,  profit: 300,  stock: 890,  outOfStock: false, icon: <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0" style={{background:'#fef9c3'}}>🚕</div> },
-  { id: 7,  code: 'sp',  name: 'Shopee',    category: 'E-Commerce', price: 2000, basePrice: 1600, profit: 400,  stock: 2100, outOfStock: false, icon: <div className="w-10 h-10 rounded-2xl flex items-center justify-center overflow-hidden shrink-0" style={{background:'#fee2e2'}}><img src="https://cdn.simpleicons.org/shopee/EE4D2D" className="w-6 h-6" alt="Shopee"/></div> },
-  { id: 8,  code: 'tpd', name: 'Tokopedia', category: 'E-Commerce', price: 2000, basePrice: 1600, profit: 400,  stock: 1100, outOfStock: false, icon: <div className="w-10 h-10 rounded-2xl flex items-center justify-center overflow-hidden shrink-0" style={{background:'#dcfce7'}}><img src="https://cdn.simpleicons.org/tokopedia/42B549" className="w-6 h-6" alt="Tokopedia"/></div> },
-  { id: 9,  code: 'lz',  name: 'Lazada',    category: 'E-Commerce', price: 1500, basePrice: 1200, profit: 300,  stock: 750,  outOfStock: false, icon: <div className="w-10 h-10 rounded-2xl flex items-center justify-center overflow-hidden shrink-0" style={{background:'#dbeafe'}}><img src="https://cdn.simpleicons.org/lazada/0F136D" className="w-6 h-6" alt="Lazada"/></div> },
-  { id: 10, code: 'ig',  name: 'Instagram', category: 'Social',     price: 1000, basePrice: 800,  profit: 200,  stock: 5000, outOfStock: false, icon: <div className="w-10 h-10 rounded-2xl flex items-center justify-center overflow-hidden shrink-0" style={{background:'#fce7f3'}}><img src="https://cdn.simpleicons.org/instagram/E1306C" className="w-6 h-6" alt="Instagram"/></div> },
-  { id: 11, code: 'tk',  name: 'TikTok',    category: 'Social',     price: 1200, basePrice: 900,  profit: 300,  stock: 3400, outOfStock: false, icon: <div className="w-10 h-10 rounded-2xl flex items-center justify-center overflow-hidden shrink-0" style={{background:'#f1f5f9'}}><img src="https://cdn.simpleicons.org/tiktok/010101" className="w-6 h-6" alt="TikTok"/></div> },
-  { id: 12, code: 'fb',  name: 'Facebook',  category: 'Social',     price: 1000, basePrice: 800,  profit: 200,  stock: 4200, outOfStock: false, icon: <div className="w-10 h-10 rounded-2xl flex items-center justify-center overflow-hidden shrink-0" style={{background:'#dbeafe'}}><img src="https://cdn.simpleicons.org/facebook/1877F2" className="w-6 h-6" alt="Facebook"/></div> },
-];
+const CS_WA        = '6287862306726';
+const CS_TELEGRAM  = '@PusatNokosCS';
+const SESSION_TTL  = 3 * 24 * 60 * 60 * 1000; // 3 hari dalam ms
+
+// Fallback kosong — data live dari API, tidak pakai harga hardcoded
+const ALL_SERVICES: Service[] = [];
 
 const CATEGORIES: string[] = ['Semua', 'Chat', 'Social', 'E-Commerce', 'Transport', 'Finance', 'Gaming', 'Streaming', 'Dating', 'Travel', 'Tech', 'Lainnya'];
 
@@ -363,13 +355,17 @@ export default function App() {
     try {
       const savedSession = localStorage.getItem('nokos_session');
       if (savedSession) {
-        const parsed = JSON.parse(savedSession) as UserData;
-        if (parsed?.email) {
+        const parsed = JSON.parse(savedSession) as UserData & { _savedAt?: number };
+        // Cek expiry — session expired setelah 7 hari
+        if (parsed?.email && parsed._savedAt && Date.now() - parsed._savedAt < SESSION_TTL) {
           setUser(parsed);
           setCurrentView('dashboard');
+        } else {
+          // Expired atau tidak ada timestamp — hapus
+          localStorage.removeItem('nokos_session');
         }
       }
-    } catch { /* session rusak, abaikan */ }
+    } catch { localStorage.removeItem('nokos_session'); }
   }, []);
 
   // Apply/remove class 'dark' di <html> setiap kali isDarkMode berubah
@@ -470,8 +466,8 @@ export default function App() {
 
   const handleLogin = (userData: UserData) => { 
     setUser(userData);
-    // Simpan session ke localStorage
-    localStorage.setItem('nokos_session', JSON.stringify(userData));
+    // Simpan session ke localStorage dengan timestamp expiry
+    localStorage.setItem('nokos_session', JSON.stringify({ ...userData, _savedAt: Date.now() }));
     showToast("Berhasil login, selamat datang " + userData.name + "!"); 
     navigate('dashboard'); 
   };
@@ -518,7 +514,7 @@ export default function App() {
       ) : currentView === 'dashboard' ? (
         <DashboardLayout user={user} onLogout={handleLogout} showToast={showToast} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} activeServices={activeServices} serviceError={serviceError} countries={countries} selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry} />
       ) : (
-        <LandingPage onNavigate={navigate} showToast={showToast} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} activeServices={activeServices} />
+        <LandingPage onNavigate={navigate} showToast={showToast} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} activeServices={activeServices} loadingServices={loadingServices} />
       )}
     </div>
   );
@@ -533,9 +529,10 @@ interface LandingPageProps {
   isDarkMode: boolean;
   setIsDarkMode: (val: boolean) => void;
   activeServices: Service[];
+  loadingServices?: boolean;
 }
 
-function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeServices }: LandingPageProps) {
+function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeServices, loadingServices = false }: LandingPageProps) {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -566,7 +563,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
 
   return (
     <div className="min-h-screen bg-[#fafafa] dark:bg-[#020617] transition-colors duration-300 overflow-x-hidden" style={{minHeight:"100svh"}}>
-      <a href="https://wa.me/6287862306726?text=Halo%20CS%20Pusat%20Nokos%2C%20saya%20butuh%20bantuan." target="_blank" rel="noopener noreferrer" aria-label="Hubungi Customer Service via WhatsApp" className="fixed bottom-6 left-6 z-[90] bg-[#25D366] text-white px-4 py-3 rounded-full shadow-[0_8px_30px_rgba(37,211,102,0.4)] hover:bg-[#1ebd5a] hover:shadow-[0_8px_40px_rgba(37,211,102,0.6)] transition-all transform hover:scale-105 flex items-center gap-3 group">
+      <a href={`https://wa.me/${CS_WA}?text=Halo%20CS%20Pusat%20Nokos%2C%20saya%20butuh%20bantuan.`} target="_blank" rel="noopener noreferrer" aria-label="Hubungi Customer Service via WhatsApp" className="fixed bottom-6 left-6 z-[90] bg-[#25D366] text-white px-4 py-3 rounded-full shadow-[0_8px_30px_rgba(37,211,102,0.4)] hover:bg-[#1ebd5a] hover:shadow-[0_8px_40px_rgba(37,211,102,0.6)] transition-all transform hover:scale-105 flex items-center gap-3 group">
         <svg viewBox="0 0 24 24" fill="white" className="w-6 h-6 shrink-0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
         <div className="text-left">
           <div className="text-[10px] font-bold opacity-80 leading-none mb-0.5">Chat Kami</div>
@@ -730,7 +727,24 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
                   </div>
                 </div>
                 <div className="overflow-y-auto flex-1 bg-slate-50/50 dark:bg-slate-900/50 p-3">
-                  {filteredServices.length > 0 ? filteredServices.map((s) => (
+                  {loadingServices ? (
+                    // Loading skeleton
+                    [...Array(4)].map((_, i) => (
+                      <div key={i} className="bg-white dark:bg-slate-800 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-700 flex justify-between items-center mb-3 animate-pulse">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-xl shrink-0"></div>
+                          <div className="space-y-2">
+                            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24"></div>
+                            <div className="h-3 bg-slate-100 dark:bg-slate-700 rounded w-16"></div>
+                          </div>
+                        </div>
+                        <div className="space-y-2 items-end flex flex-col">
+                          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-20"></div>
+                          <div className="h-6 bg-slate-100 dark:bg-slate-700 rounded w-16"></div>
+                        </div>
+                      </div>
+                    ))
+                  ) : filteredServices.length > 0 ? filteredServices.map((s) => (
                     <div key={s.id} className="bg-white dark:bg-slate-800 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex justify-between items-center mb-3 hover:border-indigo-200 dark:hover:border-indigo-500 transition-colors">
                       <div className="flex items-center space-x-4">
                         <div className="bg-slate-50 dark:bg-slate-700 p-2.5 rounded-xl border border-slate-100 dark:border-slate-600">{s.icon}</div>
@@ -913,15 +927,15 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
             <h4 className="font-bold text-slate-900 dark:text-white mb-5 uppercase text-sm tracking-wider">Hubungi Kami</h4>
             <ul className="space-y-3 text-sm text-slate-500 dark:text-slate-400 font-medium">
               <li>
-                <a href="https://wa.me/6287862306726?text=Halo%20CS%20Pusat%20Nokos%2C%20saya%20butuh%20bantuan." target="_blank" rel="noopener noreferrer" className="flex justify-center sm:justify-start items-center hover:text-green-600 dark:hover:text-green-400 transition-colors gap-2">
+                <a href={`https://wa.me/${CS_WA}?text=Halo%20CS%20Pusat%20Nokos%2C%20saya%20butuh%20bantuan.`} target="_blank" rel="noopener noreferrer" className="flex justify-center sm:justify-start items-center hover:text-green-600 dark:hover:text-green-400 transition-colors gap-2">
                   <div className="w-4 h-4 shrink-0"><svg viewBox="0 0 24 24" fill="currentColor" className="text-green-500"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
                   WhatsApp: 087862306726
                 </a>
               </li>
               <li>
-                <a href="https://t.me/PusatNokosCS" target="_blank" rel="noopener noreferrer" className="flex justify-center sm:justify-start items-center hover:text-blue-500 dark:hover:text-blue-400 transition-colors gap-2">
+                <a href={`https://t.me/${CS_TELEGRAM.replace("@","")}`} target="_blank" rel="noopener noreferrer" className="flex justify-center sm:justify-start items-center hover:text-blue-500 dark:hover:text-blue-400 transition-colors gap-2">
                   <Send className="w-4 h-4 text-blue-400 shrink-0" />
-                  Telegram: @PusatNokosCS
+                  Telegram: {CS_TELEGRAM}
                 </a>
               </li>
               <li>
@@ -1867,7 +1881,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                   bg: 'bg-blue-50 dark:bg-blue-900/30',
                   step: '06',
                   title: 'Butuh Bantuan? Hubungi CS Kami',
-                  desc: 'Tim Customer Service kami siap membantu 24/7. Hubungi via WhatsApp ke 087862306726 atau Telegram @PusatNokosCS. Sertakan username, nominal, dan screenshot jika ada kendala deposit. Kami akan merespons secepat mungkin.',
+                  desc: `Tim Customer Service kami siap membantu 24/7. Hubungi via WhatsApp ke 087862306726 atau Telegram ${CS_TELEGRAM}. Sertakan username, nominal, dan screenshot jika ada kendala deposit. Kami akan merespons secepat mungkin.`,
                 },
               ].map(item => (
                 <div key={item.step} className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
@@ -1887,7 +1901,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
 
             {/* Footer */}
             <div className="p-5 border-t border-slate-100 dark:border-slate-800 shrink-0 flex gap-3">
-              <a href="https://wa.me/6287862306726?text=Halo%20CS%20Pusat%20Nokos%2C%20saya%20butuh%20bantuan." target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebd5a] text-white font-bold px-5 py-3 rounded-2xl transition-colors text-sm shrink-0">
+              <a href={`https://wa.me/${CS_WA}?text=Halo%20CS%20Pusat%20Nokos%2C%20saya%20butuh%20bantuan.`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebd5a] text-white font-bold px-5 py-3 rounded-2xl transition-colors text-sm shrink-0">
                 <svg viewBox="0 0 24 24" fill="white" className="w-4 h-4 shrink-0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                 Chat CS
               </a>
@@ -3108,7 +3122,7 @@ const BANK_ACCOUNTS = [
 ];
 
 function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, updateBalance, user }: TopupViewProps) {
-  const [depositMode, setDepositMode]   = useState<'select' | 'manual' | 'history'>('select');
+  const [depositMode, setDepositMode]   = useState<'select' | 'manual' | 'auto' | 'history'>('select');
   const [amount,      setAmount]        = useState('');
   const [selectedBank,setSelectedBank]  = useState(BANK_ACCOUNTS[0]);
   const [step,        setStep]          = useState(1); // 1=isi nominal, 2=instruksi, 3=upload bukti
@@ -3117,8 +3131,42 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
   const [note,        setNote]          = useState('');
   const [isLoading,   setIsLoading]     = useState(false);
   const [myRequests,  setMyRequests]    = useState<any[]>([]);
+  const [waUrl,       setWaUrl]         = useState<string | null>(null);
 
+  // Paymenku otomatis
+  const [autoChannel,  setAutoChannel]  = useState('qris');
+  const [autoLoading,  setAutoLoading]  = useState(false);
+  const [autoAmount,   setAutoAmount]   = useState('');
+  const [payUrl,       setPayUrl]       = useState<string | null>(null);
+
+  const PAYMENKU_CHANNELS = [
+    { code: 'qris',       name: 'QRIS',    fee: 'Rp 200 + 0.7%',  feeFlat: 200, feePct: 0.007, type: 'qr'      },
+    { code: 'dana',       name: 'DANA',    fee: 'Rp 200 + 3%',    feeFlat: 200, feePct: 0.03,  type: 'ewallet' },
+    { code: 'linkaja',    name: 'LinkAja', fee: 'Rp 200 + 3%',    feeFlat: 200, feePct: 0.03,  type: 'ewallet' },
+  ];
+
+  const QUICK_AUTO    = [5000, 10000, 25000, 50000, 100000, 200000];
   const QUICK_AMOUNTS = [10000, 25000, 50000, 100000, 200000, 500000];
+
+  const handlePaymenku = async () => {
+    if (!user?.email) return;
+    const nominal = parseInt(autoAmount);
+    if (!nominal || nominal < 5000) { showToast('Minimal deposit Rp 5.000'); return; }
+    setAutoLoading(true);
+    try {
+      const res = await fetch('/api/deposit/paymenku/create', {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ email: user.email, amount: nominal, channelCode: autoChannel }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.payUrl) { showToast(data.error ?? 'Gagal membuat transaksi.'); return; }
+      // Simpan payUrl ke state — tampilkan tombol agar user klik sendiri (iOS/mobile safe)
+      setPayUrl(data.payUrl);
+      fetchMyRequests();
+    } catch { showToast('Terjadi kesalahan jaringan.'); }
+    finally { setAutoLoading(false); }
+  };
 
   // Fetch riwayat deposit user
   const fetchMyRequests = async () => {
@@ -3161,22 +3209,13 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
       if (!res.ok) { showToast(data.error ?? 'Gagal submit request.'); return; }
       showToast('Request deposit berhasil dikirim!');
 
-      // Redirect ke WhatsApp — pakai anchor click agar tidak diblokir di mobile
+      // Siapkan URL WA untuk ditampilkan sebagai tombol (iOS tidak izinkan auto-redirect setelah async)
       const nominal = parseInt(amount).toLocaleString('id-ID');
       const userName = user.name ?? user.email;
       const metodePembayaran = selectedBank.id === 'qris' ? 'QRIS (INSTANT)' : selectedBank.name;
       const waMsg = `Halo Admin PusatNokos, saya ingin melakukan konfirmasi Top Up Saldo.\n*Detail Top Up:*\n- Username: *${userName}*\n- Nominal: *Rp ${nominal}*\n- Metode Pembayaran: *${metodePembayaran}*\nBerikut saya lampirkan bukti transfernya.`;
-      const wa = `https://wa.me/6287862306726?text=${encodeURIComponent(waMsg)}`;
-      const link = document.createElement('a');
-      link.href = wa;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      setStep(1); setAmount(''); setProof(null); setProofName(''); setNote('');
-      setDepositMode('history');
+      setWaUrl(`https://wa.me/${CS_WA}?text=${encodeURIComponent(waMsg)}`);
+      setStep(4); // step sukses
       fetchMyRequests();
     } catch { showToast('Terjadi kesalahan jaringan.'); }
     finally { setIsLoading(false); }
@@ -3194,7 +3233,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
         <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">Deposit Saldo</h1>
         <div className="flex gap-2">
           {['select', 'history'].map(m => (
-            <button key={m} onClick={() => setDepositMode(m as any)} className={"px-4 py-2 rounded-xl text-sm font-bold transition-colors " + (depositMode === m || (depositMode === 'manual' && m === 'select') ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-300')}>
+            <button key={m} onClick={() => setDepositMode(m as any)} className={"px-4 py-2 rounded-xl text-sm font-bold transition-colors " + (depositMode === m || (depositMode === 'manual' && m === 'select') || (depositMode === 'auto' && m === 'select') ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-300')}>
               {m === 'select' ? '+ Deposit Baru' : '📋 Riwayat'}
             </button>
           ))}
@@ -3204,23 +3243,136 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
       {/* ── PILIH MODE ── */}
       {depositMode === 'select' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div onClick={() => { setDepositMode('manual'); setStep(1); }} className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 p-6 cursor-pointer transition-all group">
+          <div onClick={() => { setDepositMode('auto'); }} className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-indigo-200 dark:border-indigo-700 hover:border-indigo-500 dark:hover:border-indigo-400 p-6 cursor-pointer transition-all group relative overflow-hidden">
+            <div className="absolute top-3 right-3 bg-green-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">OTOMATIS</div>
             <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-2xl w-fit mb-4 group-hover:bg-indigo-600 transition-colors">
-              <CreditCard className="w-6 h-6 text-indigo-600 dark:text-indigo-400 group-hover:text-white transition-colors" />
+              <Zap className="w-6 h-6 text-indigo-600 dark:text-indigo-400 group-hover:text-white transition-colors" />
+            </div>
+            <h3 className="font-black text-slate-900 dark:text-white text-lg mb-1">Deposit Otomatis</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">QRIS, Virtual Account, atau E-Wallet. Saldo masuk otomatis setelah bayar.</p>
+            <div className="mt-4 text-xs font-bold text-indigo-600 dark:text-indigo-400">QRIS · BRI · BNI · Mandiri · DANA →</div>
+          </div>
+
+          <div onClick={() => { setDepositMode('manual'); setStep(1); }} className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 p-6 cursor-pointer transition-all group">
+            <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-2xl w-fit mb-4 group-hover:bg-slate-200 dark:group-hover:bg-slate-700 transition-colors">
+              <CreditCard className="w-6 h-6 text-slate-600 dark:text-slate-400" />
             </div>
             <h3 className="font-black text-slate-900 dark:text-white text-lg mb-1">Transfer Manual</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400">Transfer ke rekening/QRIS admin, upload bukti, admin approve dalam 1x24 jam.</p>
-            <div className="mt-4 text-xs font-bold text-indigo-600 dark:text-indigo-400">BCA · BRI · Mandiri · DANA · OVO · QRIS →</div>
+            <div className="mt-4 text-xs font-bold text-slate-400">SeaBank · DANA · GoPay · Bank Jago · QRIS →</div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DEPOSIT OTOMATIS (PAYMENKU) ── */}
+      {depositMode === 'auto' && (
+        <div className="space-y-5">
+          <button onClick={() => setDepositMode('select')} className="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+            ← Kembali
+          </button>
+
+          {/* Pilih nominal */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+            <h3 className="font-black text-slate-900 dark:text-white">Nominal Deposit</h3>
+            <div className="grid grid-cols-3 gap-2">
+              {QUICK_AUTO.map(n => (
+                <button key={n} onClick={() => setAutoAmount(String(n))}
+                  className={"py-2.5 rounded-xl text-sm font-bold transition-colors " + (autoAmount === String(n) ? 'bg-indigo-600 text-white' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 border border-slate-200 dark:border-slate-700')}>
+                  Rp {(n/1000)}rb
+                </button>
+              ))}
+            </div>
+            <div className="relative">
+              <span className="absolute left-4 top-3.5 text-sm font-bold text-slate-400">Rp</span>
+              <input type="number" min="5000" value={autoAmount} onChange={e => setAutoAmount(e.target.value)}
+                placeholder="Atau ketik nominal lain..." className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm font-bold dark:text-white" />
+            </div>
+            {autoAmount && parseInt(autoAmount) >= 5000 && (
+              <p className="text-xs text-indigo-600 dark:text-indigo-400 font-bold">= Rp {parseInt(autoAmount).toLocaleString('id-ID')}</p>
+            )}
           </div>
 
-          <div className="bg-slate-100 dark:bg-slate-800/50 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 p-6 opacity-60 cursor-not-allowed">
-            <div className="bg-slate-200 dark:bg-slate-700 p-3 rounded-2xl w-fit mb-4">
-              <Zap className="w-6 h-6 text-slate-500" />
+          {/* Pilih metode */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-3">
+            <h3 className="font-black text-slate-900 dark:text-white">Metode Pembayaran</h3>
+            <div className="space-y-2">
+              {PAYMENKU_CHANNELS.map(ch => {
+                const nominal = parseInt(autoAmount) || 0;
+                const totalFee = nominal > 0 ? Math.round(ch.feeFlat + nominal * ch.feePct) : 0;
+                const totalBayar = nominal + totalFee;
+                return (
+                  <button key={ch.code} onClick={() => setAutoChannel(ch.code)}
+                    className={"w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all text-left " + (autoChannel === ch.code ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300')}>
+                    <div>
+                      <div className="font-bold text-sm text-slate-900 dark:text-white">{ch.name}</div>
+                      {nominal >= 5000 ? (
+                        <div className="text-xs mt-0.5 space-x-2">
+                          <span className="text-slate-400">Biaya: Rp {totalFee.toLocaleString('id-ID')}</span>
+                          <span className="font-bold text-indigo-600 dark:text-indigo-400">Total: Rp {totalBayar.toLocaleString('id-ID')}</span>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-slate-400 mt-0.5">{ch.fee}</div>
+                      )}
+                    </div>
+                    <div className={"w-4 h-4 rounded-full border-2 shrink-0 " + (autoChannel === ch.code ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300 dark:border-slate-600')}></div>
+                  </button>
+                );
+              })}
             </div>
-            <h3 className="font-black text-slate-500 dark:text-slate-400 text-lg mb-1">Otomatis</h3>
-            <p className="text-sm text-slate-400">QRIS · VA · E-Wallet — Segera hadir</p>
-            <div className="mt-4 text-xs font-bold text-slate-400">Coming soon</div>
           </div>
+
+          {/* Total ringkasan */}
+          {autoAmount && parseInt(autoAmount) >= 5000 && (() => {
+            const ch = PAYMENKU_CHANNELS.find(c => c.code === autoChannel)!;
+            const nominal = parseInt(autoAmount);
+            const fee = Math.round(ch.feeFlat + nominal * ch.feePct);
+            return (
+              <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl p-4 space-y-2 text-sm">
+                <div className="flex justify-between text-slate-600 dark:text-slate-300">
+                  <span>Saldo masuk</span>
+                  <span className="font-bold">Rp {nominal.toLocaleString('id-ID')}</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Biaya {ch.name}</span>
+                  <span>Rp {fee.toLocaleString('id-ID')}</span>
+                </div>
+                <div className="flex justify-between text-indigo-700 dark:text-indigo-300 font-black text-base border-t border-indigo-200 dark:border-indigo-800 pt-2">
+                  <span>Total Bayar</span>
+                  <span>Rp {(nominal + fee).toLocaleString('id-ID')}</span>
+                </div>
+              </div>
+            );
+          })()}
+
+          {payUrl ? (
+            /* Setelah transaksi dibuat — tampilkan tombol link yang aman di iOS */
+            <div className="space-y-4 text-center py-2">
+              <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-7 h-7 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-900 dark:text-white">Transaksi Dibuat!</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Klik tombol di bawah untuk menyelesaikan pembayaran.</p>
+              </div>
+              <a href={payUrl} target="_blank" rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl transition-colors text-base">
+                <Zap className="w-5 h-5" /> Lanjut ke Pembayaran
+              </a>
+              <button onClick={() => { setPayUrl(null); setAutoAmount(''); setDepositMode('history'); }}
+                className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 transition-colors text-sm">
+                Lihat Riwayat Deposit
+              </button>
+            </div>
+          ) : (
+            <>
+              <button onClick={handlePaymenku} disabled={autoLoading || !autoAmount || parseInt(autoAmount) < 5000}
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-base">
+                {autoLoading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
+                {autoLoading ? 'Memproses...' : 'Bayar Sekarang'}
+              </button>
+              <p className="text-xs text-slate-400 text-center">Saldo masuk otomatis setelah pembayaran berhasil. Tidak perlu konfirmasi manual.</p>
+            </>
+          )}
         </div>
       )}
 
@@ -3367,6 +3519,32 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                   {isLoading ? 'Mengirim...' : 'Kirim Request'}
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Step 4: Sukses — tombol WA */}
+          {step === 4 && waUrl && (
+            <div className="space-y-5 text-center py-4">
+              <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">Request Berhasil Dikirim!</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Sekarang konfirmasi ke admin via WhatsApp agar saldo segera diproses.</p>
+              </div>
+              <a
+                href={waUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-3 py-4 bg-[#25D366] hover:bg-[#1ebd5a] text-white font-bold rounded-2xl transition-colors text-base"
+              >
+                <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5 shrink-0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                Konfirmasi via WhatsApp
+              </a>
+              <button onClick={() => { setStep(1); setAmount(''); setProof(null); setProofName(''); setNote(''); setWaUrl(null); setDepositMode('history'); }}
+                className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 transition-colors text-sm">
+                Lihat Riwayat Deposit
+              </button>
             </div>
           )}
         </div>
