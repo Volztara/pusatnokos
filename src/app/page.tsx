@@ -3161,13 +3161,19 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
       if (!res.ok) { showToast(data.error ?? 'Gagal submit request.'); return; }
       showToast('Request deposit berhasil dikirim!');
 
-      // Redirect ke WhatsApp admin dengan pesan otomatis
+      // Redirect ke WhatsApp — pakai anchor click agar tidak diblokir di mobile
       const nominal = parseInt(amount).toLocaleString('id-ID');
       const userName = user.name ?? user.email;
       const metodePembayaran = selectedBank.id === 'qris' ? 'QRIS (INSTANT)' : selectedBank.name;
       const waMsg = `Halo Admin PusatNokos, saya ingin melakukan konfirmasi Top Up Saldo.\n*Detail Top Up:*\n- Username: *${userName}*\n- Nominal: *Rp ${nominal}*\n- Metode Pembayaran: *${metodePembayaran}*\nBerikut saya lampirkan bukti transfernya.`;
       const wa = `https://wa.me/6287862306726?text=${encodeURIComponent(waMsg)}`;
-      window.open(wa, '_blank');
+      const link = document.createElement('a');
+      link.href = wa;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
       setStep(1); setAmount(''); setProof(null); setProofName(''); setNote('');
       setDepositMode('history');
@@ -3279,7 +3285,8 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                   <div className="space-y-4">
                     {selectedBank.qrisUrl && selectedBank.qrisUrl !== 'GANTI_DENGAN_URL_QRIS' ? (
                       <div className="flex justify-center">
-                        <NextImage src={selectedBank.qrisUrl} alt="QRIS Pusat Nokos" width={256} height={256} className="w-64 h-64 object-contain rounded-2xl border-2 border-slate-200 dark:border-slate-700 p-2" />
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={selectedBank.qrisUrl} alt="QRIS Pusat Nokos" width={256} height={256} className="w-64 h-64 object-contain rounded-2xl border-2 border-slate-200 dark:border-slate-700 p-2" />
                       </div>
                     ) : (
                       <div className="flex justify-center">
