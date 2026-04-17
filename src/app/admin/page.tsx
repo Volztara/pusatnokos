@@ -175,6 +175,10 @@ export default function AdminPage() {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
 
+  // Set Saldo Modal
+  const [saldoModal, setSaldoModal] = useState<{ userId: string; email: string } | null>(null);
+  const [saldoInput, setSaldoInput] = useState('');
+
   // Dark mode
   useEffect(() => {
     const saved = localStorage.getItem('theme');
@@ -658,7 +662,7 @@ export default function AdminPage() {
                               {u.is_blacklisted
                                 ? <button onClick={() => handleUserAction(u.id, 'unblacklist')} className="px-2.5 py-1.5 bg-green-50 hover:bg-green-600 text-green-600 hover:text-white rounded-lg text-xs font-bold border border-green-200 flex items-center gap-1"><UserCheck className="w-3 h-3" /> Buka</button>
                                 : <button onClick={() => handleUserAction(u.id, 'blacklist')} className="px-2.5 py-1.5 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded-lg text-xs font-bold border border-red-200 flex items-center gap-1"><UserX className="w-3 h-3" /> Blokir</button>}
-                              <button onClick={() => { const v = prompt(`Set saldo baru untuk ${u.email} (angka IDR):`); if (v && !isNaN(parseInt(v))) handleUserAction(u.id, 'set_balance', parseInt(v)); }} className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white rounded-lg text-xs font-bold border border-indigo-200 flex items-center gap-1"><Wallet className="w-3 h-3" /> Saldo</button>
+                              <button onClick={() => { setSaldoModal({ userId: u.id, email: u.email }); setSaldoInput(''); }} className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white rounded-lg text-xs font-bold border border-indigo-200 flex items-center gap-1"><Wallet className="w-3 h-3" /> Saldo</button>
                             </div>
                           </td>
                         </tr>
@@ -771,6 +775,81 @@ export default function AdminPage() {
 
       </main>
       </div>
+
+      {/* ── Modal Set Saldo ───────────────────────────────────────── */}
+      {saldoModal && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSaldoModal(null)}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="bg-indigo-100 dark:bg-indigo-900/40 p-2.5 rounded-2xl">
+                  <Wallet className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div>
+                  <h2 className="text-base font-black text-slate-900 dark:text-white">Set Saldo</h2>
+                  <p className="text-xs text-slate-400 truncate max-w-[180px]">{saldoModal.email}</p>
+                </div>
+              </div>
+              <button onClick={() => setSaldoModal(null)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors">
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Nominal Saldo Baru (IDR)</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-3.5 text-sm font-bold text-slate-400">Rp</span>
+                  <input
+                    type="number"
+                    min="0"
+                    autoFocus
+                    value={saldoInput}
+                    onChange={e => setSaldoInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && saldoInput && !isNaN(parseInt(saldoInput))) {
+                        handleUserAction(saldoModal.userId, 'set_balance', parseInt(saldoInput));
+                        setSaldoModal(null);
+                      }
+                    }}
+                    placeholder="0"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 text-base font-bold dark:text-white"
+                  />
+                </div>
+                {saldoInput && !isNaN(parseInt(saldoInput)) && (
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400 font-bold mt-2">
+                    = Rp {parseInt(saldoInput).toLocaleString('id-ID')}
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-3">
+                {[10000, 50000, 100000, 500000].map(n => (
+                  <button key={n} onClick={() => setSaldoInput(String(n))}
+                    className="flex-1 py-2 text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl transition-colors text-slate-600 dark:text-slate-400">
+                    {n >= 1000 ? (n/1000)+'rb' : n}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+              <button onClick={() => setSaldoModal(null)} className="flex-1 py-3 rounded-2xl font-bold text-sm bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-colors">
+                Batal
+              </button>
+              <button
+                onClick={() => {
+                  if (saldoInput && !isNaN(parseInt(saldoInput))) {
+                    handleUserAction(saldoModal.userId, 'set_balance', parseInt(saldoInput));
+                    setSaldoModal(null);
+                  }
+                }}
+                disabled={!saldoInput || isNaN(parseInt(saldoInput))}
+                className="flex-1 py-3 rounded-2xl font-bold text-sm bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Simpan Saldo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

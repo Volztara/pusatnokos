@@ -1687,8 +1687,8 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
             <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">{navItems.find(i => i.id === activeTab)?.name}</h2>
           </div>
 
-          <div className="flex items-center space-x-3 sm:space-x-5">
-            <button suppressHydrationWarning onClick={() => setIsDarkMode(!isDarkMode)} aria-label="Toggle dark mode" className="p-2.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+          <div className="flex items-center space-x-2 sm:space-x-5">
+            <button suppressHydrationWarning onClick={() => setIsDarkMode(!isDarkMode)} aria-label="Toggle dark mode" className="hidden md:flex p-2.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
               {isDarkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}
             </button>
 
@@ -1750,6 +1750,10 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                 ))}
               </div>
               <div className="p-5 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                <button suppressHydrationWarning onClick={() => { setIsDarkMode(!isDarkMode); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
+                  {isDarkMode ? <Sun className="w-5 h-5 text-amber-400 shrink-0" /> : <Moon className="w-5 h-5 text-slate-400 shrink-0" />}
+                  {isDarkMode ? 'Mode Terang' : 'Mode Gelap'}
+                </button>
                 <button onClick={() => { setShowSyaratDash(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
                   <ShieldCheck className="w-5 h-5 text-indigo-400 shrink-0" />
                   Syarat & Ketentuan
