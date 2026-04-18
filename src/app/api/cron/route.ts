@@ -111,7 +111,7 @@ export async function GET(request: Request) {
               user_id    : user_id,
               type       : 'in',
               amount     : price,
-              description: `Refund Kadaluarsa: ${service_name}`,
+              description: `Refund Kadaluarsa: ${service_name} #${activation_id}`,
               created_at : new Date().toISOString(),
             });
             refunded++;

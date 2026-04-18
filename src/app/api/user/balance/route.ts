@@ -9,10 +9,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-/**
- * GET /api/user/balance?email=xxx
- * Ambil saldo user
- */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const email = searchParams.get('email')?.trim().toLowerCase();
@@ -29,11 +25,6 @@ export async function GET(request: Request) {
   return NextResponse.json({ balance: data.balance ?? 0 });
 }
 
-/**
- * PATCH /api/user/balance
- * Update saldo user secara atomic (mencegah race condition & double refund)
- * Body: { email, amount, type: 'add' | 'subtract', activationId? }
- */
 export async function PATCH(request: Request) {
   try {
     const { email, amount, type, activationId } = await request.json();
@@ -42,34 +33,27 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Parameter tidak lengkap.' }, { status: 400 });
     }
 
+    // ✅ Gunakan RPC atomic untuk cancel — mencegah race condition & double refund
     if (activationId && type === 'add') {
-      // ✅ Idempotency check
-      const { data: existingRefund } = await supabaseAdmin
-        .from('mutations')
-        .select('id')
-        .eq('description', `Refund pembatalan order #${activationId}`)
-        .limit(1);
+      const { data, error } = await supabaseAdmin
+        .rpc('cancel_order_and_refund', {
+          p_activation_id: activationId,
+          p_email        : email.toLowerCase(),
+        });
 
-      if (existingRefund && existingRefund.length > 0) {
-        return NextResponse.json({ error: 'Order sudah pernah di-refund.' }, { status: 409 });
+      if (error) {
+        console.error('[PATCH /api/user/balance] RPC error:', error);
+        return NextResponse.json({ error: 'Gagal memproses refund.' }, { status: 500 });
       }
 
-      // ✅ Gate utama — tandai cancelled, hanya kalau masih waiting
-      const { data: updatedOrder } = await supabaseAdmin
-        .from('orders')
-        .update({ status: 'cancelled' })
-        .eq('activation_id', activationId)
-        .eq('status', 'waiting')
-        .select()
-        .single();
-
-      // Kalau order tidak ditemukan / sudah bukan waiting → tolak
-      if (!updatedOrder) {
-        return NextResponse.json({ error: 'Order tidak bisa dibatalkan.' }, { status: 409 });
+      if (!data.success) {
+        return NextResponse.json({ error: data.error }, { status: 409 });
       }
+
+      return NextResponse.json({ success: true, balance: data.balance });
     }
 
-    // ✅ Ambil profile
+    // ✅ Untuk subtract (beli nomor) — update langsung
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('id, balance')
@@ -80,11 +64,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'User tidak ditemukan.' }, { status: 404 });
     }
 
-    // ✅ Update saldo langsung — simple, reliable, tidak ada fallback yg bisa skip mutation
-    const currentBalance = profile.balance ?? 0;
-    const newBal = type === 'add'
-      ? currentBalance + amount
-      : Math.max(0, currentBalance - amount);
+    const newBal = Math.max(0, (profile.balance ?? 0) - amount);
 
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
@@ -93,16 +73,6 @@ export async function PATCH(request: Request) {
 
     if (updateError) {
       return NextResponse.json({ error: 'Gagal update saldo.' }, { status: 500 });
-    }
-
-    // ✅ Insert mutation SELALU setelah update berhasil — tidak bisa di-skip
-    if (type === 'add') {
-      await supabaseAdmin.from('mutations').insert({
-        user_id    : profile.id,
-        type       : 'in',
-        amount     : amount,
-        description: `Refund pembatalan order${activationId ? ` #${activationId}` : ''}`,
-      });
     }
 
     return NextResponse.json({ success: true, balance: newBal });

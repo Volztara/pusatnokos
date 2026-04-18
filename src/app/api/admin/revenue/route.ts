@@ -14,18 +14,20 @@ export async function GET(request: Request) {
   const from = new Date();
   from.setDate(from.getDate() - days);
 
-  // Chart data per hari
+  // Chart data per hari — hanya dari order SUCCESS
   const chart: { date: string; revenue: number; orders: number }[] = [];
   for (let i = days - 1; i >= 0; i--) {
     const d    = new Date(); d.setDate(d.getDate() - i); d.setHours(0, 0, 0, 0);
     const next = new Date(d); next.setDate(next.getDate() + 1);
 
-    const [{ data: mutations }, { count: orderCount }] = await Promise.all([
-      db.from('mutations').select('amount').eq('type', 'out').gte('created_at', d.toISOString()).lt('created_at', next.toISOString()),
-      db.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', d.toISOString()).lt('created_at', next.toISOString()),
-    ]);
+    const { data: successOrders, count: orderCount } = await db
+      .from('orders')
+      .select('price', { count: 'exact' })
+      .eq('status', 'success')
+      .gte('created_at', d.toISOString())
+      .lt('created_at', next.toISOString());
 
-    const revenue = (mutations ?? []).reduce((s: number, m: any) => s + (m.amount ?? 0), 0);
+    const revenue = (successOrders ?? []).reduce((s: number, o: any) => s + (o.price ?? 0), 0);
     chart.push({
       date   : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
       revenue,
@@ -39,8 +41,10 @@ export async function GET(request: Request) {
   const totalOrders = chart.reduce((s, d) => s + d.orders, 0);
   const bestEntry   = chart.reduce((a, b) => b.revenue > a.revenue ? b : a, chart[0] ?? { date: '', revenue: 0 });
 
-  // Top services
-  const { data: orderData } = await db.from('orders').select('service_name, price')
+  // Top services — hanya dari order SUCCESS
+  const { data: orderData } = await db
+    .from('orders')
+    .select('service_name, price')
     .gte('created_at', from.toISOString())
     .eq('status', 'success');
 

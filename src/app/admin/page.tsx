@@ -579,19 +579,61 @@ export default function AdminPage() {
               <StatCard icon={<TrendingUp className="w-5 h-5 text-green-600" />}  label="Revenue Hari Ini" value={stats ? fmtIDR(stats.todayRevenue) : '—'} sub={stats ? `Total: ${fmtIDR(stats.totalRevenue)}` : ''} accent="bg-green-50 dark:bg-green-900/30" />
             </div>
 
-            {/* Chart 7 hari */}
+            {/* Chart 7 hari — Area Line Chart */}
             {stats?.chart && (
               <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
-                <h3 className="text-sm font-black text-slate-900 dark:text-white mb-6">Revenue 7 Hari Terakhir</h3>
-                <div className="flex items-end gap-2 h-40">
-                  {stats.chart.map((c, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                      <div className="text-[9px] font-bold text-slate-400">{fmtIDR(c.revenue).replace('Rp ', '')}</div>
-                      <div className="w-full bg-indigo-600 dark:bg-indigo-500 rounded-t-md transition-all" style={{ height: `${Math.max(4, (c.revenue / maxChart) * 120)}px` }} />
-                      <div className="text-[9px] font-bold text-slate-400 text-center">{c.date}</div>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white">Revenue 7 Hari Terakhir</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Hanya order berhasil</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-slate-400">Total</div>
+                    <div className="text-sm font-black text-indigo-600 dark:text-indigo-400">{fmtIDR(stats.chart.reduce((s, c) => s + c.revenue, 0))}</div>
+                  </div>
                 </div>
+                {(() => {
+                  const data = stats.chart;
+                  const maxVal = Math.max(...data.map(c => c.revenue), 1);
+                  const W = 600, H = 160, PAD = 10;
+                  const points = data.map((c, i) => {
+                    const x = PAD + (i / (data.length - 1)) * (W - PAD * 2);
+                    const y = H - PAD - (c.revenue / maxVal) * (H - PAD * 2);
+                    return { x, y, ...c };
+                  });
+                  const polyline = points.map(p => `${p.x},${p.y}`).join(' ');
+                  const area = `M${points[0].x},${H - PAD} ` + points.map(p => `L${p.x},${p.y}`).join(' ') + ` L${points[points.length-1].x},${H - PAD} Z`;
+                  return (
+                    <div className="relative">
+                      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 160 }}>
+                        <defs>
+                          <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.3" />
+                            <stop offset="100%" stopColor="#6366f1" stopOpacity="0.02" />
+                          </linearGradient>
+                        </defs>
+                        {/* Grid lines */}
+                        {[0.25, 0.5, 0.75, 1].map((t, i) => (
+                          <line key={i} x1={PAD} y1={PAD + (1 - t) * (H - PAD * 2)} x2={W - PAD} y2={PAD + (1 - t) * (H - PAD * 2)} stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4,4" />
+                        ))}
+                        {/* Area fill */}
+                        <path d={area} fill="url(#areaGrad)" />
+                        {/* Line */}
+                        <polyline points={polyline} fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+                        {/* Dots */}
+                        {points.map((p, i) => (
+                          <circle key={i} cx={p.x} cy={p.y} r="4" fill="#fff" stroke="#6366f1" strokeWidth="2.5" />
+                        ))}
+                      </svg>
+                      {/* X axis labels */}
+                      <div className="flex justify-between mt-2 px-1">
+                        {data.map((c, i) => (
+                          <div key={i} className="text-[9px] font-bold text-slate-400 text-center flex-1">{c.date}</div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 

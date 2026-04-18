@@ -37,22 +37,65 @@ export async function PATCH(req: Request) {
     await fetch(`${HERO}?api_key=${KEY}&action=setStatus&id=${activationId}&status=${code}`, { cache: 'no-store' });
   }
 
-  // Update status di DB
-  const newStatus = action === 'cancel' ? 'cancelled' : 'success';
-  await db.from('orders').update({ status: newStatus }).eq('id', orderId);
-  try {
-    await db.from('admin_logs').insert({ action: `order_${action}`, target_id: String(orderId), details: `Order ${activationId} di-${action} oleh admin` });
-  } catch {}
-
-  // Refund saldo jika cancel
+  // ✅ Refund saldo jika cancel — dengan idempotency check
   if (action === 'cancel') {
-    const { data: order } = await db.from('orders').select('user_id, price').eq('id', orderId).single();
-    if (order) {
-      const { data: profile } = await db.from('profiles').select('balance').eq('id', order.user_id).single();
-      await db.from('profiles').update({ balance: (profile?.balance ?? 0) + order.price }).eq('id', order.user_id);
-      await db.from('mutations').insert({ user_id: order.user_id, type: 'in', amount: order.price, description: 'Refund cancel oleh admin' });
+    const { data: order } = await db
+      .from('orders')
+      .select('user_id, price, status')
+      .eq('id', orderId)
+      .single();
+
+    if (order && order.status !== 'cancelled') {
+      // ✅ Gate utama — update status hanya kalau belum cancelled
+      const { data: updated } = await db
+        .from('orders')
+        .update({ status: 'cancelled' })
+        .eq('id', orderId)
+        .neq('status', 'cancelled')
+        .select()
+        .single();
+
+      if (updated) {
+        // ✅ Idempotency check via mutations
+        const { data: existingRefund } = await db
+          .from('mutations')
+          .select('id')
+          .eq('user_id', order.user_id)
+          .eq('description', `Refund cancel oleh admin #${orderId}`)
+          .limit(1);
+
+        if (!existingRefund || existingRefund.length === 0) {
+          const { data: profile } = await db
+            .from('profiles')
+            .select('balance')
+            .eq('id', order.user_id)
+            .single();
+
+          await db.from('profiles')
+            .update({ balance: (profile?.balance ?? 0) + order.price })
+            .eq('id', order.user_id);
+
+          await db.from('mutations').insert({
+            user_id    : order.user_id,
+            type       : 'in',
+            amount     : order.price,
+            description: `Refund cancel oleh admin #${orderId}`,
+          });
+        }
+      }
     }
+  } else {
+    // Update status done/success
+    await db.from('orders').update({ status: 'success' }).eq('id', orderId);
   }
+
+  try {
+    await db.from('admin_logs').insert({
+      action   : `order_${action}`,
+      target_id: String(orderId),
+      details  : `Order ${activationId} di-${action} oleh admin`,
+    });
+  } catch {}
 
   return NextResponse.json({ success: true });
 }
