@@ -131,6 +131,171 @@ const formatTimeStr = (s: number): string => {
   return m + ":" + sec;
 };
 
+
+// ==========================================
+// TRANSLATIONS (ID / EN / ZH)
+// ==========================================
+type Lang = 'id' | 'en' | 'zh';
+
+const T: Record<Lang, Record<string, string>> = {
+  id: {
+    // Nav
+    dashboard:'Dashboard', buy:'Beli Nomor', topup:'Deposit Saldo',
+    history:'Riwayat Transaksi', mutasi:'Mutasi Saldo', profile:'Pengaturan Akun',
+    // Header
+    logout:'Keluar', topupBtn:'+ Topup', notifications:'Notifikasi',
+    clearAll:'Hapus semua', noNotif:'Belum ada notifikasi', yourBalance:'Saldo Anda',
+    // Buy page
+    buyTitle:'Beli Nomor OTP', buySubtitle:'Pilih layanan aplikasi. Harga & stok diperbarui secara real-time.',
+    serverCountry:'Negara Server', search:'Pencarian', sort:'Urutkan',
+    serviceCol:'Layanan App', stockCol:'Stok Server', priceCol:'Harga / OTP', actionCol:'Aksi',
+    buyBtn:'Beli Nomor', modeBundle:'⚡ Mode Bundle', cancelBundle:'✕ Batal Bundle',
+    searchPlaceholder:'Cari layanan...', recommended:'Rekomendasi',
+    // Active orders
+    activeOrders:'Pesanan Aktif', scrollTop:'Atas',
+    phoneReceived:'Nomor HP Diterima', otpCode:'Kode Verifikasi (OTP)',
+    waitingOTP:'Menunggu SMS Masuk...', viewAllSMS:'Lihat Semua SMS',
+    resend:'Resend', sms:'SMS', cancel:'Batal',
+    // Dashboard
+    totalBalance:'Total Saldo', totalOrder:'Total Order', successOrder:'Order Sukses',
+    activeOrder:'Sedang Aktif', successRate:'Sukses Rate',
+    financeSummary:'Ringkasan Keuangan', totalDeposit:'Total Deposit',
+    totalSpend:'Total Belanja', remainBalance:'Sisa Saldo',
+    recentTx:'Transaksi Terakhir', viewAll:'Lihat semua →',
+    quickActions:'Aksi Cepat',
+    // Deposit
+    depositTitle:'Deposit Saldo', depositNew:'+ Deposit Baru', depositHistory:'📋 Riwayat',
+    autoDeposit:'Deposit Otomatis', manualDeposit:'Transfer Manual',
+    nominalDeposit:'Nominal Deposit', paymentMethod:'Metode Pembayaran',
+    balanceIn:'Saldo masuk', totalPay:'Total Bayar', payNow:'Bayar Sekarang',
+    processing:'Memproses...', back:'← Kembali',
+    // History
+    historyTitle:'Riwayat Transaksi',
+    // Mutasi
+    mutasiTitle:'Buku Mutasi Saldo', mutasiSubtitle:'Catatan rinci pemasukan dan pengeluaran saldo Anda.',
+    timeDesc:'Waktu & Deskripsi', nominal:'Nominal',
+    // Profile
+    fullName:'Nama Lengkap', updateProfile:'Perbarui Profil',
+    changePassword:'Ganti Password', currentPass:'Password Saat Ini',
+    newPass:'Password Baru', confirmPass:'Konfirmasi Password Baru',
+    joinedAt:'Bergabung Sejak', totalOrders:'Total Order', totalPurchase:'Total Pembelian',
+    savePassword:'Simpan Password Baru', saving:'Menyimpan...',
+    // Dashboard greeting
+    greeting:'Halo', welcomeMsg:'Selamat datang di Pusat Nokos',
+    // Profile misc
+    accountInfo:'Informasi Akun', passStrWeak:'Lemah', passStrMed:'Sedang', passStrStrong:'Kuat', passStrVeryStrong:'Sangat Kuat',
+    passMismatch:'Password tidak cocok.', changePassTitle:'Ganti Password',
+    // History filters
+    filterAll:'Semua', filterSuccess:'✅ Berhasil', filterWaiting:'⏳ Menunggu',
+    filterCancelled:'❌ Batal', filterExpired:'🕐 Kadaluarsa',
+    // Mutasi filters
+    mutasiAll:'Semua', mutasiIn:'Masuk (+)', mutasiOut:'Keluar (-)',
+    // Load more
+    loadMore:'Muat lebih banyak', noMoreData:'Tidak ada data lagi',
+    noData:'Tidak ada data',
+  },
+  en: {
+    // Nav
+    dashboard:'Dashboard', buy:'Buy Number', topup:'Deposit',
+    history:'Transaction History', mutasi:'Balance History', profile:'Account Settings',
+    // Header
+    logout:'Logout', topupBtn:'+ Top Up', notifications:'Notifications',
+    clearAll:'Clear all', noNotif:'No notifications yet', yourBalance:'Your Balance',
+    // Buy page
+    buyTitle:'Buy OTP Number', buySubtitle:'Select app service. Prices & stock updated real-time.',
+    serverCountry:'Server Country', search:'Search', sort:'Sort',
+    serviceCol:'App Service', stockCol:'Server Stock', priceCol:'Price / OTP', actionCol:'Action',
+    buyBtn:'Buy Number', modeBundle:'⚡ Bundle Mode', cancelBundle:'✕ Cancel Bundle',
+    searchPlaceholder:'Search service...', recommended:'Recommended',
+    // Active orders
+    activeOrders:'Active Orders', scrollTop:'Top',
+    phoneReceived:'Phone Number Received', otpCode:'Verification Code (OTP)',
+    waitingOTP:'Waiting for SMS...', viewAllSMS:'View All SMS',
+    resend:'Resend', sms:'SMS', cancel:'Cancel',
+    // Dashboard
+    totalBalance:'Total Balance', totalOrder:'Total Orders', successOrder:'Successful',
+    activeOrder:'Active', successRate:'Success Rate',
+    financeSummary:'Financial Summary', totalDeposit:'Total Deposit',
+    totalSpend:'Total Spent', remainBalance:'Remaining Balance',
+    recentTx:'Recent Transactions', viewAll:'View all →',
+    quickActions:'Quick Actions',
+    // Deposit
+    depositTitle:'Deposit Balance', depositNew:'+ New Deposit', depositHistory:'📋 History',
+    autoDeposit:'Auto Deposit', manualDeposit:'Manual Transfer',
+    nominalDeposit:'Deposit Amount', paymentMethod:'Payment Method',
+    balanceIn:'Balance in', totalPay:'Total Pay', payNow:'Pay Now',
+    processing:'Processing...', back:'← Back',
+    // History
+    historyTitle:'Transaction History',
+    // Mutasi
+    mutasiTitle:'Balance Book', mutasiSubtitle:'Detailed record of your balance in and out.',
+    timeDesc:'Time & Description', nominal:'Amount',
+    // Profile
+    fullName:'Full Name', updateProfile:'Update Profile',
+    changePassword:'Change Password', currentPass:'Current Password',
+    newPass:'New Password', confirmPass:'Confirm New Password',
+    joinedAt:'Joined Since', totalOrders:'Total Orders', totalPurchase:'Total Purchase',
+    savePassword:'Save New Password', saving:'Saving...',
+    greeting:'Hello', welcomeMsg:'Welcome to Pusat Nokos',
+    accountInfo:'Account Information', passStrWeak:'Weak', passStrMed:'Medium', passStrStrong:'Strong', passStrVeryStrong:'Very Strong',
+    passMismatch:'Passwords do not match.', changePassTitle:'Change Password',
+    filterAll:'All', filterSuccess:'✅ Success', filterWaiting:'⏳ Waiting',
+    filterCancelled:'❌ Cancelled', filterExpired:'🕐 Expired',
+    mutasiAll:'All', mutasiIn:'Income (+)', mutasiOut:'Expense (-)',
+    loadMore:'Load more', noMoreData:'No more data', noData:'No data',
+  },
+  zh: {
+    // Nav
+    dashboard:'仪表盘', buy:'购买号码', topup:'充值',
+    history:'交易记录', mutasi:'余额记录', profile:'账户设置',
+    // Header
+    logout:'退出', topupBtn:'+ 充值', notifications:'通知',
+    clearAll:'清除全部', noNotif:'暂无通知', yourBalance:'您的余额',
+    // Buy page
+    buyTitle:'购买OTP号码', buySubtitle:'选择应用服务。价格和库存实时更新。',
+    serverCountry:'服务器国家', search:'搜索', sort:'排序',
+    serviceCol:'应用服务', stockCol:'服务器库存', priceCol:'价格 / OTP', actionCol:'操作',
+    buyBtn:'购买号码', modeBundle:'⚡ 套餐模式', cancelBundle:'✕ 取消套餐',
+    searchPlaceholder:'搜索服务...', recommended:'推荐',
+    // Active orders
+    activeOrders:'活跃订单', scrollTop:'顶部',
+    phoneReceived:'已接收号码', otpCode:'验证码 (OTP)',
+    waitingOTP:'等待短信...', viewAllSMS:'查看全部短信',
+    resend:'重发', sms:'短信', cancel:'取消',
+    // Dashboard
+    totalBalance:'总余额', totalOrder:'总订单', successOrder:'成功',
+    activeOrder:'活跃', successRate:'成功率',
+    financeSummary:'财务摘要', totalDeposit:'总充值',
+    totalSpend:'总消费', remainBalance:'剩余余额',
+    recentTx:'最近交易', viewAll:'查看全部 →',
+    quickActions:'快捷操作',
+    // Deposit
+    depositTitle:'充值余额', depositNew:'+ 新充值', depositHistory:'📋 记录',
+    autoDeposit:'自动充值', manualDeposit:'手动转账',
+    nominalDeposit:'充值金额', paymentMethod:'支付方式',
+    balanceIn:'入账余额', totalPay:'总支付', payNow:'立即支付',
+    processing:'处理中...', back:'← 返回',
+    // History
+    historyTitle:'交易记录',
+    // Mutasi
+    mutasiTitle:'余额账本', mutasiSubtitle:'详细记录您的余额收支。',
+    timeDesc:'时间与描述', nominal:'金额',
+    // Profile
+    fullName:'全名', updateProfile:'更新资料',
+    changePassword:'修改密码', currentPass:'当前密码',
+    newPass:'新密码', confirmPass:'确认新密码',
+    joinedAt:'加入时间', totalOrders:'总订单', totalPurchase:'总消费',
+    savePassword:'保存新密码', saving:'保存中...',
+    greeting:'你好', welcomeMsg:'欢迎来到 Pusat Nokos',
+    accountInfo:'账户信息', passStrWeak:'弱', passStrMed:'中', passStrStrong:'强', passStrVeryStrong:'非常强',
+    passMismatch:'密码不匹配。', changePassTitle:'修改密码',
+    filterAll:'全部', filterSuccess:'✅ 成功', filterWaiting:'⏳ 等待中',
+    filterCancelled:'❌ 已取消', filterExpired:'🕐 已过期',
+    mutasiAll:'全部', mutasiIn:'入账 (+)', mutasiOut:'支出 (-)',
+    loadMore:'加载更多', noMoreData:'没有更多数据', noData:'暂无数据',
+  },
+};
+
 // ==========================================
 // ANIMATION UTILS
 // ==========================================
@@ -520,6 +685,7 @@ export default function App() {
   const [user, setUser] = useState<UserData | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+  const [lang, setLang] = useState<Lang>(() => (typeof window !== 'undefined' ? (localStorage.getItem('lang') as Lang) ?? 'id' : 'id'));
   const [services, setServices] = useState<Service[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [serviceError,    setServiceError]    = useState(false);
@@ -705,7 +871,7 @@ export default function App() {
       {currentView === 'login' || currentView === 'register' ? (
         <AuthView type={currentView} onNavigate={navigate} onAuth={handleLogin} showToast={showToast} isDarkMode={isDarkMode} />
       ) : currentView === 'dashboard' ? (
-        <DashboardLayout user={user} onLogout={handleLogout} showToast={showToast} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} activeServices={activeServices} serviceError={serviceError} countries={countries} selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry} />
+        <DashboardLayout user={user} onLogout={handleLogout} showToast={showToast} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} activeServices={activeServices} serviceError={serviceError} countries={countries} selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry} lang={lang} setLang={setLang} />
       ) : (
         <LandingPage onNavigate={navigate} showToast={showToast} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} activeServices={activeServices} loadingServices={loadingServices} />
       )}
@@ -1714,7 +1880,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
               </div>
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Konfirmasi Password Baru</label>
+              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Konfirmasi Password</label>
               <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
                 <input type={showConfirm ? "text" : "password"} required value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className={inputCls + " pr-12"} placeholder="Ulangi password baru" />
                 <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showConfirm ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}</button>
@@ -1723,7 +1889,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
             <ErrorBox />
             <button type="submit" disabled={isLoading || otpCode.length !== 6} className={btnCls(isLoading)}>
               {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2"/> : <CheckCircle2 className="w-5 h-5 mr-2"/>}
-              {isLoading ? "Menyimpan..." : "Simpan Password Baru"}
+              {isLoading ? 'Mengirim...' : 'Verifikasi'}
             </button>
             <ResendRow onBack={() => { setStep("forgot"); setError(""); setOtpCode(""); }} />
           </form>
@@ -1748,9 +1914,12 @@ interface DashboardLayoutProps {
   countries: Country[];
   selectedCountry: string;
   setSelectedCountry: (val: string) => void;
+  lang: Lang;
+  setLang: (l: Lang) => void;
 }
 
-function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode, activeServices, serviceError, countries, selectedCountry, setSelectedCountry }: DashboardLayoutProps) {
+function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode, activeServices, serviceError, countries, selectedCountry, setSelectedCountry, lang, setLang }: DashboardLayoutProps) {
+  const t = T[lang];
   const [activeTab, setActiveTab] = useState<string>('buy');
   const [balance, setBalance] = useState<number>(user?.balance ?? 0);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -2056,12 +2225,12 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
   }, [showToast, updateBalance]);
 
   const navItems: NavItem[] = [
-    { id: 'dashboard', name: 'Dashboard', icon: <BarChart2 className="w-5 h-5" /> },
-    { id: 'buy',     name: 'Beli Nomor',        icon: <ShoppingCart className="w-5 h-5" /> },
-    { id: 'topup',   name: 'Deposit Saldo',      icon: <CreditCard className="w-5 h-5" /> },
-    { id: 'history', name: 'Riwayat Transaksi',  icon: <History className="w-5 h-5" /> },
-    { id: 'mutasi',  name: 'Mutasi Saldo',       icon: <Receipt className="w-5 h-5" /> },
-    { id: 'profile', name: 'Pengaturan Akun',    icon: <Settings className="w-5 h-5" /> },
+    { id: 'dashboard', name: t.dashboard, icon: <BarChart2 className="w-5 h-5" /> },
+    { id: 'buy',       name: t.buy,       icon: <ShoppingCart className="w-5 h-5" /> },
+    { id: 'topup',     name: t.topup,     icon: <CreditCard className="w-5 h-5" /> },
+    { id: 'history',   name: t.history,   icon: <History className="w-5 h-5" /> },
+    { id: 'mutasi',    name: t.mutasi,    icon: <Receipt className="w-5 h-5" /> },
+    { id: 'profile',   name: t.profile,   icon: <Settings className="w-5 h-5" /> },
   ];
 
   return (
@@ -2074,7 +2243,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
           <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">PusatNokos.</span>
         </div>
         <div className="p-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 font-bold mb-2 tracking-widest uppercase">Total Saldo</div>
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 font-bold mb-2 tracking-widest uppercase">{t.totalBalance.toUpperCase()}</div>
           <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400">Rp {balance.toLocaleString('id-ID')}</div>
         </div>
         <div className="flex-1 py-6 px-5 space-y-2 overflow-y-auto">
@@ -2105,6 +2274,15 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
           </div>
 
           <div className="flex items-center space-x-2 sm:space-x-5">
+            {/* Language Switcher */}
+            <div className="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1">
+              {(['id','en','zh'] as Lang[]).map(l => (
+                <button key={l} onClick={() => { setLang(l); localStorage.setItem('lang', l); }}
+                  className={"px-2.5 py-1 rounded-lg text-xs font-black transition-colors " + (lang === l ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300')}>
+                  {l === 'id' ? '🇮🇩' : l === 'en' ? '🇺🇸' : '🇨🇳'}
+                </button>
+              ))}
+            </div>
             <button suppressHydrationWarning onClick={() => setIsDarkMode(!isDarkMode)} aria-label="Toggle dark mode" className="hidden md:flex p-2.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
               {isDarkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}
             </button>
@@ -2120,16 +2298,16 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                 )}
               </button>
               {showNotif && (
-                <div className="absolute right-0 top-12 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden">
+                <div className="absolute right-0 top-12 w-[calc(100vw-2rem)] max-w-xs sm:w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-[200] overflow-hidden">
                   <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                    <span className="font-black text-slate-900 dark:text-white text-sm">Notifikasi</span>
-                    <button onClick={() => { setNotifItems([]); setShowNotif(false); }} aria-label="Hapus semua notifikasi" className="text-xs text-slate-400 hover:text-red-500 font-bold">Hapus semua</button>
+                    <span className="font-black text-slate-900 dark:text-white text-sm">{t.notifications}</span>
+                    <button onClick={() => { setNotifItems([]); setShowNotif(false); }} aria-label="Hapus semua notifikasi" className="text-xs text-slate-400 hover:text-red-500 font-bold">{t.clearAll}</button>
                   </div>
                   <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
                     {notifItems.length === 0 ? (
                       <div className="py-8 text-center text-slate-400 text-sm font-medium">
                         <Bell className="w-6 h-6 mx-auto mb-2 opacity-30" />
-                        Belum ada notifikasi
+                        {t.noNotif}
                       </div>
                     ) : notifItems.map(n => (
                       <div key={n.id} className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
@@ -2143,7 +2321,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
             </div>
             
             <button onClick={() => setActiveTab('topup')} className="font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-xs md:text-sm hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 transition-colors shadow-sm">+ Topup</button>
-            <button onClick={onLogout} className="hidden md:flex font-bold text-slate-500 dark:text-slate-400 text-sm hover:text-red-600 dark:hover:text-red-400 px-3 py-2 rounded-xl transition-colors"><LogOut className="w-5 h-5 mr-2"/> Keluar</button>
+            <button onClick={onLogout} className="hidden md:flex font-bold text-slate-500 dark:text-slate-400 text-sm hover:text-red-600 dark:hover:text-red-400 px-3 py-2 rounded-xl transition-colors"><LogOut className="w-5 h-5 mr-2"/> {t.logout}</button>
             <button onClick={() => setIsSidebarOpen(true)} aria-label="Buka menu" className="md:hidden p-2.5 text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center"><Menu className="h-6 w-6" /></button>
           </div>
         </header>
@@ -2154,8 +2332,16 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
             <div className="bg-white dark:bg-slate-900 w-[280px] h-full flex flex-col shadow-2xl animate-in slide-in-from-left-full duration-300" onClick={e => e.stopPropagation()}>
               <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-start">
                 <div>
-                  <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Saldo Anda</div>
+                  <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">{t.yourBalance}</div>
                   <div className="text-2xl font-black text-indigo-700 dark:text-indigo-400">Rp {balance.toLocaleString('id-ID')}</div>
+                </div>
+                <div className="flex items-center gap-1">
+                  {(['id','en','zh'] as Lang[]).map(l => (
+                    <button key={l} onClick={() => { setLang(l); localStorage.setItem('lang', l); }}
+                      className={"px-2 py-1 rounded-lg text-xs font-black transition-colors " + (lang === l ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-700 text-slate-400')}>
+                      {l === 'id' ? '🇮🇩' : l === 'en' ? '🇺🇸' : '🇨🇳'}
+                    </button>
+                  ))}
                 </div>
                 <button onClick={() => setIsSidebarOpen(false)} aria-label="Tutup menu" className="bg-white dark:bg-slate-800 p-2 rounded-full shadow-sm border border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400"><X className="w-5 h-5"/></button>
               </div>
@@ -2182,12 +2368,12 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
         )}
 
         <main className="flex-1 p-4 sm:p-8 md:!pb-8" style={{paddingBottom:"calc(6.5rem + env(safe-area-inset-bottom,0px))"}}>
-          {activeTab === 'dashboard' && <UserDashboardView user={user} balance={balance} orders={orders} mutasi={mutasi} setActiveTab={setActiveTab} notices={notices} />}
-          {activeTab === 'buy' && <BuyView balance={balance} setBalance={setBalance} orders={orders} setOrders={setOrders} showToast={showToast} onCancelOrder={handleCancelOrder} favorites={favorites} setFavorites={setFavorites} setMutasi={setMutasi} activeServices={activeServices} serviceError={serviceError} countries={countries} selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry} user={user} updateBalance={updateBalance} autoRetryQueue={autoRetryQueue} setAutoRetryQueue={setAutoRetryQueue} failedNumbers={failedNumbers} />}
-          {activeTab === 'topup' && <TopupView balance={balance} setBalance={setBalance} showToast={showToast} setActiveTab={setActiveTab} setMutasi={setMutasi} updateBalance={updateBalance} user={user} />}
-          {activeTab === 'history' && <HistoryView orders={orders} />}
-          {activeTab === 'mutasi' && <MutasiView mutasi={mutasi} user={user} />}
-          {activeTab === 'profile' && <ProfileView user={user} showToast={showToast} />}
+          {activeTab === 'dashboard' && <UserDashboardView user={user} balance={balance} orders={orders} mutasi={mutasi} setActiveTab={setActiveTab} notices={notices} lang={lang} />}
+          {activeTab === 'buy' && <BuyView balance={balance} setBalance={setBalance} orders={orders} setOrders={setOrders} showToast={showToast} onCancelOrder={handleCancelOrder} favorites={favorites} setFavorites={setFavorites} setMutasi={setMutasi} activeServices={activeServices} serviceError={serviceError} countries={countries} selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry} user={user} updateBalance={updateBalance} autoRetryQueue={autoRetryQueue} setAutoRetryQueue={setAutoRetryQueue} failedNumbers={failedNumbers} lang={lang} />}
+          {activeTab === 'topup' && <TopupView balance={balance} setBalance={setBalance} showToast={showToast} setActiveTab={setActiveTab} setMutasi={setMutasi} updateBalance={updateBalance} user={user} lang={lang} />}
+          {activeTab === 'history' && <HistoryView orders={orders} lang={lang} />}
+          {activeTab === 'mutasi' && <MutasiView mutasi={mutasi} user={user} lang={lang} />}
+          {activeTab === 'profile' && <ProfileView user={user} showToast={showToast} lang={lang} />}
         </main>
       </div>
 
@@ -2374,19 +2560,22 @@ interface BuyViewProps {
   autoRetryQueue: {serviceName: string; serviceCode: string; price: number; icon: React.ReactNode}[];
   setAutoRetryQueue: React.Dispatch<React.SetStateAction<{serviceName: string; serviceCode: string; price: number; icon: React.ReactNode}[]>>;
   failedNumbers: React.MutableRefObject<Set<string>>;
+  lang?: Lang;
 }
 
 // ==========================================
 // TAB: DASHBOARD RINGKASAN USER
 // ==========================================
-function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notices }: {
+function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notices, lang }: {
   user: UserData | null;
   balance: number;
   orders: Order[];
   mutasi: Mutasi[];
   setActiveTab: (tab: string) => void;
   notices: { id: number; title: string; content: string; type: string }[];
+  lang?: Lang;
 }) {
+  const t = T[lang ?? 'id'];
   const fmtIDR = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 
   const totalOrder    = orders.length;
@@ -2402,7 +2591,7 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
       {/* Greeting */}
       <div>
         <h1 className="text-2xl font-black text-slate-900 dark:text-white">
-          Halo, {user?.name?.split(' ')[0]} 👋
+          {t.greeting}, {user?.name?.split(' ')[0]} 👋
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Selamat datang di Pusat Nokos</p>
       </div>
@@ -2435,7 +2624,7 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
       <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl md:rounded-[2rem] p-4 md:p-6 text-white">
         <div className="flex items-center justify-between md:block">
           <div>
-            <div className="text-[10px] md:text-xs font-bold uppercase tracking-widest opacity-70 mb-1 md:mb-2">Total Saldo</div>
+            <div className="text-[10px] md:text-xs font-bold uppercase tracking-widest opacity-70 mb-1 md:mb-2">{t.totalBalance.toUpperCase()}</div>
             <div className="text-2xl md:text-4xl font-black">{fmtIDR(balance)}</div>
           </div>
           <button onClick={() => setActiveTab('topup')} className="bg-white/20 hover:bg-white/30 text-white text-xs md:text-sm font-bold px-4 py-2 md:px-5 md:py-2.5 rounded-xl transition-colors border border-white/20 shrink-0 md:mt-4">
@@ -2447,10 +2636,10 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
       {/* Stats grid — 2x2 compact di mobile, 4 kolom di desktop */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4">
         {[
-          { label: 'Total Order',  value: totalOrder,        icon: <Package className="w-4 h-4 md:w-5 md:h-5 text-indigo-600" />,   bg: 'bg-indigo-50 dark:bg-indigo-900/30' },
-          { label: 'Order Sukses', value: successOrder,      icon: <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-green-600" />, bg: 'bg-green-50 dark:bg-green-900/30' },
-          { label: 'Sedang Aktif', value: activeOrder,       icon: <Activity className="w-4 h-4 md:w-5 md:h-5 text-amber-600" />,    bg: 'bg-amber-50 dark:bg-amber-900/30' },
-          { label: 'Sukses Rate',  value: successRate + '%', icon: <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />,   bg: 'bg-blue-50 dark:bg-blue-900/30' },
+          { label: t.totalOrder,   value: totalOrder,        icon: <Package className="w-4 h-4 md:w-5 md:h-5 text-indigo-600" />,   bg: 'bg-indigo-50 dark:bg-indigo-900/30' },
+          { label: t.successOrder, value: successOrder,      icon: <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-green-600" />, bg: 'bg-green-50 dark:bg-green-900/30' },
+          { label: t.activeOrder,  value: activeOrder,       icon: <Activity className="w-4 h-4 md:w-5 md:h-5 text-amber-600" />,    bg: 'bg-amber-50 dark:bg-amber-900/30' },
+          { label: t.successRate,  value: successRate + '%', icon: <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />,   bg: 'bg-blue-50 dark:bg-blue-900/30' },
         ].map(s => (
           <div key={s.label} className="bg-white dark:bg-slate-900 rounded-xl md:rounded-2xl border border-slate-200 dark:border-slate-800 p-3 md:p-4">
             <div className={`${s.bg} p-2 md:p-2.5 rounded-lg md:rounded-xl w-fit mb-2 md:mb-3`}>{s.icon}</div>
@@ -2463,18 +2652,18 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Total spend vs topup */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
-          <h3 className="text-sm font-black text-slate-900 dark:text-white mb-4">Ringkasan Keuangan</h3>
+          <h3 className="text-sm font-black text-slate-900 dark:text-white mb-4">{t.financeSummary}</h3>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-500 dark:text-slate-400">Total Deposit</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">{t.totalDeposit}</span>
               <span className="font-black text-green-600 dark:text-green-400">{fmtIDR(totalTopup)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-500 dark:text-slate-400">Total Belanja</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">{t.totalSpend}</span>
               <span className="font-black text-red-500 dark:text-red-400">{fmtIDR(totalSpend)}</span>
             </div>
             <div className="border-t border-slate-100 dark:border-slate-800 pt-3 flex items-center justify-between">
-              <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Sisa Saldo</span>
+              <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.remainBalance}</span>
               <span className="font-black text-indigo-600 dark:text-indigo-400">{fmtIDR(balance)}</span>
             </div>
           </div>
@@ -2483,7 +2672,7 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
         {/* Recent mutasi */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-black text-slate-900 dark:text-white">Transaksi Terakhir</h3>
+            <h3 className="text-sm font-black text-slate-900 dark:text-white">{t.recentTx}</h3>
             <button onClick={() => setActiveTab('mutasi')} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:opacity-70">Lihat semua →</button>
           </div>
           <div className="space-y-2">
@@ -2504,8 +2693,8 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
       {/* Quick actions */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
-          { label: 'Beli Nomor OTP', tab: 'buy',     icon: <ShoppingCart className="w-5 h-5" />, color: 'bg-indigo-600 text-white' },
-          { label: 'Deposit Saldo',  tab: 'topup',   icon: <Wallet className="w-5 h-5" />,       color: 'bg-green-600 text-white' },
+          { label: t.buyTitle,       tab: 'buy',     icon: <ShoppingCart className="w-5 h-5" />, color: 'bg-indigo-600 text-white' },
+          { label: t.topup,  tab: 'topup',   icon: <Wallet className="w-5 h-5" />,       color: 'bg-green-600 text-white' },
           { label: 'Riwayat',        tab: 'history', icon: <History className="w-5 h-5" />,       color: 'bg-slate-800 dark:bg-slate-700 text-white' },
         ].map(a => (
           <button key={a.tab} onClick={() => setActiveTab(a.tab)} className={`${a.color} rounded-2xl p-4 flex items-center gap-3 font-bold text-sm hover:opacity-90 transition-opacity active:scale-95`}>
@@ -2821,7 +3010,8 @@ function MobileSortChip({ value, onChange }: { value: string; onChange: (v: stri
   );
 }
 
-function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOrder, favorites, setFavorites, setMutasi, activeServices, serviceError, countries, selectedCountry, setSelectedCountry, user, updateBalance, autoRetryQueue, setAutoRetryQueue, failedNumbers }: BuyViewProps) {
+function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOrder, favorites, setFavorites, setMutasi, activeServices, serviceError, countries, selectedCountry, setSelectedCountry, user, updateBalance, autoRetryQueue, setAutoRetryQueue, failedNumbers, lang }: BuyViewProps) {
+  const t = T[lang ?? 'id'];
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeCategory, setActiveCategory] = useState<string>('Semua');
   const [sortOrder, setSortOrder] = useState<string>('default');
@@ -3108,7 +3298,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
     <div className={`space-y-8 max-w-7xl mx-auto pb-10 ${isBundleMode && bundleSelected.size > 0 ? 'pb-28' : 'pb-10'}`}>
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
         <div>
-          <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3">Beli Nomor OTP</h1>
+          <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3">{t.buyTitle}</h1>
           <button
             onClick={handleRefreshStok}
             disabled={isRefreshingStok}
@@ -3118,13 +3308,13 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshingStok ? 'animate-spin' : ''}`} />
           </button>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">Pilih layanan aplikasi. Harga & stok diperbarui secara real-time.</p>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">{t.buySubtitle}</p>
         </div>
         <button
           onClick={() => { setIsBundleMode(v => !v); setBundleSelected(new Set()); }}
           className={"px-5 py-2.5 rounded-xl text-sm font-bold border-2 transition-all shrink-0 " + (isBundleMode ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500')}
         >
-          {isBundleMode ? '✕ Batal Bundle' : '⚡ Mode Bundle'}
+          {isBundleMode ? t.cancelBundle : t.modeBundle}
         </button>
       </div>
 
@@ -3155,7 +3345,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
           <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Pencarian</label>
           <div className="relative">
             <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 dark:text-slate-500" />
-            <input type="text" placeholder="Cari layanan..." className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/50 outline-none text-base font-bold transition-all shadow-sm dark:text-white" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            <input type="text" placeholder={t.searchPlaceholder} className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/50 outline-none text-base font-bold transition-all shadow-sm dark:text-white" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
         </div>
         {/* Sort */}
@@ -3394,14 +3584,14 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
               <div className="px-4 py-3 border-b border-indigo-500/50 flex items-center justify-between bg-indigo-700/60 font-bold">
                 <div className="flex items-center">
                   <Zap className="w-5 h-5 mr-2 text-yellow-300" />
-                  <span>Pesanan Aktif</span>
+                  <span>{t.activeOrders}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   {/* Tombol kembali ke atas */}
                   <button
                     onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                     className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white/15 hover:bg-white/30 text-xs font-bold transition-colors"
-                    title="Kembali ke atas"
+                    title={t.scrollTop}
                   >
                     <ChevronDown className="w-3.5 h-3.5 rotate-180" />
                     <span>Atas</span>
@@ -3681,6 +3871,7 @@ interface TopupViewProps {
   setMutasi: React.Dispatch<React.SetStateAction<Mutasi[]>>;
   updateBalance: (amount: number, type: 'add' | 'subtract') => Promise<void>;
   user: UserData | null;
+  lang?: Lang;
 }
 
 // Info rekening admin — sesuaikan dengan rekening kamu
@@ -3692,7 +3883,8 @@ const BANK_ACCOUNTS = [
   { id: 'qris',    name: 'QRIS',      number: 'NMID: ID1024342737094', holder: 'PUSAT NOKOS', qrisUrl: 'https://delynxoxxjzkptvrybst.supabase.co/storage/v1/object/public/deposit-proofs/6269328457800028135_121.jpg' },
 ];
 
-function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, updateBalance, user }: TopupViewProps) {
+function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, updateBalance, user, lang }: TopupViewProps) {
+  const t = T[lang ?? 'id'];
   const [depositMode, setDepositMode]   = useState<'select' | 'manual' | 'auto' | 'history'>('select');
   const [amount,      setAmount]        = useState('');
   const [selectedBank,setSelectedBank]  = useState(BANK_ACCOUNTS[0]);
@@ -3801,11 +3993,11 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">Deposit Saldo</h1>
+        <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">{t.depositTitle}</h1>
         <div className="flex gap-2">
           {['select', 'history'].map(m => (
             <button key={m} onClick={() => setDepositMode(m as any)} className={"px-4 py-2 rounded-xl text-sm font-bold transition-colors " + (depositMode === m || (depositMode === 'manual' && m === 'select') || (depositMode === 'auto' && m === 'select') ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-300')}>
-              {m === 'select' ? '+ Deposit Baru' : '📋 Riwayat'}
+              {m === 'select' ? t.depositNew : t.depositHistory}
             </button>
           ))}
         </div>
@@ -3844,7 +4036,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
 
           {/* Pilih nominal */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
-            <h3 className="font-black text-slate-900 dark:text-white">Nominal Deposit</h3>
+            <h3 className="font-black text-slate-900 dark:text-white">{t.nominalDeposit}</h3>
             <div className="grid grid-cols-3 gap-2">
               {QUICK_AUTO.map(n => (
                 <button key={n} onClick={() => setAutoAmount(String(n))}
@@ -3865,7 +4057,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
 
           {/* Pilih metode */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-3">
-            <h3 className="font-black text-slate-900 dark:text-white">Metode Pembayaran</h3>
+            <h3 className="font-black text-slate-900 dark:text-white">{t.paymentMethod}</h3>
             <div className="space-y-2">
               {PAYMENKU_CHANNELS.map(ch => {
                 const nominal = parseInt(autoAmount) || 0;
@@ -3900,7 +4092,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
             return (
               <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl p-4 space-y-2 text-sm">
                 <div className="flex justify-between text-slate-600 dark:text-slate-300">
-                  <span>Saldo masuk</span>
+                  <span>{t.balanceIn}</span>
                   <span className="font-bold">Rp {nominal.toLocaleString('id-ID')}</span>
                 </div>
                 <div className="flex justify-between text-slate-400">
@@ -3908,7 +4100,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                   <span>Rp {fee.toLocaleString('id-ID')}</span>
                 </div>
                 <div className="flex justify-between text-indigo-700 dark:text-indigo-300 font-black text-base border-t border-indigo-200 dark:border-indigo-800 pt-2">
-                  <span>Total Bayar</span>
+                  <span>{t.totalPay}</span>
                   <span>Rp {(nominal + fee).toLocaleString('id-ID')}</span>
                 </div>
               </div>
@@ -3939,7 +4131,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
               <button onClick={handlePaymenku} disabled={autoLoading || !autoAmount || parseInt(autoAmount) < 5000}
                 className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-base">
                 {autoLoading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
-                {autoLoading ? 'Memproses...' : 'Bayar Sekarang'}
+                {autoLoading ? t.processing + '' : t.payNow}
               </button>
               <p className="text-xs text-slate-400 text-center">Saldo masuk otomatis setelah pembayaran berhasil. Tidak perlu konfirmasi manual.</p>
             </>
@@ -4158,6 +4350,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
 // ==========================================
 interface HistoryViewProps {
   orders: Order[];
+  lang?: Lang;
 }
 
 // Tipe data dari /api/history
@@ -4172,7 +4365,8 @@ interface ApiHistoryItem {
   createdAt   : string | null;
 }
 
-function HistoryView({ orders }: HistoryViewProps) {
+function HistoryView({ orders, lang }: HistoryViewProps) {
+  const t = T[lang ?? 'id'];
   const [isLoading, setIsLoading]       = useState<boolean>(true);
   const [apiHistory, setApiHistory]     = useState<ApiHistoryItem[]>([]);
   const [page, setPage]                 = useState(1);
@@ -4285,14 +4479,14 @@ function HistoryView({ orders }: HistoryViewProps) {
 
       {/* Header + Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">Riwayat Transaksi</h1>
+        <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">{t.historyTitle}</h1>
         <div className="flex gap-2 overflow-x-auto pb-1" style={{scrollbarWidth:'none', msOverflowStyle:'none'}}>
           {[
-            { value: '',          label: 'Semua',       color: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700' },
-            { value: 'success',   label: '✅ Berhasil',  color: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50' },
-            { value: 'waiting',   label: '⏳ Menunggu',  color: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800/50' },
-            { value: 'cancelled', label: '❌ Batal',     color: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/50' },
-            { value: 'expired',   label: '🕐 Kadaluarsa',color: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-600' },
+            { value: '',          label: t.filterAll,       color: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700' },
+            { value: 'success',   label: t.filterSuccess,  color: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50' },
+            { value: 'waiting',   label: t.filterWaiting,  color: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800/50' },
+            { value: 'cancelled', label: t.filterCancelled, color: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/50' },
+            { value: 'expired',   label: t.filterExpired,   color: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-600' },
           ].map(opt => (
             <button
               key={opt.value}
@@ -4444,9 +4638,11 @@ function HistoryView({ orders }: HistoryViewProps) {
 interface MutasiViewProps {
   mutasi: Mutasi[];
   user: UserData | null;
+  lang?: Lang;
 }
 
-function MutasiView({ mutasi, user }: MutasiViewProps) {
+function MutasiView({ mutasi, user, lang }: MutasiViewProps) {
+  const t = T[lang ?? 'id'];
   const [isLoading, setIsLoading]         = useState<boolean>(true);
   const [dbMutasi, setDbMutasi]           = useState<Mutasi[]>([]);
   const [page, setPage]                   = useState(1);
@@ -4483,7 +4679,7 @@ function MutasiView({ mutasi, user }: MutasiViewProps) {
     <div className="max-w-5xl mx-auto space-y-6 pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">Buku Mutasi Saldo</h1>
+          <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">{t.mutasiTitle}</h1>
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2 hidden md:block">Catatan rinci pemasukan dan pengeluaran saldo Anda.</p>
         </div>
         <select
@@ -4491,9 +4687,9 @@ function MutasiView({ mutasi, user }: MutasiViewProps) {
           onChange={e => setFilterType(e.target.value as '' | 'in' | 'out')}
           className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-base font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500/50 shadow-sm w-full sm:w-40"
         >
-          <option value="">Semua</option>
-          <option value="in">Masuk (+)</option>
-          <option value="out">Keluar (-)</option>
+          <option value="">{t.mutasiAll}</option>
+          <option value="in">{t.mutasiIn}</option>
+          <option value="out">{t.mutasiOut}</option>
         </select>
       </div>
 
@@ -4502,8 +4698,8 @@ function MutasiView({ mutasi, user }: MutasiViewProps) {
           <table className="w-full text-left">
             <thead className="bg-slate-50/80 dark:bg-slate-950/80 border-b border-slate-100 dark:border-slate-800">
               <tr>
-                <th className="p-3 sm:p-5 sm:px-6 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Waktu & Deskripsi</th>
-                <th className="p-3 sm:p-5 sm:px-6 text-right text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Nominal</th>
+                <th className="p-3 sm:p-5 sm:px-6 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{t.timeDesc}</th>
+                <th className="p-3 sm:p-5 sm:px-6 text-right text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{t.nominal}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -4566,9 +4762,11 @@ function MutasiView({ mutasi, user }: MutasiViewProps) {
 interface ProfileViewProps {
   user: UserData | null;
   showToast: (msg: string) => void;
+  lang?: Lang;
 }
 
-function ProfileView({ user, showToast }: ProfileViewProps) {
+function ProfileView({ user, showToast, lang }: ProfileViewProps) {
+  const t = T[lang ?? 'id'];
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Info akun
@@ -4684,7 +4882,7 @@ function ProfileView({ user, showToast }: ProfileViewProps) {
           <div className="bg-indigo-50 dark:bg-indigo-900/30 p-2.5 rounded-xl">
             <Activity className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h3 className="text-base font-black text-slate-900 dark:text-white">Informasi Akun</h3>
+          <h3 className="text-base font-black text-slate-900 dark:text-white">{t.accountInfo}</h3>
         </div>
         {loadingInfo ? (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -4698,7 +4896,7 @@ function ProfileView({ user, showToast }: ProfileViewProps) {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5">
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Bergabung Sejak</div>
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t.joinedAt}</div>
               <div className="text-base font-black text-slate-900 dark:text-white">
                 {accountInfo?.joinedAt
                   ? new Date(accountInfo.joinedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -4706,13 +4904,13 @@ function ProfileView({ user, showToast }: ProfileViewProps) {
               </div>
             </div>
             <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5">
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Total Order</div>
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t.totalOrders}</div>
               <div className="text-base font-black text-slate-900 dark:text-white">
                 {accountInfo ? `${accountInfo.totalOrders} order` : '—'}
               </div>
             </div>
             <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5">
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Total Pembelian</div>
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t.totalPurchase}</div>
               <div className="text-base font-black text-indigo-600 dark:text-indigo-400">
                 {accountInfo ? `Rp ${accountInfo.totalSpend.toLocaleString('id-ID')}` : '—'}
               </div>
@@ -4727,12 +4925,12 @@ function ProfileView({ user, showToast }: ProfileViewProps) {
           <div className="bg-amber-50 dark:bg-amber-900/30 p-2.5 rounded-xl">
             <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
           </div>
-          <h3 className="text-base font-black text-slate-900 dark:text-white">Ganti Password</h3>
+          <h3 className="text-base font-black text-slate-900 dark:text-white">{t.changePassword}</h3>
         </div>
         <form className="space-y-4" onSubmit={handleChangePassword}>
           {/* Password Lama */}
           <div>
-            <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">Password Saat Ini</label>
+            <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">{t.currentPass}</label>
             <div className="relative">
               <input
                 type={showOld ? 'text' : 'password'}
@@ -4774,14 +4972,14 @@ function ProfileView({ user, showToast }: ProfileViewProps) {
                   }`} />
                 ))}
                 <span className="text-[10px] font-bold text-slate-400 ml-1 self-center">
-                  {newPass.length < 4 ? 'Lemah' : newPass.length < 7 ? 'Sedang' : newPass.length < 10 ? 'Kuat' : 'Sangat Kuat'}
+                  {newPass.length < 4 ? t.passStrWeak : newPass.length < 7 ? t.passStrMed : newPass.length < 10 ? t.passStrStrong : t.passStrVeryStrong}
                 </span>
               </div>
             )}
           </div>
           {/* Konfirmasi */}
           <div>
-            <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">Konfirmasi Password Baru</label>
+            <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">{t.confirmPass}</label>
             <div className="relative">
               <input
                 type={showConfirm ? 'text' : 'password'}
@@ -4796,7 +4994,7 @@ function ProfileView({ user, showToast }: ProfileViewProps) {
               </button>
             </div>
             {confirmPass && confirmPass !== newPass && (
-              <p className="text-xs text-red-500 font-bold mt-1.5">Password tidak cocok.</p>
+              <p className="text-xs text-red-500 font-bold mt-1.5">{t.passMismatch}</p>
             )}
           </div>
           {/* Error */}
@@ -4812,7 +5010,7 @@ function ProfileView({ user, showToast }: ProfileViewProps) {
               className="bg-slate-900 dark:bg-indigo-600 text-white font-bold text-sm px-8 py-4 rounded-2xl hover:bg-indigo-600 dark:hover:bg-indigo-700 transition-all active:scale-95 shadow-lg w-full sm:w-auto flex justify-center items-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {passLoading ? <RefreshCw className="w-4 h-4 animate-spin mr-2"/> : <Lock className="w-4 h-4 mr-2"/>}
-              {passLoading ? 'Menyimpan...' : 'Ubah Password'}
+              {passLoading ? t.saving : t.changePassTitle}
             </button>
           </div>
         </form>
