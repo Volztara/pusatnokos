@@ -3,6 +3,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+export const dynamic = 'force-dynamic';
+
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -29,12 +31,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Title dan message wajib diisi.' }, { status: 400 });
     }
 
-    // Hitung jumlah user aktif
     const { count } = await db
       .from('profiles')
       .select('*', { count: 'exact', head: true });
 
-    // Simpan broadcast ke DB
     const { error } = await db.from('broadcasts').insert({
       title,
       message,
