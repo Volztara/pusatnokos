@@ -2172,7 +2172,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
             ));
             fetch('/api/user/orders', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activationId: order.activationId, status: 'cancelled' }) }).catch(() => {});
             // ✅ Kirim activationId → backend cegah double refund via idempotency check
-            updateBalance(order.price, 'add', order.activationId);
+            await updateBalance(order.price, 'add', order.activationId);
             showToast(`Nomor ${order.serviceName} dibatalkan provider. Saldo Rp ${order.price.toLocaleString('id-ID')} dikembalikan.`);
             addNotif(`↩ Refund Rp ${order.price.toLocaleString('id-ID')} untuk ${order.serviceName} berhasil dikembalikan.`);
             // ✅ Refresh saldo dari DB

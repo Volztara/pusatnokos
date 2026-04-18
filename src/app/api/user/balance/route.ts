@@ -1,6 +1,4 @@
 // src/app/api/user/balance/route.ts
-// Ambil dan update saldo user dari Supabase
-
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -44,9 +42,8 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Parameter tidak lengkap.' }, { status: 400 });
     }
 
-    // ✅ Idempotency check — cegah double refund
     if (activationId && type === 'add') {
-      // Cek apakah order ini sudah pernah di-refund (ada di mutations)
+      // ✅ Idempotency check
       const { data: existingRefund } = await supabaseAdmin
         .from('mutations')
         .select('id')
@@ -54,76 +51,61 @@ export async function PATCH(request: Request) {
         .limit(1);
 
       if (existingRefund && existingRefund.length > 0) {
-        // Sudah pernah di-refund sebelumnya → tolak duplikat
-        return NextResponse.json(
-          { error: 'Order sudah pernah di-refund.' },
-          { status: 409 }
-        );
+        return NextResponse.json({ error: 'Order sudah pernah di-refund.' }, { status: 409 });
       }
 
-      // Tandai order sebagai cancelled (kalau masih waiting)
-      await supabaseAdmin
+      // ✅ Gate utama — tandai cancelled, hanya kalau masih waiting
+      const { data: updatedOrder } = await supabaseAdmin
         .from('orders')
         .update({ status: 'cancelled' })
         .eq('activation_id', activationId)
-        .eq('status', 'waiting');
-    }
-
-    // ✅ Atomic update saldo via RPC
-    const { data: newBalance, error: rpcError } = await supabaseAdmin
-      .rpc('update_balance', {
-        p_email : email.toLowerCase(),
-        p_amount: type === 'add' ? amount : -amount,
-      });
-
-    // Fallback: kalau RPC belum ada atau error, pakai direct update
-    if (rpcError) {
-      console.warn('[PATCH /api/user/balance] RPC gagal, pakai fallback:', rpcError.message);
-
-      const { data: profile } = await supabaseAdmin
-        .from('profiles')
-        .select('balance')
-        .eq('email', email.toLowerCase())
+        .eq('status', 'waiting')
+        .select()
         .single();
 
-      const currentBalance = profile?.balance ?? 0;
-      const newBal = type === 'add'
-        ? currentBalance + amount
-        : Math.max(0, currentBalance - amount);
-
-      const { error: updateError } = await supabaseAdmin
-        .from('profiles')
-        .update({ balance: newBal })
-        .eq('email', email.toLowerCase());
-
-      if (updateError) {
-        console.error('[PATCH /api/user/balance] Fallback gagal:', updateError);
-        return NextResponse.json({ error: 'Gagal update saldo.' }, { status: 500 });
+      // Kalau order tidak ditemukan / sudah bukan waiting → tolak
+      if (!updatedOrder) {
+        return NextResponse.json({ error: 'Order tidak bisa dibatalkan.' }, { status: 409 });
       }
-
-      return NextResponse.json({ success: true, balance: newBal });
     }
 
-    // ✅ Catat mutasi hanya untuk refund (type === 'add')
-    // Mutasi 'subtract' sudah dicatat di frontend & /api/user/orders
+    // ✅ Ambil profile
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('id, balance')
+      .eq('email', email.toLowerCase())
+      .single();
+
+    if (!profile) {
+      return NextResponse.json({ error: 'User tidak ditemukan.' }, { status: 404 });
+    }
+
+    // ✅ Update saldo langsung — simple, reliable, tidak ada fallback yg bisa skip mutation
+    const currentBalance = profile.balance ?? 0;
+    const newBal = type === 'add'
+      ? currentBalance + amount
+      : Math.max(0, currentBalance - amount);
+
+    const { error: updateError } = await supabaseAdmin
+      .from('profiles')
+      .update({ balance: newBal })
+      .eq('email', email.toLowerCase());
+
+    if (updateError) {
+      return NextResponse.json({ error: 'Gagal update saldo.' }, { status: 500 });
+    }
+
+    // ✅ Insert mutation SELALU setelah update berhasil — tidak bisa di-skip
     if (type === 'add') {
-      const { data: profile } = await supabaseAdmin
-        .from('profiles')
-        .select('id')
-        .eq('email', email.toLowerCase())
-        .single();
-
-      if (profile) {
-        await supabaseAdmin.from('mutations').insert({
-          user_id    : profile.id,
-          type       : 'in',
-          amount     : amount,
-          description: `Refund pembatalan order${activationId ? ` #${activationId}` : ''}`,
-        });
-      }
+      await supabaseAdmin.from('mutations').insert({
+        user_id    : profile.id,
+        type       : 'in',
+        amount     : amount,
+        description: `Refund pembatalan order${activationId ? ` #${activationId}` : ''}`,
+      });
     }
 
-    return NextResponse.json({ success: true, balance: newBalance });
+    return NextResponse.json({ success: true, balance: newBal });
 
   } catch (err) {
     console.error('[PATCH /api/user/balance]', err);
