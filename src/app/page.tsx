@@ -210,7 +210,7 @@ const SERVICE_LOGO_MAP: [string[], LogoCfg][] = [
   [['tiktok'],               { type:'si',  slug:'tiktok',        color:'010101', bg:'#f1f5f9' }],
   [['facebook'],             { type:'si',  slug:'facebook',      color:'1877F2', bg:'#dbeafe' }],
   [['twitter','x.com'],      { type:'si',  slug:'x',             color:'000000', bg:'#f1f5f9' }],
-  [['linkedin','linked in'], { type:'si',  slug:'linkedin',      color:'0A66C2', bg:'#dbeafe' }],
+  [['linkedin','linked in'], { type:'fav', domain:'linkedin.com',                bg:'#dbeafe' }],
   [['snapchat'],             { type:'si',  slug:'snapchat',      color:'FFFC00', bg:'#fef9c3' }],
   [['pinterest'],            { type:'si',  slug:'pinterest',     color:'E60023', bg:'#fee2e2' }],
   [['reddit'],               { type:'si',  slug:'reddit',        color:'FF4500', bg:'#fee2e2' }],
@@ -306,7 +306,7 @@ const SERVICE_LOGO_MAP: [string[], LogoCfg][] = [
   [['clash'],                { type:'fav', domain:'supercell.com',             bg:'#fef9c3' }],
   // ── Dating ────────────────────────────────────────────────────────────
   [['tinder'],               { type:'si',  slug:'tinder',        color:'FF6B6B', bg:'#fee2e2' }],
-  [['bumble','bumble dating'],{ type:'si', slug:'bumble',        color:'F1AE14', bg:'#fef9c3' }],
+  [['bumble','bumble dating'],{ type:'fav', domain:'bumble.com',                 bg:'#fef9c3' }],
   [['badoo'],                { type:'fav', domain:'badoo.com',                 bg:'#fce7f3' }],
   [['hinge','hinge dating'], { type:'fav', domain:'hinge.co',                  bg:'#fee2e2' }],
   // ── Travel ────────────────────────────────────────────────────────────
@@ -442,7 +442,7 @@ const SERVICE_LOGO_MAP: [string[], LogoCfg][] = [
   [['zoom'],                 { type:'si',  slug:'zoom',          color:'2D8CFF', bg:'#dbeafe' }],
   [['figma'],                { type:'si',  slug:'figma',         color:'F24E1E', bg:'#fee2e2' }],
   [['canva'],                { type:'fav', domain:'canva.com',                 bg:'#dbeafe' }],
-  [['adobe'],                { type:'si',  slug:'adobe',         color:'FF0000', bg:'#fee2e2' }],
+  [['adobe'],                { type:'fav', domain:'adobe.com',                   bg:'#fee2e2' }],
   [['wordpress'],            { type:'si',  slug:'wordpress',     color:'21759B', bg:'#dbeafe' }],
   [['icloud'],               { type:'fav', domain:'icloud.com',                bg:'#f1f5f9' }],
   [['onedrive'],             { type:'fav', domain:'onedrive.com',              bg:'#dbeafe' }],
@@ -490,13 +490,7 @@ function getServiceIconByName(name: string): React.ReactNode {
             onError={(e) => {
               const el = e.currentTarget as HTMLImageElement;
               failedIconCache.add(src);
-              // Satu kali fallback ke favicon CDN lain
-              if (!el.dataset.fallback && cfg.type === 'fav') {
-                el.dataset.fallback = '1';
-                el.src = `https://icon.horse/icon/${cfg.domain}`;
-                return;
-              }
-              // Fallback terakhir: huruf pertama (tidak retry lagi)
+              // Langsung fallback ke huruf — tidak retry ke CDN lain (cegah QuotaExceededError)
               el.style.display = 'none';
               const parent = el.parentElement;
               if (parent) {
@@ -703,7 +697,7 @@ export default function App() {
       
       {/* GLOBAL TOAST NOTIFICATION */}
       {toastMsg && (
-        <div className="fixed bottom-28 md:top-6 md:bottom-auto left-1/2 transform -translate-x-1/2 z-[100] bg-slate-900/95 dark:bg-white/95 backdrop-blur-md text-white dark:text-slate-900 px-5 py-3 rounded-2xl shadow-2xl font-bold flex items-center gap-2 transition-all animate-in fade-in slide-in-from-bottom-4 md:slide-in-from-top-4 duration-300 max-w-[calc(100vw-2rem)] text-sm">
+        <div className="fixed top-20 md:top-6 left-1/2 transform -translate-x-1/2 z-[200] bg-slate-900/95 dark:bg-white/95 backdrop-blur-md text-white dark:text-slate-900 px-5 py-3 rounded-2xl shadow-2xl font-bold flex items-center gap-2 transition-all animate-in fade-in slide-in-from-top-4 duration-300 max-w-[calc(100vw-2rem)] text-sm">
           <CheckCircle2 className="w-5 h-5 shrink-0 text-green-400 dark:text-green-600" /><span className="truncate">{toastMsg}</span>
         </div>
       )}
@@ -1900,7 +1894,6 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
     setOrders(current => current.map(order =>
       order.id === orderId ? { ...order, status: 'cancelled', timeLeft: 0 } : order
     ));
-    setMutasi(prev => [{ id: Date.now(), date: new Date().toLocaleString('id-ID'), type: 'in', amount: orderToCancel.price, desc: 'Refund Batal: ' + orderToCancel.serviceName }, ...prev]);
     showToast('Pesanan dibatalkan. Saldo Rp ' + orderToCancel.price.toLocaleString('id-ID') + ' dikembalikan.');
     // ✅ Refresh saldo dari DB agar tampilan selalu akurat
     setTimeout(() => refreshBalance(), 1000);
@@ -2008,7 +2001,6 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
             fetch('/api/user/orders', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activationId: order.activationId, status: 'cancelled' }) }).catch(() => {});
             // ✅ Kirim activationId → backend cegah double refund via idempotency check
             updateBalance(order.price, 'add', order.activationId);
-            setMutasi(prev => [{ id: Date.now(), date: new Date().toLocaleString('id-ID'), type: 'in', amount: order.price, desc: 'Refund Batal: ' + order.serviceName }, ...prev]);
             showToast(`Nomor ${order.serviceName} dibatalkan provider. Saldo Rp ${order.price.toLocaleString('id-ID')} dikembalikan.`);
             addNotif(`↩ Refund Rp ${order.price.toLocaleString('id-ID')} untuk ${order.serviceName} berhasil dikembalikan.`);
             // ✅ Refresh saldo dari DB
@@ -2042,12 +2034,9 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
         if (expiredOrders.length > 0) {
           setTimeout(() => {
             expiredOrders.forEach(order => {
-              // ✅ Kirim activationId → backend cegah double refund dengan idempotency check
-              // Cron job juga refund, tapi atomic check di DB pastikan hanya 1 yang berhasil
-              updateBalance(order.price, 'add', order.activationId);
-              // Tidak perlu update status order di sini — cron job sudah handle
-              setMutasi(prev => [{ id: Date.now(), date: new Date().toLocaleString('id-ID'), type: 'in', amount: order.price, desc: "Refund Kadaluarsa: " + order.serviceName }, ...prev]);
-              showToast(`⏱ Nomor ${order.serviceName} kadaluarsa. Saldo dikembalikan.`);
+              // ✅ Refund ditangani SEPENUHNYA oleh cron job — tidak refund dari frontend
+              // Ini mencegah race condition antara frontend timer dan cron job
+              showToast(`⏱ Nomor ${order.serviceName} kadaluarsa. Saldo akan dikembalikan otomatis.`);
               if (order.number) failedNumbers.current.add(order.number);
               setAutoRetryQueue(prev => [...prev, {
                 serviceName: order.serviceName,
@@ -2153,7 +2142,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
               )}
             </div>
             
-            <button onClick={() => setActiveTab('topup')} className="font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 px-5 py-2.5 rounded-xl text-sm hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 transition-colors shadow-sm">+ Topup</button>
+            <button onClick={() => setActiveTab('topup')} className="font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-xs md:text-sm hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 transition-colors shadow-sm">+ Topup</button>
             <button onClick={onLogout} className="hidden md:flex font-bold text-slate-500 dark:text-slate-400 text-sm hover:text-red-600 dark:hover:text-red-400 px-3 py-2 rounded-xl transition-colors"><LogOut className="w-5 h-5 mr-2"/> Keluar</button>
             <button onClick={() => setIsSidebarOpen(true)} aria-label="Buka menu" className="md:hidden p-2.5 text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center"><Menu className="h-6 w-6" /></button>
           </div>
@@ -4003,7 +3992,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                   ))}
                 </div>
               </div>
-              <button onClick={() => { if (!amount || parseInt(amount) < 10000) { showToast('Minimal Rp 10.000'); return; } setStep(2); }} className="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-600 dark:hover:bg-indigo-700 transition-colors active:scale-95">
+              <button onClick={() => { if (!amount || parseInt(amount) < 5000) { showToast('Minimal deposit otomatis Rp 5.000'); return; } setStep(2); }} className="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-600 dark:hover:bg-indigo-700 transition-colors active:scale-95">
                 Lanjut →
               </button>
             </div>

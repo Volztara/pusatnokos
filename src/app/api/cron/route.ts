@@ -30,26 +30,42 @@ export async function GET(request: Request) {
   let errors    = 0;
 
   try {
-    // ── 1. Ambil order waiting yang sudah > 20 menit ─────────────────
-    const cutoff = new Date(Date.now() - 20 * 60 * 1000).toISOString();
-
+    // ── 1. Claim expired orders secara ATOMIK via SQL function ────────
+    // UPDATE...RETURNING dalam satu query — eliminasi race condition
+    // Hanya satu instance yang dapat rows, instance lain dapat kosong
     const { data: expiredOrders, error: dbErr } = await db
-      .from('orders')
-      .select('id, activation_id, user_id, price, service_name')
-      .eq('status', 'waiting')
-      .lt('created_at', cutoff);
+      .rpc('expire_and_refund_orders');
 
     if (dbErr) throw dbErr;
+
+    // ── Auto-reject deposit pending_payment > 30 menit (selalu jalan) ─
+    let depositRejected = 0;
+    try {
+      const depositCutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+      const { data: expiredDeposits } = await db
+        .from('deposit_requests')
+        .update({ status: 'rejected', admin_note: 'Auto-reject: tidak dibayar dalam 30 menit' })
+        .eq('status', 'pending_payment')
+        .lt('created_at', depositCutoff)
+        .select('id');
+      depositRejected = expiredDeposits?.length ?? 0;
+      if (depositRejected > 0) {
+        console.log(`[cron] Auto-rejected ${depositRejected} expired deposit requests`);
+      }
+    } catch (e) {
+      console.error('[cron] Auto-reject deposit failed:', e);
+    }
 
     if (!expiredOrders || expiredOrders.length === 0) {
       return NextResponse.json({
         cancelled: 0, refunded: 0, skipped: 0, errors: 0,
+        depositRejected,
         message  : 'Tidak ada order expired.',
         timestamp: new Date().toISOString(),
       });
     }
 
-    console.log(`[cron] Found ${expiredOrders.length} expired orders`);
+    console.log(`[cron] Claimed ${expiredOrders.length} expired orders`);
 
     for (const order of expiredOrders) {
       const { activation_id, user_id, price, service_name } = order;
@@ -73,31 +89,9 @@ export async function GET(request: Request) {
         }
       }
 
-      // ── 3. Update status order → expired (atomic, hanya jika masih waiting)
-      // ✅ Idempotency: .eq('status', 'waiting') pastikan tidak di-update 2x
-      const { data: updated, error: updateErr } = await db
-        .from('orders')
-        .update({ status: 'expired' })
-        .eq('id', order.id)
-        .eq('status', 'waiting') // ← atomic check
-        .select('id');
-
-      if (updateErr) {
-        console.error(`[cron] Supabase update failed for order ${order.id}:`, updateErr);
-        errors++;
-        continue;
-      }
-
-      // Kalau 0 rows updated → order sudah di-handle sebelumnya, skip refund
-      if (!updated || updated.length === 0) {
-        skipped++;
-        console.log(`[cron] Order ${order.id} sudah diproses sebelumnya, skip.`);
-        continue;
-      }
-
-      // ── 4. Refund saldo user via atomic RPC ───────────────────────
+      // ── 3. Refund saldo user via atomic RPC ───────────────────────
+      // Status order sudah di-update ke 'expired' oleh SQL function di step 1
       if (user_id && price > 0) {
-        // Cari email user untuk RPC
         const { data: profile } = await db
           .from('profiles')
           .select('email')
@@ -105,7 +99,6 @@ export async function GET(request: Request) {
           .single();
 
         if (profile?.email) {
-          // ✅ Atomic update via RPC — tidak pakai read-then-write
           const { error: rpcErr } = await db.rpc('update_balance', {
             p_email : profile.email,
             p_amount: price,
@@ -134,13 +127,14 @@ export async function GET(request: Request) {
     }
 
     const elapsed = Date.now() - startTime;
-    console.log(`[cron] Done in ${elapsed}ms — cancelled:${cancelled} refunded:${refunded} skipped:${skipped} errors:${errors}`);
+    console.log(`[cron] Done in ${elapsed}ms — cancelled:${cancelled} refunded:${refunded} skipped:${skipped} errors:${errors} depositRejected:${depositRejected}`);
 
     return NextResponse.json({
       cancelled,
       refunded,
       skipped,
       errors,
+      depositRejected,
       total    : expiredOrders.length,
       elapsed  : `${elapsed}ms`,
       timestamp: new Date().toISOString(),

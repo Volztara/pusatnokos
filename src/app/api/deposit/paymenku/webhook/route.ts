@@ -1,7 +1,4 @@
 // src/app/api/deposit/paymenku/webhook/route.ts
-//
-// Webhook dari Paymenku saat status transaksi berubah (paid/expired/cancelled).
-// Jika paid → otomatis top up saldo user + update deposit_requests.
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
@@ -16,31 +13,21 @@ export async function POST(req: Request) {
     const body = await req.json();
     console.log('[paymenku/webhook]', JSON.stringify(body));
 
-    const {
-      event,
-      trx_id,
-      reference_id,
-      status,
-      amount,
-      amount_received,
-    } = body;
+    const { event, trx_id, reference_id, status, amount_received } = body;
 
-    // Hanya proses event payment
     if (event !== 'payment.status_updated') {
       return NextResponse.json({ ok: true });
     }
 
     if (status !== 'paid') {
-      // Update status di DB tapi jangan tambah saldo
       await db
         .from('deposit_requests')
-        .update({ status: status === 'expired' ? 'rejected' : 'rejected', admin_note: `Paymenku: ${status}` })
+        .update({ status: 'rejected', admin_note: `Paymenku: ${status}` })
         .like('note', `%trx:${trx_id}%`);
-
       return NextResponse.json({ ok: true });
     }
 
-    // Ambil deposit request berdasarkan trx_id di field note
+    // Ambil deposit request
     const { data: depositReq } = await db
       .from('deposit_requests')
       .select('id, user_id, amount, status')
@@ -52,43 +39,47 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    // Cegah double processing
-    if (depositReq.status === 'approved') {
+    // ✅ Cegah double processing secara atomic
+    const { data: claimed } = await db
+      .from('deposit_requests')
+      .update({ status: 'approved', admin_note: `Otomatis via Paymenku. TrxID: ${trx_id}` })
+      .eq('id', depositReq.id)
+      .eq('status', 'pending_payment') // hanya update jika masih pending
+      .select('id');
+
+    if (!claimed || claimed.length === 0) {
+      console.log('[webhook] Already processed:', trx_id);
       return NextResponse.json({ ok: true, message: 'Already processed' });
     }
 
-    const finalAmount = amount_received ? Math.floor(parseFloat(amount_received)) : depositReq.amount;
+    const finalAmount = amount_received
+      ? Math.floor(parseFloat(amount_received))
+      : depositReq.amount;
 
-    // Update status deposit request jadi approved
-    await db
-      .from('deposit_requests')
-      .update({
-        status    : 'approved',
-        admin_note: `Otomatis via Paymenku. TrxID: ${trx_id}. Diterima: Rp ${finalAmount.toLocaleString('id-ID')}`,
-      })
-      .eq('id', depositReq.id);
-
-    // Tambah saldo user
+    // ✅ Tambah saldo via RPC atomic (tidak pakai read-then-write)
     const { data: profile } = await db
       .from('profiles')
-      .select('balance')
+      .select('email')
       .eq('id', depositReq.user_id)
       .single();
 
-    if (!profile) {
+    if (!profile?.email) {
       console.error('[webhook] profil user tidak ditemukan:', depositReq.user_id);
       return NextResponse.json({ ok: true });
     }
 
-    const newBalance = (profile.balance ?? 0) + finalAmount;
+    const { error: rpcErr } = await db.rpc('update_balance', {
+      p_email : profile.email,
+      p_amount: finalAmount,
+    });
 
-    await db
-      .from('profiles')
-      .update({ balance: newBalance })
-      .eq('id', depositReq.user_id);
+    if (rpcErr) {
+      console.error('[webhook] RPC update_balance gagal:', rpcErr);
+      return NextResponse.json({ ok: true });
+    }
 
-    // Catat ke mutasi
-    await db.from('mutasi').insert({
+    // ✅ Catat ke mutations (bukan mutasi!)
+    await db.from('mutations').insert({
       user_id    : depositReq.user_id,
       type       : 'in',
       amount     : finalAmount,

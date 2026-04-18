@@ -42,24 +42,29 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Parameter tidak lengkap.' }, { status: 400 });
     }
 
-    // ✅ Idempotency check — cegah double refund saat cancel
+    // ✅ Idempotency check — cegah double refund
     if (activationId && type === 'add') {
-      // Coba tandai order sebagai 'cancelled' secara atomic
-      // .neq('status', 'cancelled') memastikan hanya berhasil jika belum cancelled
-      const { data: updated } = await supabaseAdmin
-        .from('orders')
-        .update({ status: 'cancelled' })
-        .eq('activation_id', activationId)
-        .neq('status', 'cancelled')
-        .select('id');
+      // Cek apakah order ini sudah pernah di-refund (ada di mutations)
+      const { data: existingRefund } = await supabaseAdmin
+        .from('mutations')
+        .select('id')
+        .eq('description', `Refund pembatalan order #${activationId}`)
+        .limit(1);
 
-      if (!updated || updated.length === 0) {
-        // Order sudah cancelled sebelumnya → tolak refund duplikat
+      if (existingRefund && existingRefund.length > 0) {
+        // Sudah pernah di-refund sebelumnya → tolak duplikat
         return NextResponse.json(
-          { error: 'Order sudah pernah di-refund. Tidak ada perubahan saldo.' },
+          { error: 'Order sudah pernah di-refund.' },
           { status: 409 }
         );
       }
+
+      // Tandai order sebagai cancelled (kalau masih waiting)
+      await supabaseAdmin
+        .from('orders')
+        .update({ status: 'cancelled' })
+        .eq('activation_id', activationId)
+        .eq('status', 'waiting');
     }
 
     // ✅ Atomic update saldo via RPC
