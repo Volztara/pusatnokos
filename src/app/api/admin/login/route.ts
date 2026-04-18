@@ -1,6 +1,8 @@
 // src/app/api/admin/login/route.ts
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 const SECRET     = process.env.ADMIN_TOKEN_SECRET ?? process.env.ADMIN_PASSWORD ?? 'fallback-secret';
 const TOKEN_TTL  = 24 * 60 * 60 * 1000; // 24 jam ms
 
