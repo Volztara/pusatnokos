@@ -7,6 +7,8 @@
 //   Dashboard → Settings → Webhook URL → https://pusatnokos.com/api/webhook
 
 import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 import { createClient } from '@supabase/supabase-js';
 
 // Shared map untuk SSE clients — di-import oleh stream/route.ts

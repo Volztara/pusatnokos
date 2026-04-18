@@ -2,6 +2,8 @@
 // Ambil dan update saldo user dari Supabase
 
 import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseAdmin = createClient(

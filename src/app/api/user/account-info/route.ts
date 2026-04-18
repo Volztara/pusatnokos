@@ -1,5 +1,7 @@
 // src/app/api/user/account-info/route.ts
 import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseAdmin = createClient(

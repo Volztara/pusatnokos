@@ -1,5 +1,7 @@
 // src/app/api/auth/register/route.ts
 import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
 

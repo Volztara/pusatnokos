@@ -6,6 +6,8 @@
 
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 const API_KEY  = process.env.HEROSMS_API_KEY ?? '';
 const BASE_URL = 'https://hero-sms.com/stubs/handler_api.php';
 

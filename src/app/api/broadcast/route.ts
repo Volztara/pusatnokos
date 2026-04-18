@@ -2,6 +2,8 @@
 // Public endpoint — user bisa baca broadcast tanpa auth
 
 import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 import { createClient } from '@supabase/supabase-js';
 
 const db = createClient(

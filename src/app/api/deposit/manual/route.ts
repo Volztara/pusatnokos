@@ -11,6 +11,8 @@
 //   5. Admin approve di panel → saldo user bertambah
 
 import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 import { createClient } from '@supabase/supabase-js';
 
 const db = createClient(

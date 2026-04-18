@@ -2,6 +2,8 @@
 // Simpan dan ambil order dari Supabase
 
 import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseAdmin = createClient(
