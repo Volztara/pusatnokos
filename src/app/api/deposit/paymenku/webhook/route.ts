@@ -54,9 +54,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, message: 'Already processed' });
     }
 
-    const finalAmount = amount_received
-      ? Math.floor(parseFloat(amount_received))
-      : depositReq.amount;
+    const finalAmount = depositReq.amount;
 
     // ✅ Tambah saldo via RPC atomic (tidak pakai read-then-write)
     const { data: profile } = await db
