@@ -9,9 +9,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-declare global { var _otpStore: Map<string, any> | undefined; }
-const otpStore: Map<string, any> = globalThis._otpStore ?? (globalThis._otpStore = new Map());
-
 export async function POST(request: Request) {
   try {
     const { email, code } = await request.json();
@@ -20,17 +17,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email dan kode wajib diisi.' }, { status: 400 });
     }
 
-    const stored = otpStore.get(email);
+    // Ambil OTP dari Supabase
+    const { data: stored, error } = await supabaseAdmin
+      .from('otp_codes')
+      .select('*')
+      .eq('email', email.trim().toLowerCase())
+      .single();
 
-    if (!stored)                        return NextResponse.json({ error: 'Kode tidak ditemukan. Minta kode baru.' }, { status: 400 });
-    if (Date.now() > stored.expiresAt)  { otpStore.delete(email); return NextResponse.json({ error: 'Kode kadaluarsa. Minta kode baru.' }, { status: 400 }); }
-    if (stored.code !== code)           return NextResponse.json({ error: 'Kode salah. Coba lagi.' }, { status: 400 });
+    if (!stored || error) {
+      return NextResponse.json({ error: 'Kode tidak ditemukan. Minta kode baru.' }, { status: 400 });
+    }
 
-    // Kode valid — hapus dari store
-    otpStore.delete(email);
+    if (Date.now() > stored.expires_at) {
+      await supabaseAdmin.from('otp_codes').delete().eq('email', email);
+      return NextResponse.json({ error: 'Kode kadaluarsa. Minta kode baru.' }, { status: 400 });
+    }
 
-    if (stored.isRegister) {
-      // Buat akun di Supabase dengan password yang disimpan
+    if (stored.code !== String(code).trim()) {
+      return NextResponse.json({ error: 'Kode salah. Coba lagi.' }, { status: 400 });
+    }
+
+    // Kode valid — hapus dari database
+    await supabaseAdmin.from('otp_codes').delete().eq('email', email);
+
+    if (stored.is_register) {
+      // Buat akun di Supabase
       const { data: newUser, error: createErr } = await supabaseAdmin.auth.admin.createUser({
         email,
         password      : stored.password,

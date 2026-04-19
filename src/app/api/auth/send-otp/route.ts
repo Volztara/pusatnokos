@@ -3,11 +3,10 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 import { Resend } from 'resend';
+import { createClient } from '@supabase/supabase-js';
 
 const resend = new Resend(process.env.RESEND_API_KEY!);
-
-declare global { var _otpStore: Map<string, any> | undefined; }
-const otpStore: Map<string, any> = globalThis._otpStore ?? (globalThis._otpStore = new Map());
+const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -20,25 +19,35 @@ export async function POST(request: Request) {
     const name       = body.name   ?? '';
     const isRegister = Boolean(body.isRegister);
     const isReset    = Boolean(body.isReset);
+    const password   = body.password ?? '';
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: 'Email tidak valid.' }, { status: 400 });
     }
 
-    // Rate limiting
-    const prev = otpStore.get(email);
-    if (prev && prev.expiresAt - 9 * 60 * 1000 > Date.now()) {
+    // Rate limiting — cek apakah OTP sudah dikirim dalam 60 detik terakhir
+    const { data: existing } = await db
+      .from('otp_codes')
+      .select('expires_at')
+      .eq('email', email)
+      .single();
+
+    if (existing && existing.expires_at - 9 * 60 * 1000 > Date.now()) {
       return NextResponse.json({ error: 'Tunggu 60 detik sebelum minta kode baru.' }, { status: 429 });
     }
 
     const code = generateOTP();
-    otpStore.set(email, {
+    const expiresAt = Date.now() + 10 * 60 * 1000;
+
+    // Simpan ke Supabase (upsert)
+    await db.from('otp_codes').upsert({
+      email,
       code,
-      expiresAt : Date.now() + 10 * 60 * 1000,
+      expires_at : expiresAt,
+      is_register: isRegister,
       name,
-      isRegister,
-      isReset,
-    });
+      password,
+    }, { onConflict: 'email' });
 
     const subject = isReset ? 'Kode Reset Password Pusat Nokos' : 'Kode Verifikasi Pusat Nokos';
     const heading = isReset ? 'Reset Password' : 'Verifikasi Email';
