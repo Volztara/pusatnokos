@@ -4,6 +4,23 @@ import { NextRequest, NextResponse } from 'next/server';
 const SECRET    = process.env.ADMIN_TOKEN_SECRET ?? process.env.ADMIN_PASSWORD ?? 'fallback-secret';
 const TOKEN_TTL = 24 * 60 * 60 * 1000; // 24 jam dalam ms
 
+// ── Rate Limiting ─────────────────────────────────────────────────────
+const rateLimit = new Map<string, { count: number; resetAt: number }>();
+const LIMIT  = 30;
+const WINDOW = 60 * 1000;
+
+function checkRateLimit(ip: string): boolean {
+  const now   = Date.now();
+  const entry = rateLimit.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimit.set(ip, { count: 1, resetAt: now + WINDOW });
+    return true;
+  }
+  if (entry.count >= LIMIT) return false;
+  entry.count++;
+  return true;
+}
+
 async function verifyToken(token: string): Promise<boolean> {
   try {
     const [payload, sig] = token.split('.');
@@ -39,12 +56,24 @@ async function verifyToken(token: string): Promise<boolean> {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  if (pathname.startsWith('/api/admin/') && pathname !== '/api/admin/login') {
-    const authHeader = req.headers.get('Authorization') ?? '';
-    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (pathname.startsWith('/api/admin/')) {
+    // Rate limiting
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+    if (!checkRateLimit(ip)) {
+      return NextResponse.json(
+        { error: 'Terlalu banyak request. Coba lagi dalam 1 menit.' },
+        { status: 429 }
+      );
+    }
 
-    if (!token || !(await verifyToken(token))) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Auth check
+    if (pathname !== '/api/admin/login') {
+      const authHeader = req.headers.get('Authorization') ?? '';
+      const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+
+      if (!token || !(await verifyToken(token))) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
     }
   }
 
