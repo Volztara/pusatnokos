@@ -11,10 +11,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Simple in-memory OTP store (shared via global)
-declare global { var _otpStore: Map<string, any> | undefined; }
-const otpStore: Map<string, any> = globalThis._otpStore ?? (globalThis._otpStore = new Map());
-
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -63,22 +59,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email sudah terdaftar. Silakan login.' }, { status: 400 });
     }
 
-    // Rate limiting
-    const prev = otpStore.get(email);
-    if (prev && prev.expiresAt - 9 * 60 * 1000 > Date.now()) {
+    // Rate limiting via Supabase
+    const { data: prev } = await supabaseAdmin
+      .from('otp_codes')
+      .select('expires_at')
+      .eq('email', email.toLowerCase())
+      .single();
+
+    if (prev && prev.expires_at - 9 * 60 * 1000 > Date.now()) {
       return NextResponse.json({ error: 'Tunggu 60 detik sebelum minta kode baru.' }, { status: 429 });
     }
 
-    // Simpan data register sementara (termasuk password) — dipakai saat verifikasi
     const code = generateOTP();
-    otpStore.set(email, {
+    const expiresAt = Date.now() + 10 * 60 * 1000;
+
+    // Simpan ke Supabase
+    const { error: upsertErr } = await supabaseAdmin.from('otp_codes').upsert({
+      email      : email.toLowerCase(),
       code,
-      expiresAt : Date.now() + 10 * 60 * 1000,
+      expires_at : expiresAt,
+      is_register: true,
       name,
       password,
-      isRegister: true,
-      isReset   : false,
-    });
+    }, { onConflict: 'email' });
+
+    if (upsertErr) {
+      console.error('[register] Gagal simpan OTP:', upsertErr);
+      return NextResponse.json({ error: 'Gagal menyimpan kode. Coba lagi.' }, { status: 500 });
+    }
 
     // Kirim email verifikasi
     const { error: sendErr } = await resend.emails.send({
