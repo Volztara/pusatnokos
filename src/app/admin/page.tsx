@@ -136,6 +136,7 @@ export default function AdminPage() {
 
   // ── Auth ─────────────────────────────────────────────────────────────
   const [isAuthed,      setIsAuthed]      = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPass,     setLoginPass]     = useState('');
   const [showPass,      setShowPass]      = useState(false);
@@ -211,7 +212,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const token = localStorage.getItem('admin_token');
-    if (!token) return;
+    if (!token) { setIsCheckingAuth(false); return; }
     fetch('/api/admin/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -219,7 +220,8 @@ export default function AdminPage() {
     }).then(r => r.json()).then(d => {
       if (d.success) setIsAuthed(true);
       else localStorage.removeItem('admin_token');
-    }).catch(() => localStorage.removeItem('admin_token'));
+    }).catch(() => localStorage.removeItem('admin_token'))
+    .finally(() => setIsCheckingAuth(false));
   }, []);
 
   // ── Fetchers ────────────────────────────────────────────────────────
@@ -364,6 +366,43 @@ export default function AdminPage() {
       return r;
     });
   }, []);
+
+  // ── Skeleton Loading (saat cek auth) ─────────────────────────────
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+        {/* Header skeleton */}
+        <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
+            <div className="space-y-1.5">
+              <div className="w-16 h-2 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+              <div className="w-24 h-3 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+            </div>
+          </div>
+          <div className="w-20 h-8 bg-slate-200 dark:bg-slate-700 rounded-2xl animate-pulse" />
+        </div>
+        <div className="flex flex-1">
+          {/* Sidebar skeleton */}
+          <div className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-3 space-y-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="h-11 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse" style={{ opacity: 1 - i * 0.08 }} />
+            ))}
+          </div>
+          {/* Content skeleton */}
+          <div className="flex-1 p-6 space-y-4">
+            <div className="h-32 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
+            <div className="grid grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-28 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl animate-pulse" />
+              ))}
+            </div>
+            <div className="h-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl animate-pulse" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ── Login Screen ─────────────────────────────────────────────────────
   if (!isAuthed) {
