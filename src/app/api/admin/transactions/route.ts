@@ -67,20 +67,23 @@ export async function PATCH(req: Request) {
         if (!existingRefund || existingRefund.length === 0) {
           const { data: profile } = await db
             .from('profiles')
-            .select('balance')
+            .select('email')
             .eq('id', order.user_id)
             .single();
 
-          await db.from('profiles')
-            .update({ balance: (profile?.balance ?? 0) + order.price })
-            .eq('id', order.user_id);
+          if (profile?.email) {
+            await db.rpc('update_balance', {
+              p_email : profile.email,
+              p_amount: order.price,
+            });
 
-          await db.from('mutations').insert({
-            user_id    : order.user_id,
-            type       : 'in',
-            amount     : order.price,
-            description: `Refund cancel oleh admin #${orderId}`,
-          });
+            await db.from('mutations').insert({
+              user_id    : order.user_id,
+              type       : 'in',
+              amount     : order.price,
+              description: `Refund cancel oleh admin #${orderId}`,
+            });
+          }
         }
       }
     }
