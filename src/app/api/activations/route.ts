@@ -6,7 +6,6 @@ export const dynamic = 'force-dynamic';
 const API_KEY = process.env.HEROSMS_API_KEY ?? '';
 const BASE_URL = 'https://hero-sms.com/stubs/handler_api.php';
 
-// ─── KONFIGURASI MARKUP (sama seperti route lain) ────────────────────
 const IDR_RATE   = 17135.75;
 const MARKUP_PCT = 0.25;
 const MIN_PROFIT = 200;
@@ -17,42 +16,13 @@ function applyMarkup(costUSD: number): number {
   const profit = Math.max(modal * MARKUP_PCT, MIN_PROFIT);
   return Math.ceil((modal + profit) / ROUND_TO) * ROUND_TO;
 }
-// ─────────────────────────────────────────────────────────────────────
 
-/**
- * Map status code HeroSMS → label yang ramah untuk frontend.
- * Referensi: https://hero-sms.com/api
- */
 const STATUS_LABEL: Record<string, string> = {
   STATUS_WAIT_CODE   : 'Menunggu OTP',
   STATUS_WAIT_RESEND : 'Menunggu Kirim Ulang',
   STATUS_CANCEL      : 'Dibatalkan',
 };
 
-/**
- * GET /api/activations
- *
- * Mengambil semua aktivasi yang sedang aktif (menunggu OTP).
- *
- * Response sukses:
- *   Array<{
- *     activationId : string
- *     phone        : string
- *     service      : string
- *     status       : string          // raw status dari HeroSMS
- *     statusLabel  : string          // label bahasa Indonesia
- *     otpCode      : string | null   // terisi jika OTP sudah masuk
- *     priceIDR     : number | null   // harga dalam IDR (jika tersedia di API)
- *     createdAt    : string | null   // ISO timestamp jika tersedia
- *   }>
- *
- * Response error:
- *   { error: string }
- *
- * Catatan:
- *   HeroSMS mengembalikan array objek aktivasi aktif.
- *   Struktur setiap item: { id, phone, service, status, sum, created_at, ... }
- */
 export async function GET() {
   try {
     const res = await fetch(
@@ -64,7 +34,6 @@ export async function GET() {
 
     const raw = await res.json();
 
-    // Tangani respons error string (misal: "BAD_KEY")
     if (typeof raw === 'string') {
       const ERROR_MAP: Record<string, string> = {
         BAD_KEY   : 'API key tidak valid (hubungi admin).',
@@ -75,22 +44,26 @@ export async function GET() {
       return NextResponse.json({ error: msg, code: raw }, { status: 422 });
     }
 
-    // HeroSMS bisa return: array langsung, atau { activeActivations: [...] }
-    const items: any[] = Array.isArray(raw)
-      ? raw
-      : Array.isArray(raw?.activeActivations)
-        ? raw.activeActivations
-        : [];
+    // HeroSMS return: { status, data: [...], activeActivations: { rows: [...] } }
+    let items: any[] = [];
+
+    if (Array.isArray(raw)) {
+      items = raw;
+    } else if (Array.isArray(raw?.data)) {
+      items = raw.data;
+    } else if (Array.isArray(raw?.activeActivations?.rows)) {
+      items = raw.activeActivations.rows;
+    } else if (Array.isArray(raw?.activeActivations)) {
+      items = raw.activeActivations;
+    }
 
     const activations = items.map((item: any) => {
-      // Normalkan field — HeroSMS kadang pakai camelCase, kadang snake_case
       const activationId = String(item.id ?? item.activationId ?? '');
       const phone        = String(item.phone ?? item.phoneNumber ?? '');
       const service      = String(item.service ?? item.serviceCode ?? '');
-      const statusRaw    = String(item.status ?? 'STATUS_WAIT_CODE');
-      const createdAt    = item.created_at ?? item.createdAt ?? null;
+      const statusRaw    = String(item.status ?? item.activationStatus ?? 'STATUS_WAIT_CODE');
+      const createdAt    = item.created_at ?? item.createdAt ?? item.createDate ?? null;
 
-      // Harga dari API (dalam USD) → markup ke IDR
       const priceIDR =
         typeof item.sum === 'number' && item.sum > 0
           ? applyMarkup(item.sum)
@@ -98,14 +71,22 @@ export async function GET() {
             ? applyMarkup(item.cost)
             : null;
 
-      // OTP sudah masuk jika status STATUS_OK:{kode}
       let otpCode: string | null = null;
       let normalizedStatus = statusRaw;
+
+      // HeroSMS kadang pakai angka untuk status
+      if (statusRaw === '1') normalizedStatus = 'STATUS_WAIT_CODE';
+      else if (statusRaw === '2') normalizedStatus = 'STATUS_OK';
+      else if (statusRaw === '3') normalizedStatus = 'STATUS_CANCEL';
+      else if (statusRaw === '4') normalizedStatus = 'STATUS_CANCEL';
 
       if (statusRaw.startsWith('STATUS_OK:')) {
         otpCode          = statusRaw.split(':')[1] ?? null;
         normalizedStatus = 'STATUS_OK';
       }
+
+      // OTP bisa dari smsCode atau smsText
+      if (!otpCode && item.smsCode) otpCode = String(item.smsCode);
 
       const statusLabel =
         STATUS_LABEL[normalizedStatus] ??
@@ -123,7 +104,6 @@ export async function GET() {
       };
     });
 
-    // Urutkan: yang masih menunggu OTP di atas, yang sudah OK/cancel di bawah
     const ORDER: Record<string, number> = {
       STATUS_WAIT_CODE   : 0,
       STATUS_WAIT_RESEND : 1,
@@ -132,8 +112,7 @@ export async function GET() {
     };
 
     activations.sort(
-      (a, b) =>
-        (ORDER[a.status] ?? 9) - (ORDER[b.status] ?? 9)
+      (a, b) => (ORDER[a.status] ?? 9) - (ORDER[b.status] ?? 9)
     );
 
     return NextResponse.json(activations);
