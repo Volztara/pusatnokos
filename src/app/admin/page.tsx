@@ -149,7 +149,10 @@ export default function AdminPage() {
   const [loadingAct,  setLoadingAct]  = useState(true);
 
   // Dashboard
-  const [stats,       setStats]       = useState<Stats | null>(null);
+  const [stats,        setStats]        = useState<Stats | null>(null);
+  const [chartPeriod,  setChartPeriod]  = useState<7 | 30>(7);
+  const [chartStats,   setChartStats]   = useState<{ date: string; revenue: number }[]>([]);
+  const [loadingChart, setLoadingChart] = useState(false);
 
   // Users
   const [users,       setUsers]       = useState<User[]>([]);
@@ -318,7 +321,12 @@ export default function AdminPage() {
     finally { setBulkLoading(false); }
   };
 
-  useEffect(() => { if (!isAuthed) return; refreshAll(); const t = setInterval(refreshAll, 15000); return () => clearInterval(t); }, [refreshAll, isAuthed]);
+  useEffect(() => {
+    if (!isAuthed) return;
+    refreshAll();
+    const t = setInterval(refreshAll, 15000);
+    return () => clearInterval(t);
+  }, [refreshAll, isAuthed]);
   useEffect(() => { if (!isAuthed) return; if (tab === 'users') fetchUsers(userPage, userSearch); }, [tab, userPage, isAuthed]);
   useEffect(() => { if (!isAuthed) return; if (tab === 'transactions') fetchTxns(txnPage, txnStatus, txnSearch, txnDateFrom, txnDateTo); }, [tab, txnPage, txnStatus, isAuthed]);
   useEffect(() => { if (!isAuthed) return; if (tab === 'pricing') fetchPricing(); }, [tab, isAuthed]);
@@ -366,6 +374,20 @@ export default function AdminPage() {
       return r;
     });
   }, []);
+
+  const fetchChartData = useCallback(async (period: 7 | 30) => {
+    setLoadingChart(true);
+    try {
+      const r = await authFetch(`/api/admin/stats?period=${period}`);
+      const d = await r.json();
+      setChartStats(d.chart ?? []);
+    } catch {}
+    finally { setLoadingChart(false); }
+  }, [authFetch]);
+
+  // Init chart saat pertama login
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isAuthed) fetchChartData(7); }, [isAuthed]);
 
   // ── Skeleton Loading (saat cek auth) ─────────────────────────────
   if (isCheckingAuth) {
@@ -516,8 +538,27 @@ export default function AdminPage() {
     finally { setSavingPrice(false); }
   };
 
-  const handleExport = (type: string) => {
-    window.open(`/api/admin/export?type=${type}`, '_blank');
+  const handleExport = async (type: string) => {
+    try {
+      showToast('⏳ Menyiapkan file...');
+      const token = localStorage.getItem('admin_token') ?? '';
+      const r = await fetch(`/api/admin/export?type=${type}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!r.ok) { showToast('❌ Gagal export, cek koneksi.'); return; }
+      const blob     = await r.blob();
+      const url      = URL.createObjectURL(blob);
+      const a        = document.createElement('a');
+      a.href         = url;
+      a.download     = `${type}_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('✅ Export berhasil!');
+    } catch {
+      showToast('❌ Gagal export.');
+    }
   };
 
   const handleActivationAction = async (id: string, action: 'cancel' | 'done') => {
@@ -618,72 +659,157 @@ export default function AdminPage() {
               <StatCard icon={<TrendingUp className="w-5 h-5 text-green-600" />}  label="Revenue Hari Ini" value={stats ? fmtIDR(stats.todayRevenue) : '—'} sub={stats ? `Total: ${fmtIDR(stats.totalRevenue)}` : ''} accent="bg-green-50 dark:bg-green-900/30" />
             </div>
 
-            {/* Chart 7 hari — Area Line Chart */}
-            {stats?.chart && (
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900 dark:text-white">Revenue 7 Hari Terakhir</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Hanya order berhasil</p>
+            {/* ── CHART MODERN ── */}
+            {(() => {
+              const data    = chartStats.length > 0 ? chartStats : (stats?.chart ?? []);
+              if (data.length === 0) return null;
+              const maxVal  = Math.max(...data.map(c => c.revenue), 1);
+              const total   = data.reduce((s, c) => s + c.revenue, 0);
+              const avgVal  = Math.round(total / data.length);
+              const todayV  = data[data.length - 1]?.revenue ?? 0;
+              const yesterV = data[data.length - 2]?.revenue ?? 0;
+              const maxDay  = Math.max(...data.map(c => c.revenue));
+              const W = 560, H = 200, PL = 10, PR = 10, PT = 20, PB = 10;
+              const cW = W - PL - PR, cH = H - PT - PB;
+              const pts = data.map((c, i) => ({
+                x: PL + (data.length === 1 ? cW / 2 : (i / (data.length - 1)) * cW),
+                y: PT + cH - (c.revenue / maxVal) * cH,
+                ...c,
+              }));
+              const smoothD = pts.reduce((acc, p, i) => {
+                if (i === 0) return `M${p.x},${p.y}`;
+                const prev = pts[i - 1];
+                const cpx  = (prev.x + p.x) / 2;
+                return acc + ` C${cpx},${prev.y} ${cpx},${p.y} ${p.x},${p.y}`;
+              }, '');
+              const areaD = smoothD + ` L${pts[pts.length-1].x},${H-PB} L${pts[0].x},${H-PB} Z`;
+              return (
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-sm font-black text-slate-900 dark:text-white">Revenue Chart</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">Hanya order berhasil · auto-update tiap 15 detik</p>
+                    </div>
+                    {/* Period toggle */}
+                    <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1">
+                      {([7, 30] as const).map(p => (
+                        <button key={p}
+                          onClick={() => { setChartPeriod(p); fetchChartData(p); }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${chartPeriod === p ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}`}>
+                          {p} Hari
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-xs text-slate-400">Total</div>
-                    <div className="text-sm font-black text-indigo-600 dark:text-indigo-400">{fmtIDR(stats.chart.reduce((s, c) => s + c.revenue, 0))}</div>
+
+                  {/* Mini stat row */}
+                  <div className="grid grid-cols-4 gap-3 mb-5">
+                    {[
+                      { label: `Total ${chartPeriod}H`, value: fmtIDR(total),   cls: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300' },
+                      { label: 'Rata-rata/Hari',         value: fmtIDR(avgVal),  cls: 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200' },
+                      { label: 'Kemarin',                value: fmtIDR(yesterV), cls: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-300' },
+                      { label: 'Hari Ini',               value: fmtIDR(todayV),  cls: todayV >= yesterV ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-300' },
+                    ].map(s => (
+                      <div key={s.label} className={`rounded-xl px-3 py-2.5 ${s.cls}`}>
+                        <div className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-0.5">{s.label}</div>
+                        <div className="text-sm font-black leading-tight">{s.value}</div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-                {(() => {
-                  const data = stats.chart;
-                  const maxVal = Math.max(...data.map(c => c.revenue), 1);
-                  const W = 600, H = 160, PAD = 10;
-                  const points = data.map((c, i) => {
-                    const x = PAD + (i / (data.length - 1)) * (W - PAD * 2);
-                    const y = H - PAD - (c.revenue / maxVal) * (H - PAD * 2);
-                    return { x, y, ...c };
-                  });
-                  const polyline = points.map(p => `${p.x},${p.y}`).join(' ');
-                  const area = `M${points[0].x},${H - PAD} ` + points.map(p => `L${p.x},${p.y}`).join(' ') + ` L${points[points.length-1].x},${H - PAD} Z`;
-                  return (
-                    <div className="relative">
-                      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 160 }}>
+
+                  {/* SVG Chart */}
+                  {loadingChart ? (
+                    <div className="flex items-center justify-center h-[200px]">
+                      <RefreshCw className="w-5 h-5 animate-spin text-indigo-400" />
+                    </div>
+                  ) : (
+                    <div>
+                      <svg viewBox={`0 0 ${W} ${H}`} className="w-full overflow-visible" style={{ height: 200 }}>
                         <defs>
-                          <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.3" />
-                            <stop offset="100%" stopColor="#6366f1" stopOpacity="0.02" />
+                          <linearGradient id="cgrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%"   stopColor="#6366f1" stopOpacity="0.28" />
+                            <stop offset="100%" stopColor="#6366f1" stopOpacity="0"    />
                           </linearGradient>
+                          <filter id="cglow">
+                            <feGaussianBlur stdDeviation="2.5" result="blur" />
+                            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                          </filter>
                         </defs>
-                        {/* Grid lines */}
-                        {[0.25, 0.5, 0.75, 1].map((t, i) => (
-                          <line key={i} x1={PAD} y1={PAD + (1 - t) * (H - PAD * 2)} x2={W - PAD} y2={PAD + (1 - t) * (H - PAD * 2)} stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4,4" />
+                        {/* Grid */}
+                        {[0, 0.25, 0.5, 0.75, 1].map((t, i) => (
+                          <g key={i}>
+                            <line x1={PL} y1={PT + t * cH} x2={W - PR} y2={PT + t * cH}
+                              stroke="#e2e8f0" strokeWidth="1" strokeDasharray={t === 0 ? '0' : '3,5'} />
+                            {t > 0 && (
+                              <text x={PL - 2} y={PT + t * cH + 3} textAnchor="end" fill="#94a3b8" fontSize="8" fontWeight="700">
+                                {(maxVal * (1 - t) / 1000).toFixed(0)}k
+                              </text>
+                            )}
+                          </g>
                         ))}
-                        {/* Area fill */}
-                        <path d={area} fill="url(#areaGrad)" />
-                        {/* Line */}
-                        <polyline points={polyline} fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-                        {/* Dots */}
-                        {points.map((p, i) => (
-                          <circle key={i} cx={p.x} cy={p.y} r="4" fill="#fff" stroke="#6366f1" strokeWidth="2.5" />
+                        {/* Max day vertical marker */}
+                        {pts.filter(p => p.revenue === maxDay && maxDay > 0).slice(0, 1).map((p, i) => (
+                          <line key={i} x1={p.x} y1={PT} x2={p.x} y2={H - PB}
+                            stroke="#6366f1" strokeWidth="1" strokeDasharray="3,4" strokeOpacity="0.35" />
                         ))}
+                        {/* Area */}
+                        <path d={areaD} fill="url(#cgrad)" />
+                        {/* Smooth line */}
+                        <path d={smoothD} fill="none" stroke="#6366f1" strokeWidth="2.5"
+                          strokeLinejoin="round" strokeLinecap="round" filter="url(#cglow)" />
+                        {/* Dots + Tooltip */}
+                        {pts.map((p, i) => {
+                          const isMax   = p.revenue === maxDay && maxDay > 0;
+                          const isToday = i === pts.length - 1;
+                          const tipX    = Math.min(Math.max(p.x - 45, 0), W - 96);
+                          const tipY    = Math.max(p.y - 52, 2);
+                          return (
+                            <g key={i} className="group/dot cursor-pointer">
+                              <circle cx={p.x} cy={p.y} r="18" fill="transparent" />
+                              {isMax && <circle cx={p.x} cy={p.y} r="9" fill="#6366f1" fillOpacity="0.12" />}
+                              <circle cx={p.x} cy={p.y} r={isMax || isToday ? 5 : 3.5}
+                                fill={isMax ? '#6366f1' : '#fff'} stroke="#6366f1" strokeWidth="2.5" />
+                              <g transform={`translate(${tipX},${tipY})`}
+                                className="opacity-0 group-hover/dot:opacity-100 transition-opacity pointer-events-none">
+                                <rect rx="8" width="92" height="38" fill="#0f172a" fillOpacity="0.93" />
+                                <text x="46" y="14" textAnchor="middle" fill="#94a3b8" fontSize="9" fontWeight="700">{p.date}</text>
+                                <text x="46" y="28" textAnchor="middle" fill="white" fontSize="11" fontWeight="900">
+                                  {fmtIDR(p.revenue)}
+                                </text>
+                              </g>
+                            </g>
+                          );
+                        })}
                       </svg>
-                      {/* X axis labels */}
-                      <div className="flex justify-between mt-2 px-1">
-                        {data.map((c, i) => (
-                          <div key={i} className="text-[9px] font-bold text-slate-400 text-center flex-1">{c.date}</div>
-                        ))}
+                      {/* X Labels */}
+                      <div className="flex justify-between mt-1 px-1">
+                        {data.map((c, i) => {
+                          const show = chartPeriod === 30 ? (i % 5 === 0 || i === data.length - 1) : true;
+                          return (
+                            <div key={i} className="text-center flex-1">
+                              {show && <span className="text-[9px] font-bold text-slate-400">{c.date.slice(0, 5)}</span>}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  );
-                })()}
-              </div>
-            )}
+                  )}
+                </div>
+              );
+            })()}
 
-            {/* Export */}
+            {/* ── EXPORT ── */}
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
-              <h3 className="text-sm font-black text-slate-900 dark:text-white mb-4">Export Data</h3>
+              <h3 className="text-sm font-black text-slate-900 dark:text-white mb-1">Export Data</h3>
+              <p className="text-xs text-slate-400 mb-4">Download semua data dalam format CSV</p>
               <div className="flex gap-3 flex-wrap">
-                <button onClick={() => handleExport('users')} className="flex items-center gap-2 px-5 py-2.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 rounded-xl text-sm font-bold hover:bg-indigo-600 hover:text-white transition-colors">
+                <button onClick={() => handleExport('users')}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-sm font-bold transition-all shadow-sm shadow-indigo-600/30">
                   <Download className="w-4 h-4" /> Export Users CSV
                 </button>
-                <button onClick={() => handleExport('transactions')} className="flex items-center gap-2 px-5 py-2.5 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800/50 rounded-xl text-sm font-bold hover:bg-green-600 hover:text-white transition-colors">
+                <button onClick={() => handleExport('transactions')}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-sm font-bold transition-all shadow-sm shadow-emerald-600/30">
                   <Download className="w-4 h-4" /> Export Transaksi CSV
                 </button>
               </div>
