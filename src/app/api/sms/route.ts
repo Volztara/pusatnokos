@@ -1,10 +1,22 @@
 // src/app/api/sms/route.ts
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
-const API_KEY = process.env.HEROSMS_API_KEY ?? '';
+const API_KEY  = process.env.HEROSMS_API_KEY ?? '';
 const BASE_URL = 'https://hero-sms.com/stubs/handler_api.php';
+
+const db = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+function extractNumericOtp(text: string): string {
+  if (!text) return text;
+  const match = text.match(/\b(\d{4,10})\b/);
+  return match ? match[1] : text;
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -14,63 +26,77 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Parameter "id" wajib diisi.' }, { status: 400 });
   }
 
+  // ── 1. Coba ambil dari Supabase dulu (lebih reliable) ──────────────
   try {
+    const { data: order } = await db
+      .from('orders')
+      .select('otp_code, status')
+      .eq('activation_id', id)
+      .single();
+
+    if (order?.otp_code) {
+      const code = extractNumericOtp(order.otp_code);
+      return NextResponse.json({ otpCode: code, source: 'db' });
+    }
+  } catch (dbErr) {
+    console.warn('[GET /api/sms] Supabase fallback error:', dbErr);
+  }
+
+  // ── 2. Fallback: coba HeroSMS API ──────────────────────────────────
+  try {
+    // Coba getStatus (lebih umum) daripada getFullSms
     const res = await fetch(
-      `${BASE_URL}?api_key=${API_KEY}&action=getFullSms&id=${id}`,
-      { cache: 'no-store' }
+      `${BASE_URL}?api_key=${API_KEY}&action=getStatus&id=${id}`,
+      { cache: 'no-store', signal: AbortSignal.timeout(8000) }
     );
-    if (!res.ok) throw new Error(`Upstream HTTP ${res.status}`);
 
-    // ✅ Baca sebagai text dulu — HeroSMS kadang return plain string bukan JSON
-    const text = await res.text();
+    if (!res.ok) {
+      console.warn('[GET /api/sms] HeroSMS HTTP error:', res.status);
+      return NextResponse.json({ status: 'waiting' });
+    }
 
-    const ERROR_MAP: Record<string, string> = {
-      BAD_KEY     : 'API key tidak valid.',
-      NO_ACTIVATE : 'Aktivasi tidak ditemukan.',
-      STATUS_WAIT : 'SMS belum masuk.',
-      ERROR_SQL   : 'Kesalahan server upstream.',
-    };
-
-    // Cek apakah plain string error dari HeroSMS
+    const text    = await res.text();
     const trimmed = text.trim();
-    if (ERROR_MAP[trimmed]) {
-      return NextResponse.json(
-        { error: ERROR_MAP[trimmed], code: trimmed },
-        { status: 422 }
-      );
+
+    console.log('[GET /api/sms] HeroSMS response:', trimmed.slice(0, 100));
+
+    const ERROR_CODES = new Set(['BAD_KEY', 'NO_ACTIVATE', 'STATUS_WAIT', 'ERROR_SQL', 'STATUS_WAIT_CODE', 'STATUS_WAIT_RESEND']);
+
+    if (ERROR_CODES.has(trimmed)) {
+      return NextResponse.json({ status: 'waiting' });
     }
 
-    // Parse JSON
-    let raw: any;
+    if (trimmed.startsWith('STATUS_OK:')) {
+      const fullText = trimmed.slice('STATUS_OK:'.length);
+      const code     = extractNumericOtp(fullText) || fullText;
+      return NextResponse.json({ otpCode: code, source: 'herosms' });
+    }
+
+    if (trimmed === 'STATUS_CANCEL') {
+      return NextResponse.json({ status: 'cancelled' });
+    }
+
+    // Coba parse JSON (getFullSms format)
     try {
-      raw = JSON.parse(text);
+      const raw   = JSON.parse(text);
+      const items = Array.isArray(raw) ? raw : Array.isArray(raw?.sms) ? raw.sms : [];
+      const messages = items
+        .map((item: any) => {
+          const rawCode = String(item.code ?? item.smsCode ?? item.text ?? '');
+          return {
+            code   : extractNumericOtp(rawCode) || rawCode,
+            service: String(item.service ?? ''),
+            text   : String(item.text ?? item.fullSms ?? rawCode),
+          };
+        })
+        .filter((m: { code: string; service: string; text: string }) => m.code.length > 0);
+      return NextResponse.json(messages);
     } catch {
-      // Bukan JSON dan bukan error yang dikenal — kembalikan array kosong
-      console.warn('[GET /api/sms] Non-JSON response:', trimmed.slice(0, 100));
-      return NextResponse.json([]);
+      return NextResponse.json({ status: 'waiting' });
     }
-
-    if (typeof raw === 'string') {
-      return NextResponse.json(
-        { error: ERROR_MAP[raw] ?? `Gagal mengambil SMS: ${raw}`, code: raw },
-        { status: 422 }
-      );
-    }
-
-    const items: any[] = Array.isArray(raw) ? raw : Array.isArray(raw?.sms) ? raw.sms : [];
-
-    const messages = items
-      .map((item: any) => ({
-        code   : String(item.code    ?? item.smsCode ?? item.text ?? ''),
-        service: String(item.service ?? ''),
-        text   : String(item.text    ?? item.fullSms ?? item.code ?? ''),
-      }))
-      .filter(m => m.code.length > 0);
-
-    return NextResponse.json(messages);
 
   } catch (err) {
-    console.error('[GET /api/sms]', err);
-    return NextResponse.json({ error: 'Terjadi kesalahan server.' }, { status: 500 });
+    console.error('[GET /api/sms] error:', err);
+    return NextResponse.json({ status: 'waiting' });
   }
 }

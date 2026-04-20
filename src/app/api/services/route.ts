@@ -169,7 +169,16 @@ export async function GET(request: Request) {
           idrRate, markupPct, minProfit, roundTo
         );
 
-        const overridePrice = overrides[code] ?? overrides[codeLower] ?? null;
+        const COUNTRY_NUM: Record<string, string> = {
+          id:'6', us:'0', uk:'16', my:'9', th:'52', ph:'44', vn:'13', ru:'2',
+        };
+        const cNum = COUNTRY_NUM[country] ?? country;
+        const overridePrice =
+          overrides[`${cNum}_${code}`] ??
+          overrides[`${cNum}_${codeLower}`] ??
+          overrides[`${country}_${code}`] ??
+          overrides[`${country}_${codeLower}`] ??
+          overrides[code] ?? overrides[codeLower] ?? null;
         const price  = overridePrice ?? defaultPrice;
         const profit = price - basePrice;
 

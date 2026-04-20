@@ -81,12 +81,19 @@ export async function GET() {
       else if (statusRaw === '4') normalizedStatus = 'STATUS_CANCEL';
 
       if (statusRaw.startsWith('STATUS_OK:')) {
-        otpCode          = statusRaw.split(':')[1] ?? null;
+        // Pakai slice bukan split(':')[1] agar tidak terpotong jika ada ':' di teks OTP
+        const fullText = statusRaw.slice('STATUS_OK:'.length);
+        const numMatch = fullText.match(/\b(\d{4,10})\b/);
+        otpCode          = numMatch ? numMatch[1] : fullText;
         normalizedStatus = 'STATUS_OK';
       }
 
       // OTP bisa dari smsCode atau smsText
-      if (!otpCode && item.smsCode) otpCode = String(item.smsCode);
+      if (!otpCode && item.smsCode) {
+        const raw = String(item.smsCode);
+        const numMatch2 = raw.match(/\b(\d{4,10})\b/);
+        otpCode = numMatch2 ? numMatch2[1] : raw;
+      }
 
       const statusLabel =
         STATUS_LABEL[normalizedStatus] ??

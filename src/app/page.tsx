@@ -98,11 +98,18 @@ const PAYMENT_METHODS: PaymentMethod[] = [
 ];
 
 const COUNTRIES: Country[] = [
-  { id: 'id', name: '🇮🇩 Indonesia (+62)' },
-  { id: 'us', name: '🇺🇸 United States (+1)' },
-  { id: 'uk', name: '🇬🇧 United Kingdom (+44)' },
-  { id: 'my', name: '🇲🇾 Malaysia (+60)' },
-  { id: 'th', name: '🇹🇭 Thailand (+66)' }
+  { id: '6',   name: '🇮🇩 Indonesia (+62)' },
+  { id: '7',   name: '🇲🇾 Malaysia (+60)' },
+  { id: '12',  name: '🇺🇸 United States (+1)' },
+  { id: '16',  name: '🇬🇧 United Kingdom (+44)' },
+  { id: '52',  name: '🇹🇭 Thailand (+66)' },
+  { id: '10',  name: '🇻🇳 Vietnam (+84)' },
+  { id: '4',   name: '🇵🇭 Philippines (+63)' },
+  { id: '0',   name: '🇷🇺 Russia (+7)' },
+  { id: '22',  name: '🇮🇳 India (+91)' },
+  { id: '43',  name: '🇩🇪 Germany (+49)' },
+  { id: '73',  name: '🇧🇷 Brazil (+55)' },
+  { id: '135', name: '🇸🇬 Singapore (+65)' },
 ];
 
 const copyToClipboard = async (text: string, fallbackCallback: (msg: string) => void) => {
@@ -129,6 +136,12 @@ const formatTimeStr = (s: number): string => {
   const m = Math.floor(s / 60).toString().padStart(2, '0');
   const sec = (s % 60).toString().padStart(2, '0');
   return m + ":" + sec;
+};
+
+const extractOtp = (text: string | null): string => {
+  if (!text) return '';
+  const match = text.match(/\b(\d{4,8})\b/);
+  return match ? match[1] : text;
 };
 
 
@@ -2581,13 +2594,24 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
   const t = T[lang ?? 'id'];
   const fmtIDR = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 
-  const totalOrder    = orders.length;
-  const successOrder  = orders.filter(o => o.status === 'success').length;
-  const activeOrder   = orders.filter(o => o.status === 'waiting').length;
-  const totalSpend    = mutasi.filter(m => m.type === 'out').reduce((s, m) => s + m.amount, 0);
-  const totalTopup    = mutasi.filter(m => m.type === 'in').reduce((s, m) => s + m.amount, 0);
-  const successRate   = totalOrder > 0 ? Math.round((successOrder / totalOrder) * 100) : 0;
-  const recentMutasi  = mutasi.slice(0, 5);
+  // Stats dari DB (akurat, semua order)
+  const [dbStats, setDbStats] = useState<{ totalOrders: number; successOrders: number; successRate: number; totalSpend: number; totalDeposit: number } | null>(null);
+
+  useEffect(() => {
+    if (!user?.email) return;
+    fetch(`/api/user/account-info?email=${encodeURIComponent(user.email)}`)
+      .then(r => r.json())
+      .then(d => { if (d.totalOrders !== undefined) setDbStats(d); })
+      .catch(() => {});
+  }, [user?.email]);
+
+  const totalOrder   = dbStats?.totalOrders  ?? orders.length;
+  const successOrder = dbStats?.successOrders ?? orders.filter(o => o.status === 'success').length;
+  const activeOrder  = orders.filter(o => o.status === 'waiting').length;
+  const totalSpend   = dbStats?.totalSpend   ?? mutasi.filter(m => m.type === 'out').reduce((s, m) => s + m.amount, 0);
+  const totalTopup   = dbStats?.totalDeposit ?? mutasi.filter(m => m.type === 'in').reduce((s, m) => s + m.amount, 0);
+  const successRate  = dbStats?.successRate  ?? (totalOrder > 0 ? Math.round((successOrder / totalOrder) * 100) : 0);
+  const recentMutasi = mutasi.slice(0, 5);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-10">
@@ -3726,8 +3750,9 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                         ) : (
                           /* V1 reguler */
                           o.otpCode ? (
-                            <div className="bg-green-500 text-white px-4 py-3.5 rounded-xl font-black text-2xl tracking-widest cursor-pointer shadow-lg text-center border border-green-400 hover:bg-green-400 transition-colors animate-in zoom-in flex justify-center items-center group" onClick={() => copyToClipboard(o.otpCode ?? '', showToast)} aria-label={`Salin kode OTP ${o.otpCode}`}>
-                              {o.otpCode} <Copy className="w-5 h-5 ml-2.5 opacity-70 group-hover:opacity-100 transition-opacity"/>
+                            <div className="bg-green-500 text-white px-4 py-3.5 rounded-xl cursor-pointer shadow-lg border border-green-400 hover:bg-green-400 transition-colors animate-in zoom-in group" onClick={() => copyToClipboard(o.otpCode ?? '', showToast)}>
+                              <div className="font-black text-xl tracking-widest break-all leading-snug text-center">{o.otpCode}</div>
+                              <div className="flex items-center justify-center mt-1.5 opacity-70 group-hover:opacity-100 text-xs font-bold gap-1"><Copy className="w-3.5 h-3.5"/> Salin</div>
                             </div>
                           ) : (
                             <div className="text-xs font-medium flex items-center justify-center text-indigo-200 py-4 border-2 border-dashed border-indigo-400/50 rounded-xl bg-indigo-900/20">
@@ -4465,6 +4490,21 @@ function HistoryView({ orders, lang }: HistoryViewProps) {
   const apiIds = new Set(apiHistory.map(a => a.activationId));
   const localOnly = orders.filter(o => !apiIds.has(o.activationId));
 
+  // Parse tanggal format Indonesia "21/4/2026, 03.08.11" -> timestamp
+  const parseIDDate = (s: string): number => {
+    try {
+      const [datePart, timePart] = s.split(', ');
+      const [d, m, y] = datePart.split('/');
+      const [h, mi, sec] = (timePart ?? '00.00.00').split('.');
+      return new Date(+y, +m - 1, +d, +h || 0, +mi || 0, +sec || 0).getTime();
+    } catch { return 0; }
+  };
+  const sortedLocal = [...localOnly].sort((a, b) => parseIDDate(b.date) - parseIDDate(a.date));
+  const sortedApi = [...apiHistory].sort((a, b) => {
+    const parse = (s: string | null) => !s ? 0 : isNaN(Date.parse(s)) ? parseIDDate(s) : Date.parse(s);
+    return parse(b.createdAt) - parse(a.createdAt);
+  });
+
   const STATUS_COLOR: Record<string, string> = {
     success   : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50',
     waiting   : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800/50',
@@ -4537,18 +4577,18 @@ function HistoryView({ orders, lang }: HistoryViewProps) {
                 </td></tr>
               ) : (
                 <>
-                  {localOnly.filter(o => !filterStatus || o.status === filterStatus).map(o => (
+                  {sortedLocal.filter(o => !filterStatus || o.status === filterStatus).map(o => (
                     <tr key={'local-' + o.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
                       <td className="p-5 sm:px-6"><div className="font-bold text-base text-slate-900 dark:text-white">{o.serviceName}</div><div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{o.date}</div></td>
-                      <td className="p-5 sm:px-6"><span className="font-mono font-bold text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg dark:text-slate-300">{o.number}</span>{o.otpCode && <span className="text-sm font-black text-green-700 dark:text-green-400 ml-3 inline-flex items-center">OTP: <span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 ml-1.5 tracking-widest">{o.otpCode}</span></span>}</td>
+                      <td className="p-5 sm:px-6"><span className="font-mono font-bold text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg dark:text-slate-300">{o.number}</span>{o.otpCode && <span className="text-sm font-black text-green-700 dark:text-green-400 ml-3 inline-flex items-start gap-1.5"><span className="shrink-0">OTP:</span><span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 tracking-widest break-all leading-snug">{o.otpCode}</span></span>}</td>
                       <td className="p-5 sm:px-6 text-right"><span className={"px-3.5 py-1.5 text-[11px] font-black rounded-lg border uppercase tracking-wider " + (STATUS_COLOR[o.status] ?? STATUS_COLOR['cancelled'])}>{o.status === 'cancelled' ? 'BATAL' : o.status === 'waiting' ? 'MENUNGGU' : o.status === 'success' ? 'BERHASIL' : 'KADALUARSA'}</span></td>
                       <td className="p-5 sm:px-6 text-right">—</td>
                     </tr>
                   ))}
-                  {apiHistory.map(a => (
+                  {sortedApi.map(a => (
                     <tr key={'api-' + a.activationId} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
                       <td className="p-5 sm:px-6"><div className="font-bold text-base text-slate-900 dark:text-white uppercase">{a.service}</div><div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{a.createdAt ?? '—'}</div></td>
-                      <td className="p-5 sm:px-6"><span className="font-mono font-bold text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg dark:text-slate-300">{a.phone}</span>{a.otpCode && <span className="text-sm font-black text-green-700 dark:text-green-400 ml-3 inline-flex items-center">OTP: <span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 ml-1.5 tracking-widest">{a.otpCode}</span></span>}</td>
+                      <td className="p-5 sm:px-6"><span className="font-mono font-bold text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg dark:text-slate-300">{a.phone}</span>{a.otpCode && <span className="text-sm font-black text-green-700 dark:text-green-400 ml-3 inline-flex items-start gap-1.5"><span className="shrink-0">OTP:</span><span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 tracking-widest break-all leading-snug">{a.otpCode}</span></span>}</td>
                       <td className="p-5 sm:px-6 text-right"><span className={"px-3.5 py-1.5 text-[11px] font-black rounded-lg border uppercase tracking-wider " + (STATUS_COLOR[a.status] ?? STATUS_COLOR['cancelled'])}>{a.statusLabel}</span></td>
                       <td className="p-5 sm:px-6 text-right">
                         {a.status === 'success' && a.activationId && (
@@ -4585,24 +4625,24 @@ function HistoryView({ orders, lang }: HistoryViewProps) {
             </div>
           ) : (
             <>
-              {localOnly.filter(o => !filterStatus || o.status === filterStatus).map(o => (
+              {sortedLocal.filter(o => !filterStatus || o.status === filterStatus).map(o => (
                 <div key={'m-local-' + o.id} className="p-4 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div><div className="font-bold text-sm text-slate-900 dark:text-white">{o.serviceName}</div><div className="text-xs text-slate-400 mt-0.5">{o.date}</div></div>
                     <span className={"px-2.5 py-1 text-[10px] font-black rounded-lg border uppercase shrink-0 " + (STATUS_COLOR[o.status] ?? STATUS_COLOR['cancelled'])}>{o.status === 'cancelled' ? 'BATAL' : o.status === 'waiting' ? 'MENUNGGU' : o.status === 'success' ? 'BERHASIL' : 'KADALUARSA'}</span>
                   </div>
                   <div className="font-mono text-xs bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 inline-block">{o.number}</div>
-                  {o.otpCode && <div className="flex items-center gap-1.5 text-xs font-black text-green-700 dark:text-green-400">OTP: <span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 tracking-widest">{o.otpCode}</span></div>}
+                  {o.otpCode && <div className="flex items-start gap-1.5 text-xs font-black text-green-700 dark:text-green-400"><span className="shrink-0">OTP:</span><span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 tracking-widest break-all leading-snug">{o.otpCode}</span></div>}
                 </div>
               ))}
-              {apiHistory.map(a => (
+              {sortedApi.map(a => (
                 <div key={'m-api-' + a.activationId} className="p-4 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div><div className="font-bold text-sm text-slate-900 dark:text-white uppercase">{a.service}</div><div className="text-xs text-slate-400 mt-0.5">{a.createdAt ?? '—'}</div></div>
                     <span className={"px-2.5 py-1 text-[10px] font-black rounded-lg border uppercase shrink-0 " + (STATUS_COLOR[a.status] ?? STATUS_COLOR['cancelled'])}>{a.statusLabel}</span>
                   </div>
                   <div className="font-mono text-xs bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 inline-block">{a.phone}</div>
-                  {a.otpCode && <div className="flex items-center gap-1.5 text-xs font-black text-green-700 dark:text-green-400">OTP: <span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 tracking-widest">{a.otpCode}</span></div>}
+                  {a.otpCode && <div className="flex items-start gap-1.5 text-xs font-black text-green-700 dark:text-green-400"><span className="shrink-0">OTP:</span><span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 tracking-widest break-all leading-snug">{a.otpCode}</span></div>}
                   {a.status === 'success' && a.activationId && (
                     <button disabled={reactivating === a.activationId}
                       onClick={async () => { setReactivating(a.activationId); try { const costRes = await fetch(`/api/reactivation?id=${a.activationId}`); const costData = await costRes.json(); if (!costRes.ok) { const e = typeof costData.error === 'string' ? costData.error.toLowerCase() : ''; showHistoryToast(e.includes('404')||e.includes('upstream')||e.includes('server') ? 'Nomor sudah kadaluarsa. Beli nomor baru.' : (costData.error ?? 'Gagal cek harga.')); return; } const confirm = window.confirm(`Pakai nomor ${a.phone} lagi?\nBiaya: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`); if (!confirm) return; const res = await fetch('/api/reactivation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: a.activationId, service: a.service }) }); const data = await res.json(); if (!res.ok) { const e2 = typeof data.error === 'string' ? data.error.toLowerCase() : ''; showHistoryToast(e2.includes('upstream')||e2.includes('server') ? 'Reaktivasi gagal — nomor kadaluarsa.' : (data.error ?? 'Gagal reaktivasi.')); return; } showHistoryToast(`Berhasil! Nomor ${data.phone} siap dipakai lagi.`); } catch { showHistoryToast('Kesalahan jaringan.'); } finally { setReactivating(null); } }}

@@ -142,7 +142,9 @@ export async function GET(request: Request) {
     if (text === 'STATUS_CANCEL')      return NextResponse.json({ status: 'cancel' });
 
     if (text.startsWith('STATUS_OK:')) {
-      const otpCode = text.split(':')[1] ?? '';
+      const fullText = text.slice('STATUS_OK:'.length);
+      const numMatch = fullText.match(/\b(\d{4,10})\b/);
+      const otpCode  = numMatch ? numMatch[1] : fullText;
       return NextResponse.json({ status: 'ok', otpCode });
     }
 

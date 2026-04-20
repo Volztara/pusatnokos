@@ -7,7 +7,7 @@ import {
   Copy, Check, ShieldAlert, Activity, Zap, RotateCcw, Signal, Ban,
   Moon, Sun, Users, TrendingUp, ShoppingCart, DollarSign, Download,
   Settings, FileText, Search, ChevronDown, BarChart2, Sliders,
-  UserX, UserCheck, XCircle, Eye, EyeOff, Package, LogOut, Lock, Mail, Megaphone, Bell, ClipboardList
+  UserX, UserCheck, XCircle, Eye, EyeOff, Package, LogOut, Lock, Mail, Megaphone, Bell, ClipboardList, Globe
 } from 'lucide-react';
 
 // ─── TYPES ───────────────────────────────────────────────────────────
@@ -1625,27 +1625,49 @@ function RevenueTab({ isAuthed }: { isAuthed: boolean }) {
 }
 
 // ─── OVERRIDE HARGA TAB ───────────────────────────────────────────────
+const OVERRIDE_COUNTRIES = [
+  { id: '6',   label: '🇮🇩 Indonesia' },
+  { id: '7',   label: '🇲🇾 Malaysia' },
+  { id: '12',  label: '🇺🇸 USA' },
+  { id: '16',  label: '🇬🇧 UK' },
+  { id: '52',  label: '🇹🇭 Thailand' },
+  { id: '10',  label: '🇻🇳 Vietnam' },
+  { id: '4',   label: '🇵🇭 Philippines' },
+  { id: '0',   label: '🇷🇺 Russia' },
+  { id: '22',  label: '🇮🇳 India' },
+  { id: '43',  label: '🇩🇪 Germany' },
+  { id: '73',  label: '🇧🇷 Brazil' },
+  { id: '135', label: '🇸🇬 Singapore' },
+  { id: '133', label: '🇦🇺 Australia' },
+  { id: '132', label: '🇯🇵 Japan' },
+];
+
 function OverridePricingTab({ showToast }: { showToast: (msg: string) => void }) {
 
   const authFetch = (url: string, options: RequestInit = {}) => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') ?? '' : '';
     return fetch(url, { ...options, headers: { ...(options.headers ?? {}), 'Authorization': `Bearer ${token}` } });
   };
-  const [overrides,  setOverrides]  = useState<Record<string, number>>({});
-  const [allServices,setAllServices]= useState<{ code: string; name: string; price: number }[]>([]);
-  const [search,     setSearch]     = useState('');
-  const [loading,    setLoading]    = useState(true);
-  const [saving,     setSaving]     = useState(false);
-  const [edited,     setEdited]     = useState<Record<string, number>>({});
+  const [overrides,      setOverrides]      = useState<Record<string, number>>({});
+  const [allServices,    setAllServices]    = useState<{ code: string; name: string; price: number }[]>([]);
+  const [search,         setSearch]         = useState('');
+  const [loading,        setLoading]        = useState(true);
+  const [saving,         setSaving]         = useState(false);
+  const [edited,         setEdited]         = useState<Record<string, number>>({});
+  const [selectedCountry,setSelectedCountry]= useState('6');
 
   const fmtIDR = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
+
+  // key unik per negara + layanan
+  const overrideKey = (code: string) => `${selectedCountry}_${code}`;
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      setEdited({});
       try {
         const [svcRes, ovRes] = await Promise.all([
-          fetch('/api/services?country=6&operator=0'),
+          fetch(`/api/services?country=${selectedCountry}&operator=0`),
           authFetch('/api/admin/pricing/overrides'),
         ]);
         const svcs = await svcRes.json();
@@ -1656,7 +1678,7 @@ function OverridePricingTab({ showToast }: { showToast: (msg: string) => void })
       finally { setLoading(false); }
     };
     fetchData();
-  }, []);
+  }, [selectedCountry]);
 
   // Filter by search
   const services = search
@@ -1682,11 +1704,12 @@ function OverridePricingTab({ showToast }: { showToast: (msg: string) => void })
   };
 
   const handleReset = async (code: string) => {
+    const key = overrideKey(code);
     const newOv = { ...overrides };
-    delete newOv[code];
+    delete newOv[key];
     setOverrides(newOv);
     const newEd = { ...edited };
-    delete newEd[code];
+    delete newEd[key];
     setEdited(newEd);
     await authFetch('/api/admin/pricing/overrides', {
       method : 'PUT',
@@ -1701,9 +1724,22 @@ function OverridePricingTab({ showToast }: { showToast: (msg: string) => void })
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-lg font-black text-slate-900 dark:text-white">Override Harga per Layanan</h2>
-          <p className="text-xs text-slate-400 mt-1">Tetapkan harga khusus untuk layanan tertentu. Kosongkan untuk pakai harga markup global. Total: {allServices.length} layanan</p>
+          <p className="text-xs text-slate-400 mt-1">Tetapkan harga khusus untuk layanan & negara tertentu. Kosongkan untuk pakai harga markup global. Total: {allServices.length} layanan</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Country selector */}
+          <div className="relative">
+            <Globe className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+            <select
+              value={selectedCountry}
+              onChange={e => setSelectedCountry(e.target.value)}
+              className="pl-9 pr-8 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white appearance-none cursor-pointer"
+            >
+              {OVERRIDE_COUNTRIES.map(c => (
+                <option key={c.id} value={c.id}>{c.label}</option>
+              ))}
+            </select>
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari layanan..." className="pl-9 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white w-48" />
@@ -1735,8 +1771,9 @@ function OverridePricingTab({ showToast }: { showToast: (msg: string) => void })
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {services.map(s => {
-                  const hasOverride = overrides[s.code] !== undefined || edited[s.code] !== undefined;
-                  const currentOverride = edited[s.code] ?? overrides[s.code] ?? '';
+                  const key = overrideKey(s.code);
+                  const hasOverride = overrides[key] !== undefined || edited[key] !== undefined;
+                  const currentOverride = edited[key] ?? overrides[key] ?? '';
                   return (
                     <tr key={s.code} className={"hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors " + (hasOverride ? 'bg-amber-50/30 dark:bg-amber-900/10' : '')}>
                       <td className="px-5 py-3">
@@ -1751,7 +1788,7 @@ function OverridePricingTab({ showToast }: { showToast: (msg: string) => void })
                             type="number"
                             placeholder="—"
                             value={currentOverride}
-                            onChange={e => setEdited(prev => ({ ...prev, [s.code]: parseInt(e.target.value) || 0 }))}
+                            onChange={e => setEdited(prev => ({ ...prev, [key]: parseInt(e.target.value) || 0 }))}
                             className={"pl-8 pr-3 py-2 border rounded-xl text-sm font-bold outline-none w-36 transition-colors " + (hasOverride ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-600 text-amber-700 dark:text-amber-400' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 dark:text-white focus:border-indigo-500')}
                           />
                         </div>
