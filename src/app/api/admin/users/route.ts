@@ -18,17 +18,23 @@ export async function GET(req: Request) {
 
   const { data: users, count } = await query;
 
-  // Ambil total order & spending per user (exclude cancelled)
-  const enriched = await Promise.all((users ?? []).map(async (u: any) => {
-    const { count: orderCount } = await db.from('orders').select('*', { count: 'exact', head: true }).eq('user_id', u.id).neq('status', 'cancelled');
-    const { data: spending }   = await db.from('mutations')
-      .select('amount, orders!inner(status)')
-      .eq('user_id', u.id)
-      .eq('type', 'out')
-      .neq('orders.status', 'cancelled');
-    const totalSpend = (spending ?? []).reduce((s: number, m: any) => s + (m.amount ?? 0), 0);
-    return { ...u, orderCount: orderCount ?? 0, totalSpend };
-  }));
+  // Ambil semua orders sekaligus (1 query, bukan N query per user)
+  const userIds = (users ?? []).map((u: any) => u.id);
+
+  const { data: allOrders } = await db
+    .from('orders')
+    .select('user_id, price, status')
+    .in('user_id', userIds);
+
+  // Hitung orderCount & totalSpend per user di memori (tanpa loop async)
+  const enriched = (users ?? []).map((u: any) => {
+    const userOrders = (allOrders ?? []).filter((o: any) => o.user_id === u.id);
+    const orderCount = userOrders.filter((o: any) => o.status !== 'cancelled').length;
+    const totalSpend = userOrders
+      .filter((o: any) => o.status === 'success')
+      .reduce((s: number, o: any) => s + (o.price ?? 0), 0);
+    return { ...u, orderCount, totalSpend };
+  });
 
   return NextResponse.json({ users: enriched, total: count ?? 0 });
 }
@@ -55,7 +61,7 @@ export async function PATCH(req: Request) {
     // Update saldo
     await db.from('profiles').update({ balance: value }).eq('id', userId);
 
-    // ✅ Catat mutasi agar riwayat user tercatat
+    // Catat mutasi agar riwayat user tercatat
     if (diff !== 0) {
       try {
         await db.from('mutations').insert({
