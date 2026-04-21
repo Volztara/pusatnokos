@@ -1,6 +1,5 @@
 // src/app/api/cron/route.ts
 import { NextResponse } from 'next/server';
-
 export const dynamic = 'force-dynamic';
 import { createClient } from '@supabase/supabase-js';
 
@@ -14,7 +13,7 @@ const db = createClient(
 );
 
 export async function GET(request: Request) {
-  // ── Auth ────────────────────────────────────────────────────────────
+  // ── Auth ──────────────────────────────────────────────────────────
   if (CRON_SECRET) {
     const { searchParams } = new URL(request.url);
     const secret       = searchParams.get('secret') ?? '';
@@ -25,24 +24,21 @@ export async function GET(request: Request) {
     }
   }
 
-  const startTime = Date.now();
+  const startTime     = Date.now();
   let cancelled       = 0;
-  let refunded        = 0;
-  let skipped         = 0;
   let errors          = 0;
-  let doubleRefundPrevented = 0;
+  let depositRejected = 0; // ← declare di luar try agar bisa diakses di catch
 
   try {
-    // ── 1. Claim expired orders secara ATOMIK via SQL function ────────
-    // UPDATE...RETURNING dalam satu query — eliminasi race condition
-    // Semua negara ditangani (tidak ada filter country)
+    // ── 1. Expire + refund ATOMIK via SQL ─────────────────────────────
+    // SQL function sudah handle: UPDATE orders, UPDATE profiles (balance), INSERT mutations
+    // Tidak perlu refund lagi di sini
     const { data: expiredOrders, error: dbErr } = await db
-      .rpc('expire_and_refund_orders');
+      .rpc('expire_and_refund_orders', { p_batch_size: 100 });
 
     if (dbErr) throw dbErr;
 
-    // ── Auto-reject deposit pending_payment > 30 menit ─────────────
-    let depositRejected = 0;
+    // ── 2. Auto-reject deposit pending_payment > 30 menit ─────────────
     try {
       const depositCutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
       const { data: expiredDeposits } = await db
@@ -61,44 +57,21 @@ export async function GET(request: Request) {
 
     if (!expiredOrders || expiredOrders.length === 0) {
       return NextResponse.json({
-        cancelled: 0, refunded: 0, skipped: 0, errors: 0,
-        doubleRefundPrevented: 0,
+        refunded : 0,
+        cancelled: 0,
+        errors   : 0,
         depositRejected,
         message  : 'Tidak ada order expired.',
         timestamp: new Date().toISOString(),
       });
     }
 
-    console.log(`[cron] Claimed ${expiredOrders.length} expired orders (all countries)`);
+    console.log(`[cron] Refunded ${expiredOrders.length} expired orders via SQL`);
 
+    // ── 3. Cancel di HeroSMS saja (refund sudah dilakukan SQL) ────────
     for (const order of expiredOrders) {
-      const { activation_id, user_id, price, service_name, country } = order;
+      const { activation_id } = order;
 
-      // ── 2. Anti double-refund: cek apakah sudah pernah di-refund ──
-      // Cek di tabel mutations sebelum melakukan refund apapun
-      if (activation_id && user_id) {
-        try {
-          const { data: existingRefund } = await db
-            .from('mutations')
-            .select('id')
-            .eq('user_id', user_id)
-            .eq('type', 'in')
-            .ilike('description', `%#${activation_id}%`)
-            .maybeSingle();
-
-          if (existingRefund) {
-            console.log(`[cron] SKIP double-refund: order ${activation_id} already refunded (mutation #${existingRefund.id})`);
-            doubleRefundPrevented++;
-            continue; // sudah di-refund, lewati
-          }
-        } catch (e) {
-          console.error(`[cron] Double-refund check failed for ${activation_id}:`, e);
-          // Lanjutkan dengan hati-hati
-        }
-      }
-
-      // ── 3. Cancel di HeroSMS (semua negara) ────────────────────────
-      // status=8 adalah cancel universal di HeroSMS API
       if (activation_id) {
         try {
           const cancelRes  = await fetch(
@@ -109,95 +82,33 @@ export async function GET(request: Request) {
           if (
             cancelText.startsWith('ACCESS_CANCEL') ||
             cancelText.startsWith('ACTIVATION_STATUS_CHANGED') ||
-            cancelText.startsWith('ACCESS_ALREADY_USED') // sudah dipakai, tetap lanjut refund
+            cancelText.startsWith('ACCESS_ALREADY_USED')
           ) {
             cancelled++;
           } else {
-            // Log tapi tetap lanjut refund — jangan blokir refund karena HeroSMS
-            console.warn(`[cron] HeroSMS cancel for ${activation_id} (country:${country ?? '?'}): ${cancelText}`);
-            // Tetap lanjut ke refund
+            console.warn(`[cron] HeroSMS cancel for ${activation_id}: ${cancelText}`);
           }
         } catch (e) {
-          // Timeout/network error — tetap lanjut refund user
           console.error(`[cron] HeroSMS cancel failed for ${activation_id}:`, e);
           errors++;
-          // TIDAK return/continue — user tetap harus dapat refund
         }
       }
 
-      // ── 4. Refund saldo user (semua negara) ────────────────────────
-      if (user_id && price > 0) {
-        try {
-          const { data: profile } = await db
-            .from('profiles')
-            .select('email')
-            .eq('id', user_id)
-            .single();
-
-          if (!profile?.email) {
-            console.warn(`[cron] Profile not found for user ${user_id}, skipping refund`);
-            skipped++;
-            continue;
-          }
-
-          // Gunakan update_balance RPC (atomic)
-          const { error: rpcErr } = await db.rpc('update_balance', {
-            p_email : profile.email,
-            p_amount: price,
-          });
-
-          if (rpcErr) {
-            console.error(`[cron] RPC update_balance failed for user ${user_id}:`, rpcErr);
-            errors++;
-            continue;
-          }
-
-          // Catat mutasi refund dengan activation_id di description
-          // (dipakai oleh anti double-refund check di atas)
-          const { error: mutErr } = await db.from('mutations').insert({
-            user_id    : user_id,
-            type       : 'in',
-            amount     : price,
-            description: `Refund Kadaluarsa: ${service_name} #${activation_id}`,
-            created_at : new Date().toISOString(),
-          });
-
-          if (mutErr) {
-            // Refund sudah masuk tapi mutasi gagal dicatat — log saja
-            console.error(`[cron] Mutation insert failed for ${activation_id}:`, mutErr);
-          }
-
-          refunded++;
-          console.log(`[cron] Refunded Rp${price} to user ${user_id} (${service_name} | country:${country ?? 'ID'} | #${activation_id})`);
-
-        } catch (e) {
-          console.error(`[cron] Refund error for user ${user_id}:`, e);
-          errors++;
-        }
-      } else {
-        if (price <= 0) console.log(`[cron] Skip refund: price=0 for ${activation_id}`);
-        skipped++;
-      }
-
-      // Delay kecil antar order agar tidak spam DB
-      await new Promise(r => setTimeout(r, 80));
+      await new Promise(r => setTimeout(r, 50));
     }
 
     const elapsed = Date.now() - startTime;
     console.log(
       `[cron] Done in ${elapsed}ms — ` +
-      `cancelled:${cancelled} refunded:${refunded} skipped:${skipped} ` +
-      `errors:${errors} doubleRefundPrevented:${doubleRefundPrevented} depositRejected:${depositRejected}`
+      `refunded:${expiredOrders.length} cancelled:${cancelled} ` +
+      `errors:${errors} depositRejected:${depositRejected}`
     );
 
     return NextResponse.json({
+      refunded : expiredOrders.length,
       cancelled,
-      refunded,
-      skipped,
       errors,
-      doubleRefundPrevented,
       depositRejected,
-      total    : expiredOrders.length,
       elapsed  : `${elapsed}ms`,
       timestamp: new Date().toISOString(),
     });
@@ -205,7 +116,7 @@ export async function GET(request: Request) {
   } catch (err) {
     console.error('[cron] Fatal error:', err);
     return NextResponse.json(
-      { error: 'Cron job gagal.', timestamp: new Date().toISOString() },
+      { error: 'Cron job gagal.', depositRejected, timestamp: new Date().toISOString() },
       { status: 500 }
     );
   }
