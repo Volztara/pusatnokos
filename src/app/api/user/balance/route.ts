@@ -1,19 +1,56 @@
 // src/app/api/user/balance/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
-import { createClient } from '@supabase/supabase-js';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const email = searchParams.get('email')?.trim().toLowerCase();
+function getVerifiedEmail(request: NextRequest): string | null {
+  // Coba semua header yang mungkin ada
+  return (
+    request.headers.get('X-Verified-User-Email')?.trim().toLowerCase() ??
+    request.headers.get('X-User-Email')?.trim().toLowerCase() ??
+    null
+  );
+}
 
-  if (!email) return NextResponse.json({ error: 'Email wajib diisi.' }, { status: 400 });
+// Validasi token JWT Supabase
+async function validateToken(request: NextRequest): Promise<string | null> {
+  const authHeader = request.headers.get('Authorization') ?? '';
+  const token = authHeader.replace('Bearer ', '').trim();
+  if (!token) return null;
+
+  try {
+    const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
+    const supabase = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return null;
+    return user.email?.toLowerCase() ?? null;
+  } catch { return null; }
+}
+
+async function getAuthEmail(request: NextRequest): Promise<string | null> {
+  // 1. Coba dari header langsung
+  const headerEmail = getVerifiedEmail(request);
+  if (headerEmail) return headerEmail;
+
+  // 2. Coba validasi JWT
+  const tokenEmail = await validateToken(request);
+  if (tokenEmail) return tokenEmail;
+
+  return null;
+}
+
+export async function GET(request: NextRequest) {
+  const email = await getAuthEmail(request);
+  if (!email) return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
 
   const { data, error } = await supabaseAdmin
     .from('profiles')
@@ -25,56 +62,94 @@ export async function GET(request: Request) {
   return NextResponse.json({ balance: data.balance ?? 0 });
 }
 
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
   try {
-    const { email, amount, type, activationId } = await request.json();
+    const email = await getAuthEmail(request);
+    if (!email) return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
 
-    if (!email || !amount || !type) {
+    const body = await request.json();
+    const { amount, type, activationId } = body;
+
+    if (!amount || !type) {
       return NextResponse.json({ error: 'Parameter tidak lengkap.' }, { status: 400 });
     }
 
-    // ✅ Gunakan RPC atomic untuk cancel — mencegah race condition & double refund
-    if (activationId && type === 'add') {
-      const { data, error } = await supabaseAdmin
-        .rpc('cancel_order_and_refund', {
-          p_activation_id: activationId,
-          p_email        : email.toLowerCase(),
-        });
+    if (type === 'add') {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('id, balance')
+        .eq('email', email)
+        .single();
 
-      if (error) {
-        console.error('[PATCH /api/user/balance] RPC error:', error);
-        return NextResponse.json({ error: 'Gagal memproses refund.' }, { status: 500 });
+      if (!profile) return NextResponse.json({ error: 'User tidak ditemukan.' }, { status: 404 });
+
+      // Anti double-refund
+      if (activationId) {
+        const { data: existingMutation } = await supabaseAdmin
+          .from('mutations')
+          .select('id')
+          .eq('user_id', profile.id)
+          .eq('type', 'in')
+          .ilike('description', `%#${activationId}%`)
+          .maybeSingle();
+
+        if (existingMutation) {
+          return NextResponse.json(
+            { error: 'Refund sudah diproses sebelumnya.', alreadyRefunded: true },
+            { status: 409 }
+          );
+        }
+
+        try {
+          const { data: rpcData, error: rpcErr } = await supabaseAdmin
+            .rpc('cancel_order_and_refund', {
+              p_activation_id: activationId,
+              p_email        : email,
+            });
+
+          if (rpcErr) throw new Error('fallback');
+
+          if (!rpcData?.success) {
+            const msg = rpcData?.error ?? 'Refund sudah diproses.';
+            if (msg.includes('already') || msg.includes('sudah') || msg.includes('not found')) {
+              return NextResponse.json({ error: msg, alreadyRefunded: true }, { status: 409 });
+            }
+            return NextResponse.json({ error: msg }, { status: 400 });
+          }
+
+          return NextResponse.json({ success: true, balance: rpcData.balance });
+
+        } catch (e: any) {
+          if (e?.message !== 'fallback') throw e;
+        }
       }
 
-      if (!data.success) {
-        return NextResponse.json({ error: data.error }, { status: 409 });
-      }
+      const newBal = (profile.balance ?? 0) + amount;
+      const { error: updateErr } = await supabaseAdmin
+        .from('profiles')
+        .update({ balance: newBal })
+        .eq('email', email);
 
-      return NextResponse.json({ success: true, balance: data.balance });
+      if (updateErr) return NextResponse.json({ error: 'Gagal update saldo.' }, { status: 500 });
+      return NextResponse.json({ success: true, balance: newBal });
     }
 
-    // ✅ Untuk subtract (beli nomor) — update langsung
+    // SUBTRACT
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('id, balance')
-      .eq('email', email.toLowerCase())
+      .eq('email', email)
       .single();
 
-    if (!profile) {
-      return NextResponse.json({ error: 'User tidak ditemukan.' }, { status: 404 });
-    }
+    if (!profile) return NextResponse.json({ error: 'User tidak ditemukan.' }, { status: 404 });
 
     const newBal = Math.max(0, (profile.balance ?? 0) - amount);
-
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
       .update({ balance: newBal })
-      .eq('email', email.toLowerCase());
+      .eq('email', email);
 
-    if (updateError) {
-      return NextResponse.json({ error: 'Gagal update saldo.' }, { status: 500 });
-    }
-
+    if (updateError) return NextResponse.json({ error: 'Gagal update saldo.' }, { status: 500 });
     return NextResponse.json({ success: true, balance: newBal });
 
   } catch (err) {

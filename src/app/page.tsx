@@ -85,6 +85,133 @@ const CS_WA        = '6287862306726';
 const CS_TELEGRAM  = '@PusatNokosCS';
 const SESSION_TTL  = 3 * 24 * 60 * 60 * 1000; // 3 hari dalam ms
 
+// ── Security helpers ─────────────────────────────────────────────────
+// Generate token kriptografis (32 hex chars)
+const genToken = (): string => {
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const arr = new Uint8Array(16);
+    crypto.getRandomValues(arr);
+    return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+};
+
+// In-memory session store (tidak bisa dicuri via XSS dari tab lain)
+let _sessionToken: string | null = null;
+let _csrfToken: string | null = null;
+
+const setSecureSession = (userData: UserData, accessToken?: string) => {
+  _sessionToken = accessToken ?? genToken(); // pakai Supabase JWT jika tersedia
+  _csrfToken    = genToken();
+  const payload = { ...userData, _savedAt: Date.now(), _st: _sessionToken, _at: accessToken ?? '' };
+  // sessionStorage: auto-hapus saat browser/tab ditutup (lebih aman dari localStorage)
+  try {
+    // Bersihkan session lama sebelum set baru agar tidak quota exceeded
+    sessionStorage.removeItem('nokos_s');
+    sessionStorage.setItem('nokos_s', JSON.stringify(payload));
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+      try { sessionStorage.clear(); sessionStorage.setItem('nokos_s', JSON.stringify(payload)); } catch {}
+    }
+  }
+};
+
+const clearSecureSession = () => {
+  _sessionToken = null;
+  _csrfToken    = null;
+  try { sessionStorage.removeItem('nokos_s'); } catch {}
+  try { localStorage.removeItem('nokos_session'); } catch {} // hapus lama juga
+};
+
+// Bersihkan localStorage dari keys lama agar tidak QuotaExceededError
+const cleanupStorage = () => {
+  try {
+    const now = Date.now();
+    const keysToDelete: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      // Hapus semua rate limit keys (expired atau tidak)
+      if (key.startsWith('rl_')) {
+        keysToDelete.push(key);
+        continue;
+      }
+      // Hapus cache keys lama
+      if (key.startsWith('cache_') || key.startsWith('sw_') || key.startsWith('workbox-')) {
+        keysToDelete.push(key);
+      }
+    }
+    keysToDelete.forEach(k => localStorage.removeItem(k));
+
+    // Kalau masih penuh, cek total size dan clear agresif
+    try {
+      const testKey = '__quota_test__';
+      localStorage.setItem(testKey, 'x');
+      localStorage.removeItem(testKey);
+    } catch {
+      // Masih penuh — hapus semua kecuali theme dan lang
+      const keep = new Set(['theme', 'lang']);
+      const allKeys: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && !keep.has(k)) allKeys.push(k);
+      }
+      allKeys.forEach(k => localStorage.removeItem(k));
+    }
+  } catch {}
+};
+
+// Wrapper setItem yang bersihkan storage jika quota exceeded
+const safeLocalSet = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+      cleanupStorage();
+      try { localStorage.setItem(key, value); } catch {} // retry sekali
+    }
+  }
+};
+
+const restoreSecureSession = (): (UserData & { _savedAt: number }) | null => {
+  try {
+    // Coba sessionStorage dulu (sesi aktif)
+    const s = sessionStorage.getItem('nokos_s');
+    if (s) {
+      const parsed = JSON.parse(s) as UserData & { _savedAt: number; _st: string; _at?: string };
+      if (parsed?.email && parsed._savedAt && Date.now() - parsed._savedAt < SESSION_TTL) {
+        // Restore Supabase access_token jika tersimpan (_at), atau gunakan session token lama
+        _sessionToken = parsed._at || parsed._st || genToken();
+        _csrfToken    = genToken();
+        return parsed;
+      }
+      sessionStorage.removeItem('nokos_s');
+    }
+    // Fallback: localStorage lama (migrasi 1x — lalu hapus)
+    const old = localStorage.getItem('nokos_session');
+    if (old) {
+      const parsed = JSON.parse(old) as UserData & { _savedAt?: number };
+      if (parsed?.email && parsed._savedAt && Date.now() - parsed._savedAt < SESSION_TTL) {
+        // Sesi lama tidak punya access_token → hapus, paksa login ulang
+        localStorage.removeItem('nokos_session');
+        return null; // paksa re-login agar user dapat token baru
+      }
+      localStorage.removeItem('nokos_session');
+    }
+  } catch {}
+  return null;
+};
+
+// Helper: tambahkan security headers ke semua fetch yang membutuhkan auth
+// _sessionToken sekarang berisi Supabase access_token (JWT) dari login response
+const authHeaders = (extra?: Record<string, string>): Record<string, string> => ({
+  'Content-Type': 'application/json',
+  // Authorization: Bearer <supabase_access_token> — divalidasi server via supabase.auth.getUser()
+  ...((_sessionToken) ? { 'Authorization': `Bearer ${_sessionToken}` } : {}),
+  ...((_csrfToken)    ? { 'X-CSRF-Token': _csrfToken }                : {}),
+  ...extra,
+});
+
 // Fallback kosong — data live dari API, tidak pakai harga hardcoded
 const ALL_SERVICES: Service[] = [];
 
@@ -316,13 +443,19 @@ function useInView(threshold = 0.15) {
   const ref = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
   useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') { setInView(true); return; }
+    let fired = false;
     const io = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) setInView(true); },
-      { threshold }
+      ([e]) => { if (e.isIntersecting && !fired) { fired = true; setInView(true); io.disconnect(); } },
+      { threshold, rootMargin: '0px 0px -10% 0px' }
     );
-    if (ref.current) io.observe(ref.current);
-    return () => io.disconnect();
-  }, [threshold]);
+    const el = ref.current;
+    if (el) io.observe(el);
+    // Fallback: jika setelah 1.2 detik masih belum visible, paksa visible
+    const t = window.setTimeout(() => { if (!fired) { fired = true; setInView(true); } }, 1200);
+    return () => { io.disconnect(); window.clearTimeout(t); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return { ref, inView };
 }
 
@@ -346,17 +479,37 @@ function useCountUp(end: number, duration = 1300, trigger = false) {
 function FadeInSection({ children, delay = 0, className = '' }: {
   children: React.ReactNode; delay?: number; className?: string;
 }) {
-  const { ref, inView } = useInView(0.12);
+  // Render langsung tanpa animasi — IntersectionObserver tidak reliable di dev mode
+  return <div className={className}>{children}</div>;
+}
+// ── Modal Konfirmasi (ganti window.confirm) ───────────────────────────
+function ConfirmModal({ message, onConfirm, onCancel }: {
+  message: string; onConfirm: () => void; onCancel: () => void;
+}) {
   return (
-    <div ref={ref} className={className} style={{
-      opacity: inView ? 1 : 0,
-      transform: inView ? 'translateY(0)' : 'translateY(26px)',
-      transition: `opacity 0.6s ease ${delay}ms, transform 0.6s ease ${delay}ms`,
-    }}>
-      {children}
+    <div className="fixed inset-0 z-[300] flex items-center justify-center px-4" style={{background:'rgba(0,0,0,0.5)'}}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 max-w-sm w-full">
+        <div className="flex items-start gap-3 mb-5">
+          <div className="bg-amber-50 dark:bg-amber-900/20 p-2 rounded-xl shrink-0">
+            <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400"/>
+          </div>
+          <p className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-relaxed">{message}</p>
+        </div>
+        <div className="flex gap-3">
+          <button onClick={onCancel}
+            className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+            Batal
+          </button>
+          <button onClick={onConfirm}
+            className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-colors">
+            Ya, Lanjutkan
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
+
 
 // ==========================================
 // MODULE-LEVEL SERVICE ICON HELPER
@@ -637,54 +790,43 @@ const SERVICE_LOGO_MAP: [string[], LogoCfg][] = [
   [['celcom'],               { type:'fav', domain:'celcom.com.my',             bg:'#dbeafe' }],
 ];
 
-// Cache icon yang gagal agar tidak terus-terusan retry → cegah QuotaExceededError
-const failedIconCache = new Set<string>();
+
+// Warna avatar deterministik berdasarkan nama — konsisten di setiap render
+const AVATAR_PALETTES = [
+  { bg: '#dbeafe', color: '#1d4ed8' }, // biru
+  { bg: '#dcfce7', color: '#15803d' }, // hijau
+  { bg: '#fce7f3', color: '#be185d' }, // pink
+  { bg: '#ede9fe', color: '#6d28d9' }, // ungu
+  { bg: '#fef9c3', color: '#854d0e' }, // kuning
+  { bg: '#fee2e2', color: '#b91c1c' }, // merah
+  { bg: '#fef3c7', color: '#92400e' }, // oranye
+  { bg: '#f0fdf4', color: '#166534' }, // hijau muda
+  { bg: '#f0f9ff', color: '#0369a1' }, // biru muda
+  { bg: '#fdf4ff', color: '#7e22ce' }, // lavender
+];
+
+function getAvatarPalette(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_PALETTES[Math.abs(hash) % AVATAR_PALETTES.length];
+}
 
 function getServiceIconByName(name: string): React.ReactNode {
   const n = name.toLowerCase();
+  // Cari background dari SERVICE_LOGO_MAP jika ada (untuk warna konsisten per brand)
   for (const [keys, cfg] of SERVICE_LOGO_MAP) {
     if (keys.some(k => n.includes(k))) {
-      // Simpleicons: hapus warna dari URL → pakai brand default color, tidak 404
-      const src = cfg.type === 'si'
-        ? `https://cdn.simpleicons.org/${cfg.slug}`
-        : `https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${cfg.domain}&size=64`;
-      const imgSize = cfg.type === 'si' ? 'w-6 h-6' : 'w-7 h-7';
-
-      // Kalau sudah pernah gagal, langsung tampilkan huruf
-      if (failedIconCache.has(src)) {
-        return (
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-base font-black" style={{ background: cfg.bg, color: '#4f46e5' }}>
-            {name.charAt(0).toUpperCase()}
-          </div>
-        );
-      }
-
       return (
-        <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden" style={{ background: cfg.bg }}>
-          <img
-            src={src}
-            alt={name}
-            className={`${imgSize} object-contain`}
-            onError={(e) => {
-              const el = e.currentTarget as HTMLImageElement;
-              failedIconCache.add(src);
-              // Langsung fallback ke huruf — tidak retry ke CDN lain (cegah QuotaExceededError)
-              el.style.display = 'none';
-              const parent = el.parentElement;
-              if (parent) {
-                parent.style.fontSize = '16px';
-                parent.style.fontWeight = '900';
-                parent.style.color = '#4f46e5';
-                parent.textContent = name.charAt(0).toUpperCase();
-              }
-            }}
-          />
+        <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-base font-black" style={{ background: cfg.bg, color: '#4f46e5' }}>
+          {name.charAt(0).toUpperCase()}
         </div>
       );
     }
   }
+  // Fallback: warna deterministik dari nama
+  const palette = getAvatarPalette(name);
   return (
-    <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-black shrink-0" style={{ background: '#eef2ff', color: '#4f46e5' }}>
+    <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-base font-black shrink-0" style={{ background: palette.bg, color: palette.color }}>
       {name.charAt(0).toUpperCase()}
     </div>
   );
@@ -714,6 +856,37 @@ export default function App() {
 
   const IDR_RATE = 16300;
 
+  // Scroll to top saat pertama load (cegah browser restore posisi scroll lama)
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    cleanupStorage(); // bersihkan storage lama saat pertama load
+  }, []);
+
+  // Bersihkan Service Worker cache lama agar tidak QuotaExceededError
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const killSW = () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(regs => {
+          regs.forEach(reg => reg.unregister());
+        }).catch(() => {});
+        // Juga hapus semua SW controller
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+        }
+      }
+      if ('caches' in window) {
+        caches.keys().then(keys => {
+          keys.forEach(key => caches.delete(key));
+        }).catch(() => {});
+      }
+    };
+    killSW();
+    // Jalankan lagi setelah 2 detik karena SW kadang re-register
+    const t = setTimeout(killSW, 2000);
+    return () => clearTimeout(t);
+  }, []);
+
   // Baca preferensi saat pertama mount
   useEffect(() => {
     const saved = localStorage.getItem('theme');
@@ -723,21 +896,12 @@ export default function App() {
     if (shouldBeDark) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
 
-    // ── Restore session dari localStorage ────────────────────────────
-    try {
-      const savedSession = localStorage.getItem('nokos_session');
-      if (savedSession) {
-        const parsed = JSON.parse(savedSession) as UserData & { _savedAt?: number };
-        // Cek expiry — session expired setelah 7 hari
-        if (parsed?.email && parsed._savedAt && Date.now() - parsed._savedAt < SESSION_TTL) {
-          setUser(parsed);
-          setCurrentView('dashboard');
-        } else {
-          // Expired atau tidak ada timestamp — hapus
-          localStorage.removeItem('nokos_session');
-        }
-      }
-    } catch { localStorage.removeItem('nokos_session'); }
+    // ── Restore session (sessionStorage → localStorage fallback → hapus) ─
+    const restoredSession = restoreSecureSession();
+    if (restoredSession) {
+      setUser(restoredSession);
+      setCurrentView('dashboard');
+    }
   }, []);
 
   // Apply/remove class 'dark' di <html> setiap kali isDarkMode berubah
@@ -745,10 +909,10 @@ export default function App() {
     const root = document.documentElement;
     if (isDarkMode) {
       root.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
+      safeLocalSet('theme', 'dark');
     } else {
       root.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
+      safeLocalSet('theme', 'light');
     }
   }, [isDarkMode]);
 
@@ -836,17 +1000,17 @@ export default function App() {
     setCurrentView(view); 
   };
 
-  const handleLogin = (userData: UserData) => { 
+  const handleLogin = (userData: UserData, accessToken?: string) => { 
     setUser(userData);
-    // Simpan session ke localStorage dengan timestamp expiry
-    localStorage.setItem('nokos_session', JSON.stringify({ ...userData, _savedAt: Date.now() }));
+    // Simpan session + access_token ke sessionStorage sekaligus
+    setSecureSession(userData, accessToken);
     showToast("Berhasil login, selamat datang " + userData.name + "!"); 
     navigate('dashboard'); 
   };
 
   const handleLogout = () => { 
     setUser(null);
-    localStorage.removeItem('nokos_session');
+    clearSecureSession();
     showToast("Anda berhasil keluar dari sistem keamanan."); 
     navigate('landing'); 
   };
@@ -856,11 +1020,11 @@ export default function App() {
     if (!user?.email) return;
     const checkBlacklist = async () => {
       try {
-        const res = await fetch(`/api/auth/check-blacklist?email=${encodeURIComponent(user.email)}`);
+        const res = await fetch(`/api/auth/check-blacklist?email=${encodeURIComponent(user.email)}`, { headers: authHeaders({ 'X-User-Email': user.email }) });
         const data = await res.json();
         if (data.is_blacklisted) {
           setUser(null);
-          localStorage.removeItem('nokos_session');
+          clearSecureSession();
           navigate('login');
           showToast('Akun Anda telah diblokir oleh admin.');
         }
@@ -912,7 +1076,10 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
   const [showPrivasi, setShowPrivasi] = useState(false);
 
   // Animation hooks
-  const { ref: statsRef, inView: statsOn } = useInView(0.3);
+  // Stats counter — trigger langsung setelah mount (500ms) agar angka selalu muncul
+  const statsRef = useRef<HTMLDivElement>(null);
+  const [statsOn, setStatsOn] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setStatsOn(true), 500); return () => clearTimeout(t); }, []);
   const cnt500 = useCountUp(500, 1300, statsOn);
   const cnt50  = useCountUp(50,  1200, statsOn);
   const cnt99  = useCountUp(99,  1000, statsOn);
@@ -940,7 +1107,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
   };
 
   return (
-    <div className="min-h-screen bg-[#fafafa] dark:bg-[#020617] transition-colors duration-300 overflow-x-hidden" style={{minHeight:"100svh"}}>
+    <div className="min-h-screen bg-[#fafafa] dark:bg-[#020617] transition-colors duration-300" style={{minHeight:"100svh", overflowX:"clip"}}>
       <style>{`
         @keyframes _heroIn { from { opacity:0; transform:translateY(22px); } to { opacity:1; transform:translateY(0); } }
         ._h1{animation:_heroIn .55s ease .05s both}
@@ -1078,12 +1245,12 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
                     key={s.label}
                     className="flex flex-col items-center justify-center py-7 px-4 text-center gap-2"
                     style={{
-                      opacity: statsOn ? 1 : 0,
-                      transform: statsOn ? 'translateY(0)' : 'translateY(14px)',
+                      opacity: 1,
+                      transform: 'translateY(0)',
                       transition: `opacity .5s ease ${s.i * 110}ms, transform .5s ease ${s.i * 110}ms`,
                     }}
                     onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-4px)'; }}
-                    onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = statsOn ? 'translateY(0)' : 'translateY(14px)'; }}
+                    onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(0)'; }}
                   >
                     <div
                       className={`w-10 h-10 ${s.bg} rounded-2xl flex items-center justify-center`}
@@ -1147,7 +1314,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
                 <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
                   <div className="relative">
                     <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                    <input type="text" placeholder="Contoh: Shopee, Telegram..." className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-12 pr-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 text-base font-medium transition-shadow dark:text-white" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                    <input type="text" placeholder="Contoh: Shopee, Telegram..." className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-12 pr-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 text-base font-medium transition-shadow dark:text-white" id="search-service" name="search" aria-label="Cari layanan" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                   </div>
                 </div>
                 <div className="overflow-y-auto flex-1 bg-slate-50/50 dark:bg-slate-900/50 p-3">
@@ -1521,7 +1688,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
 interface AuthViewProps {
   type: string;
   onNavigate: (view: string) => void;
-  onAuth: (user: UserData) => void;
+  onAuth: (user: UserData, accessToken?: string) => void;
   showToast: (msg: string) => void;
   isDarkMode: boolean;
 }
@@ -1604,12 +1771,54 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
     return () => clearTimeout(t);
   }, [countdown]);
 
+  // ── Rate limiting: maks 5 gagal login per 15 menit (client-side guard) ──
+  const MAX_ATTEMPTS  = 5;
+  const LOCKOUT_MS    = 15 * 60 * 1000; // 15 menit
+  const getRateKey    = () => `rl_${email.toLowerCase().trim()}`;
+
+  const checkRateLimit = (): { blocked: boolean; remaining: number; unlockIn: string } => {
+    try {
+      const raw = localStorage.getItem(getRateKey());
+      if (!raw) return { blocked: false, remaining: MAX_ATTEMPTS, unlockIn: '' };
+      const { count, firstAt } = JSON.parse(raw) as { count: number; firstAt: number };
+      const elapsed = Date.now() - firstAt;
+      if (elapsed > LOCKOUT_MS) {
+        localStorage.removeItem(getRateKey());
+        return { blocked: false, remaining: MAX_ATTEMPTS, unlockIn: '' };
+      }
+      const blocked   = count >= MAX_ATTEMPTS;
+      const remaining = Math.max(0, MAX_ATTEMPTS - count);
+      const unlockSec = Math.ceil((LOCKOUT_MS - elapsed) / 1000);
+      const unlockIn  = unlockSec > 60 ? `${Math.ceil(unlockSec / 60)} menit` : `${unlockSec} detik`;
+      return { blocked, remaining, unlockIn };
+    } catch { return { blocked: false, remaining: MAX_ATTEMPTS, unlockIn: '' }; }
+  };
+
+  const recordFailedAttempt = () => {
+    try {
+      const raw = localStorage.getItem(getRateKey());
+      const prev = raw ? JSON.parse(raw) as { count: number; firstAt: number } : { count: 0, firstAt: Date.now() };
+      const updated = { count: prev.count + 1, firstAt: prev.firstAt };
+      safeLocalSet(getRateKey(), JSON.stringify(updated));
+    } catch {}
+  };
+
+  const clearAttempts = () => {
+    try { localStorage.removeItem(getRateKey()); } catch {}
+  };
+
   // ── LOGIN ──────────────────────────────────────────────────────────
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     if (!email || !password) { setError('Email dan password wajib diisi.'); return; }
     if (!turnstileToken) { setError('Harap selesaikan verifikasi CAPTCHA.'); return; }
+    // Rate limit check
+    const rl = checkRateLimit();
+    if (rl.blocked) {
+      setError(`Terlalu banyak percobaan gagal. Coba lagi dalam ${rl.unlockIn}.`);
+      return;
+    }
     setIsLoading(true);
     try {
       const res  = await fetch('/api/auth/login', {
@@ -1617,8 +1826,17 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
         body: JSON.stringify({ email, password, turnstileToken }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? 'Email atau password salah.'); return; }
-      onAuth({ name: data.user.name, email: data.user.email });
+      if (!res.ok) {
+        recordFailedAttempt();
+        const rlAfter = checkRateLimit();
+        const hint = rlAfter.remaining > 0
+          ? ` (${rlAfter.remaining} percobaan tersisa)`
+          : ` — akun dikunci ${rlAfter.unlockIn}`;
+        setError((data.error ?? 'Email atau password salah.') + hint);
+        return;
+      }
+      clearAttempts(); // reset rate limit setelah login berhasil
+      onAuth({ name: data.user.name, email: data.user.email }, data.access_token);
       showToast(`Selamat datang kembali, ${data.user.name}!`);
     } catch { setError('Terjadi kesalahan jaringan.'); }
     finally { setIsLoading(false); }
@@ -1660,7 +1878,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Kode salah.'); return; }
-      onAuth({ name: data.user.name, email: data.user.email });
+      onAuth({ name: data.user.name, email: data.user.email }, data.access_token);
       showToast(`Akun berhasil dibuat, selamat datang ${data.user.name}!`);
     } catch { setError('Terjadi kesalahan jaringan.'); }
     finally { setIsLoading(false); }
@@ -1789,7 +2007,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Alamat Email</label>
               <div className="relative"><Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="Email kamu" />
+                <input id="login-email" name="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="Email kamu" aria-label="Email" />
               </div>
             </div>
             <div>
@@ -1798,7 +2016,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
                 <button type="button" onClick={() => { setStep("forgot"); setError(""); }} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800">Lupa password?</button>
               </div>
               <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="••••••••" />
+                <input id="login-password" name="password" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="••••••••" aria-label="Password" />
                 <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showPassword ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}</button>
               </div>
             </div>
@@ -1818,26 +2036,26 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Nama Lengkap</label>
               <div className="relative"><User className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input type="text" required value={name} onChange={e => setName(e.target.value)} className={inputCls} placeholder="Nama Anda" />
+                <input id="reg-name" name="name" type="text" required value={name} onChange={e => setName(e.target.value)} className={inputCls} placeholder="Nama Anda" aria-label="Nama" />
               </div>
             </div>
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Alamat Email</label>
               <div className="relative"><Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="Email kamu" />
+                <input id="login-email" name="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="Email kamu" aria-label="Email" />
               </div>
             </div>
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Password</label>
               <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="Min. 6 karakter" />
+                <input id="reg-password" name="password" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="Min. 6 karakter" aria-label="Password baru" />
                 <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showPassword ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}</button>
               </div>
             </div>
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Konfirmasi Password</label>
               <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input type={showConfirm ? "text" : "password"} required value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className={inputCls + " pr-12"} placeholder="Ulangi password" />
+                <input id="reg-confirm" name="confirm_password" type={showConfirm ? "text" : "password"} required value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className={inputCls + " pr-12"} placeholder="Ulangi password" aria-label="Konfirmasi password" />
                 <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showConfirm ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}</button>
               </div>
             </div>
@@ -1870,7 +2088,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Alamat Email</label>
               <div className="relative"><Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="Email kamu" />
+                <input id="login-email" name="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="Email kamu" aria-label="Email" />
               </div>
             </div>
             <ErrorBox />
@@ -1891,14 +2109,14 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Password Baru</label>
               <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="Min. 6 karakter" />
+                <input id="reg-password" name="password" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="Min. 6 karakter" aria-label="Password baru" />
                 <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showPassword ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}</button>
               </div>
             </div>
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Konfirmasi Password</label>
               <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input type={showConfirm ? "text" : "password"} required value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className={inputCls + " pr-12"} placeholder="Ulangi password baru" />
+                <input id="reset-confirm" name="confirm_password" type={showConfirm ? "text" : "password"} required value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className={inputCls + " pr-12"} placeholder="Ulangi password baru" aria-label="Konfirmasi password baru" />
                 <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showConfirm ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}</button>
               </div>
             </div>
@@ -1954,13 +2172,13 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
     if (!user?.email) return;
 
     // Fetch saldo
-    fetch(`/api/user/balance?email=${encodeURIComponent(user.email)}`)
+    fetch(`/api/user/balance?email=${encodeURIComponent(user.email)}`, { headers: authHeaders({ 'X-User-Email': user.email }) })
       .then(r => r.json())
       .then(d => { if (typeof d.balance === 'number') setBalance(d.balance); })
       .catch(() => {});
 
     // Fetch orders aktif
-    fetch(`/api/user/orders?email=${encodeURIComponent(user.email)}`)
+    fetch(`/api/user/orders?email=${encodeURIComponent(user.email)}`, { headers: authHeaders({ 'X-User-Email': user.email }) })
       .then(r => r.json())
       .then((data: any[]) => {
         if (!Array.isArray(data)) return;
@@ -1972,10 +2190,13 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
           price        : o.price,
           icon         : <Smartphone className="w-5 h-5" />,
           number       : o.phone,
-          // 'success' dari DB → 'completed' agar tidak muncul di panel aktif saat reload
+          // 'success' dari DB → tetap 'success' jika masih <10 menit (agar OTP masih tampil setelah refresh)
+          // 'success' >10 menit → 'completed' agar tidak muncul di panel aktif
           // 'waiting' yang sudah lewat 20 menit → 'expired'
           status       : o.status === 'success'
-            ? 'completed' as Order['status']
+            ? (Date.now() - new Date(o.created_at).getTime() < 10 * 60 * 1000
+                ? 'success' as Order['status']
+                : 'completed' as Order['status'])
             : (o.status === 'waiting' && Date.now() - new Date(o.created_at).getTime() > 1200000)
               ? 'expired' as Order['status']
               : o.status as Order['status'],
@@ -2025,25 +2246,30 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
   const refreshBalance = async () => {
     if (!user?.email) return;
     try {
-      const res = await fetch(`/api/user/balance?email=${encodeURIComponent(user.email)}`);
+      const res = await fetch(`/api/user/balance?email=${encodeURIComponent(user.email)}`, { headers: authHeaders({ 'X-User-Email': user.email }) });
       const d = await res.json();
       if (typeof d.balance === 'number') setBalance(d.balance);
     } catch {}
   };
 
   const updateBalance = async (amount: number, type: 'add' | 'subtract', activationId?: string) => {
+    // Skip jika amount 0 atau invalid — mencegah 400 Bad Request ke API
+    if (!amount || amount <= 0) return;
+    const prevBal = balance;
     const newBal = type === 'add' ? balance + amount : Math.max(0, balance - amount);
     setBalance(newBal);
     if (!user?.email) return;
     try {
       const res = await fetch('/api/user/balance', {
         method : 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'X-User-Email': user.email }),
         body   : JSON.stringify({ email: user.email, amount, type, activationId }),
       });
-      // Jika 409 = sudah pernah di-refund, rollback balance lokal
-      if (res.status === 409) {
-        setBalance(balance);
+      // Rollback balance lokal jika API gagal
+      if (res.status === 409 || res.status === 400 || res.status === 401) {
+        setBalance(prevBal);
+        if (res.status === 409) console.warn('[balance] Double refund blocked:', activationId);
+        if (res.status === 400) console.warn('[balance] Bad request, amount:', amount);
       }
     } catch { /* update lokal sudah cukup jika gagal */ }
   };
@@ -2072,7 +2298,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
     // Update status order di Supabase
     fetch('/api/user/orders', {
       method : 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body   : JSON.stringify({ activationId: orderToCancel.activationId, status: 'cancelled' }),
     }).catch(() => {});
 
@@ -2114,18 +2340,18 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
             if (o.activationId !== event.activationId) return o;
             if (o.isV2) {
               const otpCodes = [...(o.otpCodes ?? []), { service: event.service, code: event.smsCode }];
-              return { ...o, status: 'success', otpCodes, autoDismissAt: Date.now() + 60000 };
+              return { ...o, status: 'success', otpCodes, autoDismissAt: Date.now() + 10 * 60 * 1000 };
             }
-            return { ...o, status: 'success', otpCode: event.smsCode, autoDismissAt: Date.now() + 60000 };
+            return { ...o, status: 'success', otpCode: event.smsCode, autoDismissAt: Date.now() + 10 * 60 * 1000 };
           }));
-          // Auto-dismiss dari panel aktif setelah 60 detik
+          // Auto-dismiss dari panel aktif setelah 10 menit
           setTimeout(() => {
             setOrders(cur => cur.map(o =>
               o.activationId === event.activationId && o.status === 'success'
                 ? { ...o, status: 'completed' as Order['status'] }
                 : o
             ));
-          }, 60000);
+          }, 10 * 60 * 1000);
           showToast(`OTP masuk: ${event.smsCode}`);
           addNotif(`🔑 OTP masuk untuk ${event.service ?? 'pesanan kamu'}: ${event.smsCode}`);
         } catch { /* abaikan parse error */ }
@@ -2152,28 +2378,28 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                 code,
               }));
               setOrders(current => current.map(o =>
-                o.id === order.id ? { ...o, status: 'success', otpCodes, autoDismissAt: Date.now() + 60000 } : o
+                o.id === order.id ? { ...o, status: 'success', otpCodes, autoDismissAt: Date.now() + 10 * 60 * 1000 } : o
               ));
-              fetch('/api/user/orders', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activationId: order.activationId, status: 'success', otpCode: data.otpCodes[0] }) }).catch(() => {});
+              fetch('/api/user/orders', { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ activationId: order.activationId, status: 'success', otpCode: data.otpCodes[0] }) }).catch(() => {});
               showToast(`OTP bundle ${order.serviceName} masuk!`);
               addNotif(`🔑 OTP Bundle ${order.serviceName} masuk!`);
               setTimeout(() => {
                 setOrders(cur => cur.map(o =>
                   o.id === order.id && o.status === 'success' ? { ...o, status: 'completed' as Order['status'] } : o
                 ));
-              }, 60000);
+              }, 10 * 60 * 1000);
             } else if (!order.isV2 && data.otpCode) {
               setOrders(current => current.map(o =>
-                o.id === order.id ? { ...o, status: 'success', otpCode: data.otpCode, autoDismissAt: Date.now() + 60000 } : o
+                o.id === order.id ? { ...o, status: 'success', otpCode: data.otpCode, autoDismissAt: Date.now() + 10 * 60 * 1000 } : o
               ));
-              fetch('/api/user/orders', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activationId: order.activationId, status: 'success', otpCode: data.otpCode }) }).catch(() => {});
+              fetch('/api/user/orders', { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ activationId: order.activationId, status: 'success', otpCode: data.otpCode }) }).catch(() => {});
               showToast(`Berhasil! Kode OTP ${order.serviceName} masuk.`);
               addNotif(`🔑 OTP ${order.serviceName}: ${data.otpCode}`);
               setTimeout(() => {
                 setOrders(cur => cur.map(o =>
                   o.id === order.id && o.status === 'success' ? { ...o, status: 'completed' as Order['status'] } : o
                 ));
-              }, 60000);
+              }, 10 * 60 * 1000);
             }
           } else if (data.status === 'cancel') {
             // ✅ Update ref dulu — cegah polling berikutnya refund lagi
@@ -2183,7 +2409,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
             setOrders(current => current.map(o =>
               o.id === order.id ? { ...o, status: 'cancelled', timeLeft: 0 } : o
             ));
-            fetch('/api/user/orders', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activationId: order.activationId, status: 'cancelled' }) }).catch(() => {});
+            fetch('/api/user/orders', { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ activationId: order.activationId, status: 'cancelled' }) }).catch(() => {});
             // ✅ Kirim activationId → backend cegah double refund via idempotency check
             await updateBalance(order.price, 'add', order.activationId);
             showToast(`Nomor ${order.serviceName} dibatalkan provider. Saldo Rp ${order.price.toLocaleString('id-ID')} dikembalikan.`);
@@ -2293,7 +2519,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
             {/* Language Switcher */}
             <div className="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1">
               {(['id','en','zh'] as Lang[]).map(l => (
-                <button key={l} onClick={() => { setLang(l); localStorage.setItem('lang', l); }}
+                <button key={l} onClick={() => { setLang(l); safeLocalSet('lang', l); }}
                   className={"px-2.5 py-1 rounded-lg text-xs font-black transition-colors " + (lang === l ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300')}>
                   {l === 'id' ? '🇮🇩' : l === 'en' ? '🇺🇸' : '🇨🇳'}
                 </button>
@@ -2353,7 +2579,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                 </div>
                 <div className="flex items-center gap-1">
                   {(['id','en','zh'] as Lang[]).map(l => (
-                    <button key={l} onClick={() => { setLang(l); localStorage.setItem('lang', l); }}
+                    <button key={l} onClick={() => { setLang(l); safeLocalSet('lang', l); }}
                       className={"px-2 py-1 rounded-lg text-xs font-black transition-colors " + (lang === l ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-700 text-slate-400')}>
                       {l === 'id' ? '🇮🇩' : l === 'en' ? '🇺🇸' : '🇨🇳'}
                     </button>
@@ -2387,7 +2613,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
           {activeTab === 'dashboard' && <UserDashboardView user={user} balance={balance} orders={orders} mutasi={mutasi} setActiveTab={setActiveTab} notices={notices} lang={lang} />}
           {activeTab === 'buy' && <BuyView balance={balance} setBalance={setBalance} orders={orders} setOrders={setOrders} showToast={showToast} onCancelOrder={handleCancelOrder} favorites={favorites} setFavorites={setFavorites} setMutasi={setMutasi} activeServices={activeServices} serviceError={serviceError} countries={countries} selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry} user={user} updateBalance={updateBalance} autoRetryQueue={autoRetryQueue} setAutoRetryQueue={setAutoRetryQueue} failedNumbers={failedNumbers} lang={lang} />}
           {activeTab === 'topup' && <TopupView balance={balance} setBalance={setBalance} showToast={showToast} setActiveTab={setActiveTab} setMutasi={setMutasi} updateBalance={updateBalance} user={user} lang={lang} />}
-          {activeTab === 'history' && <HistoryView orders={orders} lang={lang} />}
+          {activeTab === 'history' && <HistoryView orders={orders} user={user} lang={lang} />}
           {activeTab === 'mutasi' && <MutasiView mutasi={mutasi} user={user} lang={lang} />}
           {activeTab === 'profile' && <ProfileView user={user} showToast={showToast} lang={lang} />}
         </main>
@@ -2599,7 +2825,7 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
 
   useEffect(() => {
     if (!user?.email) return;
-    fetch(`/api/user/account-info?email=${encodeURIComponent(user.email)}`)
+    fetch(`/api/user/account-info?email=${encodeURIComponent(user.email)}`, { headers: authHeaders({ 'X-User-Email': user.email }) })
       .then(r => r.json())
       .then(d => { if (d.totalOrders !== undefined) setDbStats(d); })
       .catch(() => {});
@@ -2612,6 +2838,8 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
   const totalTopup   = dbStats?.totalDeposit ?? mutasi.filter(m => m.type === 'in').reduce((s, m) => s + m.amount, 0);
   const successRate  = dbStats?.successRate  ?? (totalOrder > 0 ? Math.round((successOrder / totalOrder) * 100) : 0);
   const recentMutasi = mutasi.slice(0, 5);
+
+  const isLoadingStats = dbStats === null;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-10">
@@ -2652,7 +2880,11 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
         <div className="flex items-center justify-between md:block">
           <div>
             <div className="text-[10px] md:text-xs font-bold uppercase tracking-widest opacity-70 mb-1 md:mb-2">{t.totalBalance.toUpperCase()}</div>
-            <div className="text-2xl md:text-4xl font-black">{fmtIDR(balance)}</div>
+            {isLoadingStats ? (
+              <div className="h-8 bg-white/20 rounded-xl w-32 animate-pulse mt-1" />
+            ) : (
+              <div className="text-2xl md:text-4xl font-black">{fmtIDR(balance)}</div>
+            )}
           </div>
           <button onClick={() => setActiveTab('topup')} className="bg-white/20 hover:bg-white/30 text-white text-xs md:text-sm font-bold px-4 py-2 md:px-5 md:py-2.5 rounded-xl transition-colors border border-white/20 shrink-0 md:mt-4">
             + Deposit
@@ -2662,38 +2894,54 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
 
       {/* Stats grid — 2x2 compact di mobile, 4 kolom di desktop */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4">
-        {[
-          { label: t.totalOrder,   value: totalOrder,        icon: <Package className="w-4 h-4 md:w-5 md:h-5 text-indigo-600" />,   bg: 'bg-indigo-50 dark:bg-indigo-900/30' },
-          { label: t.successOrder, value: successOrder,      icon: <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-green-600" />, bg: 'bg-green-50 dark:bg-green-900/30' },
-          { label: t.activeOrder,  value: activeOrder,       icon: <Activity className="w-4 h-4 md:w-5 md:h-5 text-amber-600" />,    bg: 'bg-amber-50 dark:bg-amber-900/30' },
-          { label: t.successRate,  value: successRate + '%', icon: <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />,   bg: 'bg-blue-50 dark:bg-blue-900/30' },
-        ].map(s => (
-          <div key={s.label} className="bg-white dark:bg-slate-900 rounded-xl md:rounded-2xl border border-slate-200 dark:border-slate-800 p-3 md:p-4">
-            <div className={`${s.bg} p-2 md:p-2.5 rounded-lg md:rounded-xl w-fit mb-2 md:mb-3`}>{s.icon}</div>
-            <div className="text-lg md:text-xl font-black text-slate-900 dark:text-white">{s.value}</div>
-            <div className="text-[10px] md:text-xs font-bold text-slate-400 mt-0.5">{s.label}</div>
-          </div>
-        ))}
+        {isLoadingStats ? (
+          [...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white dark:bg-slate-900 rounded-xl md:rounded-2xl border border-slate-200 dark:border-slate-800 p-3 md:p-4 animate-pulse">
+              <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-lg mb-3" />
+              <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-12 mb-1.5" />
+              <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-16" />
+            </div>
+          ))
+        ) : (
+          [
+            { label: t.totalOrder,   value: totalOrder,        icon: <Package className="w-4 h-4 md:w-5 md:h-5 text-indigo-600" />,   bg: 'bg-indigo-50 dark:bg-indigo-900/30' },
+            { label: t.successOrder, value: successOrder,      icon: <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-green-600" />, bg: 'bg-green-50 dark:bg-green-900/30' },
+            { label: t.activeOrder,  value: activeOrder,       icon: <Activity className="w-4 h-4 md:w-5 md:h-5 text-amber-600" />,    bg: 'bg-amber-50 dark:bg-amber-900/30' },
+            { label: t.successRate,  value: successRate + '%', icon: <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />,   bg: 'bg-blue-50 dark:bg-blue-900/30' },
+          ].map(s => (
+            <div key={s.label} className="bg-white dark:bg-slate-900 rounded-xl md:rounded-2xl border border-slate-200 dark:border-slate-800 p-3 md:p-4">
+              <div className={`${s.bg} p-2 md:p-2.5 rounded-lg md:rounded-xl w-fit mb-2 md:mb-3`}>{s.icon}</div>
+              <div className="text-lg md:text-xl font-black text-slate-900 dark:text-white">{s.value}</div>
+              <div className="text-[10px] md:text-xs font-bold text-slate-400 mt-0.5">{s.label}</div>
+            </div>
+          ))
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Total spend vs topup */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
           <h3 className="text-sm font-black text-slate-900 dark:text-white mb-4">{t.financeSummary}</h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-500 dark:text-slate-400">{t.totalDeposit}</span>
-              <span className="font-black text-green-600 dark:text-green-400">{fmtIDR(totalTopup)}</span>
+          {isLoadingStats ? (
+            <div className="space-y-3 animate-pulse">
+              {[1,2,3].map(i => <div key={i} className="flex justify-between"><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24"/><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-20"/></div>)}
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-500 dark:text-slate-400">{t.totalSpend}</span>
-              <span className="font-black text-red-500 dark:text-red-400">{fmtIDR(totalSpend)}</span>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-500 dark:text-slate-400">{t.totalDeposit}</span>
+                <span className="font-black text-green-600 dark:text-green-400">{fmtIDR(totalTopup)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-500 dark:text-slate-400">{t.totalSpend}</span>
+                <span className="font-black text-red-500 dark:text-red-400">{fmtIDR(totalSpend)}</span>
+              </div>
+              <div className="border-t border-slate-100 dark:border-slate-800 pt-3 flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.remainBalance}</span>
+                <span className="font-black text-indigo-600 dark:text-indigo-400">{fmtIDR(balance)}</span>
+              </div>
             </div>
-            <div className="border-t border-slate-100 dark:border-slate-800 pt-3 flex items-center justify-between">
-              <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.remainBalance}</span>
-              <span className="font-black text-indigo-600 dark:text-indigo-400">{fmtIDR(balance)}</span>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Recent mutasi */}
@@ -3168,7 +3416,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
       // Simpan order bundle ke Supabase
       if (user?.email) {
         fetch('/api/user/orders', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: authHeaders({ 'X-User-Email': user.email }),
           body: JSON.stringify({ email: user.email, activationId: data.activationId, serviceCode: primary.code, serviceName: newOrder.serviceName, phone: data.phone, price: bundleTotalPrice, country: selectedCountry, isV2: true }),
         }).catch(() => {});
       }
@@ -3271,7 +3519,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
     try {
       const res = await fetch('/api/order', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ service: service.code, country: selectedCountry, operator: '0' }),
       });
       const data = await res.json();
@@ -3308,7 +3556,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
       // Simpan order ke Supabase
       if (user?.email) {
         fetch('/api/user/orders', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: authHeaders({ 'X-User-Email': user.email }),
           body: JSON.stringify({ email: user.email, activationId: data.activationId, serviceCode: service.code, serviceName: service.name, phone: data.phone, price: service.price, country: selectedCountry }),
         }).catch(() => {});
       }
@@ -3947,7 +4195,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
     try {
       const res = await fetch('/api/deposit/paymenku/create', {
         method : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'X-User-Email': user.email }),
         body   : JSON.stringify({ email: user.email, amount: nominal, channelCode: autoChannel }),
       });
       const data = await res.json();
@@ -3963,7 +4211,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
   const fetchMyRequests = async () => {
     if (!user?.email) return;
     try {
-      const r = await fetch(`/api/deposit/manual?email=${encodeURIComponent(user.email)}`);
+      const r = await fetch(`/api/deposit/manual?email=${encodeURIComponent(user.email)}`, { headers: authHeaders({ 'X-User-Email': user.email }) });
       setMyRequests(await r.json());
     } catch {}
   };
@@ -3987,7 +4235,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
     try {
       const res = await fetch('/api/deposit/manual', {
         method : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'X-User-Email': user.email }),
         body   : JSON.stringify({
           email     : user.email,
           amount    : parseInt(amount),
@@ -4075,7 +4323,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
             </div>
             <div className="relative">
               <span className="absolute left-4 top-3.5 text-sm font-bold text-slate-400">Rp</span>
-              <input type="number" min="5000" value={autoAmount} onChange={e => setAutoAmount(e.target.value)}
+              <input id="deposit-amount" name="amount" type="number" min="5000" aria-label="Nominal deposit" value={autoAmount} onChange={e => setAutoAmount(e.target.value)}
                 placeholder="Atau ketik nominal lain..." className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm font-bold dark:text-white" />
             </div>
             {autoAmount && parseInt(autoAmount) >= 5000 && (
@@ -4378,7 +4626,8 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
 // ==========================================
 interface HistoryViewProps {
   orders: Order[];
-  lang?: Lang;
+  user  : UserData | null;
+  lang  ?: Lang;
 }
 
 // Tipe data dari /api/history
@@ -4393,7 +4642,7 @@ interface ApiHistoryItem {
   createdAt   : string | null;
 }
 
-function HistoryView({ orders, lang }: HistoryViewProps) {
+function HistoryView({ orders, user, lang }: HistoryViewProps) {
   const t = T[lang ?? 'id'];
   const [isLoading, setIsLoading]       = useState<boolean>(true);
   const [apiHistory, setApiHistory]     = useState<ApiHistoryItem[]>([]);
@@ -4402,11 +4651,18 @@ function HistoryView({ orders, lang }: HistoryViewProps) {
   const [filterStatus, setFilterStatus] = useState('');
   const [reactivating, setReactivating] = useState<string | null>(null);
   const [historyToast, setHistoryToast] = useState<string | null>(null);
+  const [confirmData, setConfirmData] = useState<{ msg: string; onOk: () => void; onCancel: () => void } | null>(null);
 
   const showHistoryToast = (msg: string) => {
     setHistoryToast(msg);
     setTimeout(() => setHistoryToast(null), 3000);
   };
+
+  // showConfirm: tampilkan modal konfirmasi, return true jika user konfirmasi
+  const showConfirm = (msg: string): Promise<boolean> =>
+    new Promise(resolve => {
+      setConfirmData({ msg, onOk: () => resolve(true), onCancel: () => resolve(false) });
+    });
 
   const handleReactivate = async (activationId: string) => {
     if (reactivating) return;
@@ -4436,9 +4692,7 @@ function HistoryView({ orders, lang }: HistoryViewProps) {
         return;
       }
 
-      const konfirmasi = window.confirm(
-        `Pakai nomor ini lagi?\nBiaya reaktivasi: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`
-      );
+      const konfirmasi = await showConfirm(`Pakai nomor ini lagi? Biaya reaktivasi: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`);
       if (!konfirmasi) return;
 
       // Proses reaktivasi
@@ -4466,11 +4720,14 @@ function HistoryView({ orders, lang }: HistoryViewProps) {
   };
 
   const fetchHistory = async (p: number, status: string) => {
+    if (!user?.email) { setIsLoading(false); return; }
     setIsLoading(true);
     try {
       const params = new URLSearchParams({ page: String(p), limit: '20' });
       if (status) params.set('status', status);
-      const res  = await fetch(`/api/history?${params}`);
+      const res  = await fetch(`/api/history?${params}`, {
+        headers: authHeaders({ 'X-User-Email': user.email }),
+      });
       const data = await res.json();
       if (res.ok && Array.isArray(data.items)) {
         setApiHistory(prev => p === 1 ? data.items : [...prev, ...data.items]);
@@ -4518,6 +4775,13 @@ function HistoryView({ orders, lang }: HistoryViewProps) {
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] bg-slate-900/95 dark:bg-white/95 text-white dark:text-slate-900 text-sm font-bold px-6 py-3 rounded-full shadow-2xl flex items-center gap-2">
           <Zap className="w-4 h-4 text-yellow-400 dark:text-yellow-600" /> {historyToast}
         </div>
+      )}
+      {confirmData && (
+        <ConfirmModal
+          message={confirmData.msg}
+          onConfirm={() => { const fn = confirmData.onOk; setConfirmData(null); fn(); }}
+          onCancel={() => { const fn = confirmData.onCancel; setConfirmData(null); fn?.(); }}
+        />
       )}
 
       {/* Header + Filter */}
@@ -4593,7 +4857,7 @@ function HistoryView({ orders, lang }: HistoryViewProps) {
                       <td className="p-5 sm:px-6 text-right">
                         {a.status === 'success' && a.activationId && (
                           <button disabled={reactivating === a.activationId}
-                            onClick={async () => { setReactivating(a.activationId); try { const costRes = await fetch(`/api/reactivation?id=${a.activationId}`); const costData = await costRes.json(); if (!costRes.ok) { const e = typeof costData.error === 'string' ? costData.error.toLowerCase() : ''; showHistoryToast(e.includes('404')||e.includes('upstream')||e.includes('server')||e.includes('not found')||e.includes('invalid') ? 'Nomor sudah kadaluarsa. Beli nomor baru.' : (costData.error ?? 'Gagal cek harga.')); return; } const confirm = window.confirm(`Pakai nomor ${a.phone} lagi?\nBiaya: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`); if (!confirm) return; const res = await fetch('/api/reactivation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: a.activationId, service: a.service }) }); const data = await res.json(); if (!res.ok) { const e2 = typeof data.error === 'string' ? data.error.toLowerCase() : ''; showHistoryToast(e2.includes('upstream')||e2.includes('server') ? 'Reaktivasi gagal — nomor kadaluarsa.' : (data.error ?? 'Gagal reaktivasi.')); return; } showHistoryToast(`Berhasil! Nomor ${data.phone} siap dipakai lagi.`); } catch { showHistoryToast('Kesalahan jaringan.'); } finally { setReactivating(null); } }}
+                            onClick={async () => { setReactivating(a.activationId); try { const costRes = await fetch(`/api/reactivation?id=${a.activationId}`); const costData = await costRes.json(); if (!costRes.ok) { const e = typeof costData.error === 'string' ? costData.error.toLowerCase() : ''; showHistoryToast(e.includes('404')||e.includes('upstream')||e.includes('server')||e.includes('not found')||e.includes('invalid') ? 'Nomor sudah kadaluarsa. Beli nomor baru.' : (costData.error ?? 'Gagal cek harga.')); return; } const konfirm = await showConfirm(`Pakai nomor ${a.phone} lagi? Biaya: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`); if (!konfirm) return; const res = await fetch('/api/reactivation', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ id: a.activationId, service: a.service }) }); const data = await res.json(); if (!res.ok) { const e2 = typeof data.error === 'string' ? data.error.toLowerCase() : ''; showHistoryToast(e2.includes('upstream')||e2.includes('server') ? 'Reaktivasi gagal — nomor kadaluarsa.' : (data.error ?? 'Gagal reaktivasi.')); return; } showHistoryToast(`Berhasil! Nomor ${data.phone} siap dipakai lagi.`); } catch { showHistoryToast('Kesalahan jaringan.'); } finally { setReactivating(null); } }}
                             className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 rounded-lg text-[11px] font-black hover:bg-indigo-600 hover:text-white transition-colors disabled:opacity-50 flex items-center gap-1">
                             {reactivating === a.activationId ? <RefreshCw className="w-3 h-3 animate-spin" /> : null}Pakai Lagi
                           </button>
@@ -4645,7 +4909,7 @@ function HistoryView({ orders, lang }: HistoryViewProps) {
                   {a.otpCode && <div className="flex items-start gap-1.5 text-xs font-black text-green-700 dark:text-green-400"><span className="shrink-0">OTP:</span><span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 tracking-widest break-all leading-snug">{a.otpCode}</span></div>}
                   {a.status === 'success' && a.activationId && (
                     <button disabled={reactivating === a.activationId}
-                      onClick={async () => { setReactivating(a.activationId); try { const costRes = await fetch(`/api/reactivation?id=${a.activationId}`); const costData = await costRes.json(); if (!costRes.ok) { const e = typeof costData.error === 'string' ? costData.error.toLowerCase() : ''; showHistoryToast(e.includes('404')||e.includes('upstream')||e.includes('server') ? 'Nomor sudah kadaluarsa. Beli nomor baru.' : (costData.error ?? 'Gagal cek harga.')); return; } const confirm = window.confirm(`Pakai nomor ${a.phone} lagi?\nBiaya: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`); if (!confirm) return; const res = await fetch('/api/reactivation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: a.activationId, service: a.service }) }); const data = await res.json(); if (!res.ok) { const e2 = typeof data.error === 'string' ? data.error.toLowerCase() : ''; showHistoryToast(e2.includes('upstream')||e2.includes('server') ? 'Reaktivasi gagal — nomor kadaluarsa.' : (data.error ?? 'Gagal reaktivasi.')); return; } showHistoryToast(`Berhasil! Nomor ${data.phone} siap dipakai lagi.`); } catch { showHistoryToast('Kesalahan jaringan.'); } finally { setReactivating(null); } }}
+                      onClick={async () => { setReactivating(a.activationId); try { const costRes = await fetch(`/api/reactivation?id=${a.activationId}`); const costData = await costRes.json(); if (!costRes.ok) { const e = typeof costData.error === 'string' ? costData.error.toLowerCase() : ''; showHistoryToast(e.includes('404')||e.includes('upstream')||e.includes('server') ? 'Nomor sudah kadaluarsa. Beli nomor baru.' : (costData.error ?? 'Gagal cek harga.')); return; } const konfirm = await showConfirm(`Pakai nomor ${a.phone} lagi? Biaya: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`); if (!konfirm) return; const res = await fetch('/api/reactivation', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ id: a.activationId, service: a.service }) }); const data = await res.json(); if (!res.ok) { const e2 = typeof data.error === 'string' ? data.error.toLowerCase() : ''; showHistoryToast(e2.includes('upstream')||e2.includes('server') ? 'Reaktivasi gagal — nomor kadaluarsa.' : (data.error ?? 'Gagal reaktivasi.')); return; } showHistoryToast(`Berhasil! Nomor ${data.phone} siap dipakai lagi.`); } catch { showHistoryToast('Kesalahan jaringan.'); } finally { setReactivating(null); } }}
                       className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 rounded-xl text-xs font-black active:scale-95 transition-all disabled:opacity-50">
                       {reactivating === a.activationId ? <RefreshCw className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}Pakai Lagi
                     </button>
@@ -4696,9 +4960,23 @@ function MutasiView({ mutasi, user, lang }: MutasiViewProps) {
     if (!user?.email) { setIsLoading(false); return; }
     setIsLoading(true);
     try {
+      // Coba POST dulu (server baru), fallback ke GET jika 405/error
       const params = new URLSearchParams({ email: user.email, page: String(p), limit: '20' });
       if (type) params.set('type', type);
-      const res  = await fetch(`/api/user/mutations?${params}`);
+
+      let res = await fetch('/api/user/mutations', {
+        method: 'POST',
+        headers: authHeaders({ 'X-User-Email': user.email }),
+        body: JSON.stringify({ page: p, limit: 20, type: type || undefined }),
+      });
+
+      // Fallback ke GET jika server belum support POST
+      if (res.status === 405 || res.status === 404) {
+        res = await fetch(`/api/user/mutations?${params}`, {
+          headers: authHeaders({ 'X-User-Email': user.email }),
+        });
+      }
+
       const data = await res.json();
       if (Array.isArray(data.items)) {
         setDbMutasi(prev => p === 1 ? data.items : [...prev, ...data.items]);
@@ -4831,7 +5109,7 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
     const fetchInfo = async () => {
       setLoadingInfo(true);
       try {
-        const r = await fetch(`/api/user/account-info?email=${encodeURIComponent(user.email)}`);
+        const r = await fetch(`/api/user/account-info?email=${encodeURIComponent(user.email)}`, { headers: authHeaders({ 'X-User-Email': user.email }) });
         const d = await r.json();
         setAccountInfo(d);
       } catch {}
@@ -4858,7 +5136,8 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
     try {
       const r = await fetch('/api/user/change-password', {
         method : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'X-User-Email': user?.email ?? '' }),
+        // headers backup 'Content-Type': 'application/json' },
         body   : JSON.stringify({ email: user?.email, oldPassword: oldPass, newPassword: newPass }),
       });
       const d = await r.json();
@@ -4942,20 +5221,20 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
               <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t.joinedAt}</div>
               <div className="text-base font-black text-slate-900 dark:text-white">
                 {accountInfo?.joinedAt
-                  ? new Date(accountInfo.joinedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+                  ? accountInfo.joinedAt ? new Date(accountInfo.joinedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'
                   : '—'}
               </div>
             </div>
             <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t.totalOrders}</div>
               <div className="text-base font-black text-slate-900 dark:text-white">
-                {accountInfo ? `${accountInfo.totalOrders} order` : '—'}
+                {accountInfo ? `${accountInfo.totalOrders ?? 0} order` : '—'}
               </div>
             </div>
             <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t.totalPurchase}</div>
               <div className="text-base font-black text-indigo-600 dark:text-indigo-400">
-                {accountInfo ? `Rp ${accountInfo.totalSpend.toLocaleString('id-ID')}` : '—'}
+                {accountInfo ? `Rp ${(accountInfo.totalSpend ?? 0).toLocaleString('id-ID')}` : '—'}
               </div>
             </div>
           </div>

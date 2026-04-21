@@ -26,16 +26,37 @@ export async function GET(request: Request) {
 
   if (!profile) return NextResponse.json([]);
 
-  const { data, error } = await supabaseAdmin
+  // Ambil order yang masih relevan:
+  // - 'waiting' dibuat dalam 20 menit terakhir (belum expired)
+  // - 'success' dibuat dalam 10 menit terakhir (OTP masih bisa dilihat)
+  const cutoff20min = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+  const cutoff10min = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+
+  const { data: waitingOrders } = await supabaseAdmin
     .from('orders')
     .select('*')
     .eq('user_id', profile.id)
-    .in('status', ['waiting', 'success'])
+    .eq('status', 'waiting')
+    .gte('created_at', cutoff20min)
     .order('created_at', { ascending: false })
-    .limit(50);
+    .limit(20);
 
-  if (error) return NextResponse.json([]);
-  return NextResponse.json(data ?? []);
+  const { data: successOrders } = await supabaseAdmin
+    .from('orders')
+    .select('*')
+    .eq('user_id', profile.id)
+    .eq('status', 'success')
+    .gte('created_at', cutoff10min)
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  const data = [
+    ...(waitingOrders ?? []),
+    ...(successOrders ?? []),
+  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  if (!data) return NextResponse.json([]);
+  return NextResponse.json(data);
 }
 
 /**
