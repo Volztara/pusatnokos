@@ -2,10 +2,8 @@
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
 
-const resend = new Resend(process.env.RESEND_API_KEY!);
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -29,6 +27,37 @@ async function verifyTurnstile(token: string): Promise<boolean> {
     return data.success === true;
   } catch {
     return false;
+  }
+}
+
+async function sendBrevoEmail(to: string, name: string, code: string) {
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': process.env.BREVO_API_KEY!,
+    },
+    body: JSON.stringify({
+      sender: { name: 'Pusat Nokos', email: 'noreply@pusatnokos.com' },
+      to: [{ email: to }],
+      subject: 'Aktivasi Akun Pusat Nokos',
+      htmlContent: `
+        <div style="font-family:sans-serif;max-width:480px;margin:auto;background:#fff;border-radius:24px;padding:40px;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+          <h2 style="color:#0f172a;font-size:20px;font-weight:800;margin-bottom:8px;">Halo, ${name}!</h2>
+          <p style="color:#334155;font-size:15px;">Masukkan kode berikut untuk mengaktifkan akun kamu:</p>
+          <div style="background:#f1f5f9;border-radius:16px;padding:24px;text-align:center;margin:24px 0;">
+            <div style="font-size:42px;font-weight:900;letter-spacing:12px;color:#4f46e5;font-family:monospace;">${code}</div>
+            <p style="color:#94a3b8;font-size:13px;margin:12px 0 0;">Berlaku <strong>10 menit</strong></p>
+          </div>
+          <p style="color:#94a3b8;font-size:13px;text-align:center;">Jangan bagikan kode ini ke siapapun.</p>
+        </div>
+      `,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err?.message ?? 'Brevo error');
   }
 }
 
@@ -89,25 +118,10 @@ export async function POST(request: Request) {
     }
 
     // Kirim email verifikasi
-    const { error: sendErr } = await resend.emails.send({
-      from   : 'Pusat Nokos <noreply@pusatnokos.com>',
-      to     : email,
-      subject: 'Aktivasi Akun Pusat Nokos',
-      html   : `
-        <div style="font-family:sans-serif;max-width:480px;margin:auto;background:#fff;border-radius:24px;padding:40px;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
-          <h2 style="color:#0f172a;font-size:20px;font-weight:800;margin-bottom:8px;">Halo, ${name}!</h2>
-          <p style="color:#334155;font-size:15px;">Masukkan kode berikut untuk mengaktifkan akun kamu:</p>
-          <div style="background:#f1f5f9;border-radius:16px;padding:24px;text-align:center;margin:24px 0;">
-            <div style="font-size:42px;font-weight:900;letter-spacing:12px;color:#4f46e5;font-family:monospace;">${code}</div>
-            <p style="color:#94a3b8;font-size:13px;margin:12px 0 0;">Berlaku <strong>10 menit</strong></p>
-          </div>
-          <p style="color:#94a3b8;font-size:13px;text-align:center;">Jangan bagikan kode ini ke siapapun.</p>
-        </div>
-      `,
-    });
-
-    if (sendErr) {
-      console.error('[register] Resend error:', sendErr);
+    try {
+      await sendBrevoEmail(email, name, code);
+    } catch (err) {
+      console.error('[register] Brevo error:', err);
       return NextResponse.json({ error: 'Gagal mengirim email. Coba lagi.' }, { status: 500 });
     }
 

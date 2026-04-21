@@ -2,14 +2,33 @@
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
 
-const resend = new Resend(process.env.RESEND_API_KEY!);
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+async function sendBrevoEmail(to: string, subject: string, html: string) {
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': process.env.BREVO_API_KEY!,
+    },
+    body: JSON.stringify({
+      sender: { name: 'Pusat Nokos', email: 'noreply@pusatnokos.com' },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err?.message ?? 'Brevo error');
+  }
 }
 
 export async function POST(request: Request) {
@@ -55,24 +74,21 @@ export async function POST(request: Request) {
       ? 'Masukkan kode berikut untuk mereset password kamu:'
       : `Masukkan kode berikut untuk ${isRegister ? 'mengaktifkan akun' : 'masuk ke akun'} kamu:`;
 
-    const { error: sendErr } = await resend.emails.send({
-      from   : 'Pusat Nokos <noreply@pusatnokos.com>',
-      to     : email,
-      subject,
-      html   : `
-        <div style="font-family:sans-serif;max-width:480px;margin:auto;background:#fff;border-radius:24px;padding:40px;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
-          <h2 style="color:#0f172a;font-size:20px;font-weight:800;margin-bottom:8px;">${heading}</h2>
-          <p style="color:#334155;font-size:15px;">${desc}</p>
-          <div style="background:#f1f5f9;border-radius:16px;padding:24px;text-align:center;margin:24px 0;">
-            <div style="font-size:42px;font-weight:900;letter-spacing:12px;color:#4f46e5;font-family:monospace;">${code}</div>
-            <p style="color:#94a3b8;font-size:13px;margin:12px 0 0;">Berlaku <strong>10 menit</strong></p>
-          </div>
-          <p style="color:#94a3b8;font-size:13px;text-align:center;">Jangan bagikan kode ini ke siapapun.</p>
+    const html = `
+      <div style="font-family:sans-serif;max-width:480px;margin:auto;background:#fff;border-radius:24px;padding:40px;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+        <h2 style="color:#0f172a;font-size:20px;font-weight:800;margin-bottom:8px;">${heading}</h2>
+        <p style="color:#334155;font-size:15px;">${desc}</p>
+        <div style="background:#f1f5f9;border-radius:16px;padding:24px;text-align:center;margin:24px 0;">
+          <div style="font-size:42px;font-weight:900;letter-spacing:12px;color:#4f46e5;font-family:monospace;">${code}</div>
+          <p style="color:#94a3b8;font-size:13px;margin:12px 0 0;">Berlaku <strong>10 menit</strong></p>
         </div>
-      `,
-    });
+        <p style="color:#94a3b8;font-size:13px;text-align:center;">Jangan bagikan kode ini ke siapapun.</p>
+      </div>
+    `;
 
-    if (sendErr) {
+    try {
+      await sendBrevoEmail(email, subject, html);
+    } catch (err) {
       return NextResponse.json({ error: 'Gagal mengirim email. Coba lagi.' }, { status: 500 });
     }
 
