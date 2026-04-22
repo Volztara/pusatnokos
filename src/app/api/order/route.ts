@@ -68,7 +68,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // Fetch config markup dari DB (sama dengan /api/services)
     const config = await getMarkupConfig();
     const { idrRate, markupPct, minProfit, roundTo } = config;
 
@@ -190,12 +189,68 @@ export async function PATCH(request: Request) {
     const SUCCESS_TOKENS: Record<string, string[]> = {
       resend: ['ACCESS_RETRY_GET', 'STATUS_WAIT_RESEND'],
       done  : ['ACCESS_ACTIVATION', 'ACTIVATION_STATUS_CHANGED'],
-      cancel: ['ACCESS_CANCEL'],
+      cancel: ['ACCESS_CANCEL', 'ACTIVATION_STATUS_CHANGED', 'ACCESS_ALREADY_USED'],
     };
 
     const isSuccess = (SUCCESS_TOKENS[action] ?? []).some(t => text.startsWith(t));
 
     if (isSuccess) {
+
+      // ── Jika cancel → refund saldo user secara ATOMIC ─────────────
+      if (action === 'cancel') {
+        try {
+          // Ambil order berdasarkan activation_id
+          const { data: order } = await db
+            .from('orders')
+            .select('id, user_id, price, service_name, refunded')
+            .eq('activation_id', id)
+            .maybeSingle();
+
+          if (order && order.user_id && order.price > 0 && !order.refunded) {
+
+            // Atomic update — hanya lanjut jika refunded masih FALSE
+            const { data: updated } = await db
+              .from('orders')
+              .update({ status: 'cancelled', refunded: true })
+              .eq('id', order.id)
+              .eq('refunded', false)          // ← atomic guard anti double refund
+              .select('id');
+
+            if (updated && updated.length > 0) {
+              // Ambil email untuk RPC update_balance
+              const { data: profile } = await db
+                .from('profiles')
+                .select('email')
+                .eq('id', order.user_id)
+                .single();
+
+              if (profile?.email) {
+                await db.rpc('update_balance', {
+                  p_email : profile.email,
+                  p_amount: order.price,
+                });
+              }
+
+              // Catat mutasi refund
+              await db.from('mutations').insert({
+                user_id    : order.user_id,
+                type       : 'in',
+                amount     : order.price,
+                description: `Refund Pembatalan: ${order.service_name} #${order.id}`,
+              });
+
+              console.log(`[cancel] Refunded Rp${order.price} to user ${order.user_id} (order #${order.id})`);
+            } else {
+              console.log(`[cancel] Skip — order #${order.id} sudah direfund sebelumnya`);
+            }
+
+          }
+        } catch (e) {
+          // Cancel HeroSMS sudah berhasil, refund DB gagal — log saja
+          console.error(`[cancel] Refund failed for activation ${id}:`, e);
+        }
+      }
+
       const MESSAGE: Record<string, string> = {
         resend: 'Permintaan kirim ulang OTP berhasil dikirim.',
         done  : 'Pesanan berhasil dikonfirmasi sebagai selesai.',
