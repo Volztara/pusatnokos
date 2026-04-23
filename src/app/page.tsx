@@ -2488,7 +2488,6 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
   };
 
   const updateBalance = async (amount: number, type: 'add' | 'subtract', activationId?: string) => {
-    // Skip jika amount 0 atau invalid — mencegah 400 Bad Request ke API
     if (!amount || amount <= 0) return;
     const prevBal = balance;
     const newBal = type === 'add' ? balance + amount : Math.max(0, balance - amount);
@@ -2500,13 +2499,31 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
         headers: authHeaders({ 'X-User-Email': user.email }),
         body   : JSON.stringify({ email: user.email, amount, type, activationId }),
       });
-      // Rollback balance lokal jika API gagal
-      if (res.status === 409 || res.status === 400 || res.status === 401) {
-        setBalance(prevBal);
-        if (res.status === 409) console.warn('[balance] Double refund blocked:', activationId);
-        if (res.status === 400) console.warn('[balance] Bad request, amount:', amount);
+
+      if (res.ok) return; // sukses
+
+      if (res.status === 409 || (res.status === 400 && type === 'add')) {
+        // 409 = double refund, 400 + add = server sudah proses via webhook
+        // Jangan rollback — sync saldo dari DB untuk memastikan angka benar
+        console.info('[balance] Refund sudah diproses server:', activationId);
+        setTimeout(() => refreshBalance(), 600);
+        return;
       }
-    } catch { /* update lokal sudah cukup jika gagal */ }
+
+      if (res.status === 400 && type === 'subtract') {
+        // Beli nomor gagal → rollback saldo lokal
+        setBalance(prevBal);
+        showToast('Transaksi gagal diproses. Coba lagi.');
+        return;
+      }
+
+      if (res.status === 401) {
+        // Token expired → gunakan onLogout yang sudah tersedia
+        setBalance(prevBal);
+        showToast('Sesi berakhir. Silakan login kembali.');
+        setTimeout(() => onLogout(), 1500);
+      }
+    } catch { /* network error — optimistic update tetap */ }
   };
 
   const handleCancelOrder = async (orderId: number) => {
