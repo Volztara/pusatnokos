@@ -1742,6 +1742,37 @@ interface AuthViewProps {
   isDarkMode: boolean;
 }
 
+// ── Standalone components — HARUS di luar AuthView agar tidak re-mount saat re-render ──
+function OtpInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Verification Code (6 digits)</label>
+      <input
+        type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6} required
+        value={value} onChange={e => onChange(e.target.value.replace(/\D/g, ''))}
+        className="w-full px-6 py-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-indigo-500 dark:text-white text-3xl font-black tracking-[0.5em] text-center transition-all"
+        placeholder="000000"
+      />
+      <p className="text-xs text-slate-400 mt-2 text-center">Valid for 10 minutes</p>
+    </div>
+  );
+}
+function ResendRow({ onBack, onResend, countdown, isLoading }: {
+  onBack: () => void;
+  onResend: () => void;
+  countdown: number;
+  isLoading: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between pt-2">
+      <button type="button" onClick={onBack} className="text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-indigo-600 transition">← Back</button>
+      <button type="button" onClick={onResend} disabled={countdown > 0 || isLoading} className="text-sm font-bold text-indigo-600 dark:text-indigo-400 disabled:text-slate-400 disabled:cursor-not-allowed transition">
+        {countdown > 0 ? `Resend (${countdown}s)` : "Resend"}
+      </button>
+    </div>
+  );
+}
+
 function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm,  setShowConfirm]  = useState(false);
@@ -2002,28 +2033,6 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
     </div>
   ) : null;
 
-  const OtpInput = () => (
-    <div>
-      <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Verification Code (6 digits)</label>
-      <input
-        type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6} required autoFocus
-        value={otpCode} onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
-        className="w-full px-6 py-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-indigo-500 dark:text-white text-3xl font-black tracking-[0.5em] text-center transition-all"
-        placeholder="000000"
-      />
-      <p className="text-xs text-slate-400 mt-2 text-center">Berlaku 10 menit</p>
-    </div>
-  );
-
-  const ResendRow = ({ onBack }: { onBack: () => void }) => (
-    <div className="flex items-center justify-between pt-2">
-      <button type="button" onClick={onBack} className="text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-indigo-600 transition">← Back</button>
-      <button type="button" onClick={handleResendOTP} disabled={countdown > 0 || isLoading} className="text-sm font-bold text-indigo-600 dark:text-indigo-400 disabled:text-slate-400 disabled:cursor-not-allowed transition">
-        {countdown > 0 ? `Resend (${countdown}s)` : "Resend"}
-      </button>
-    </div>
-  );
-
   const titles: Record<string, string> = {
     form:   isLogin ? "Welcome Back" : "Create Account",
     verify : "Verify Email",
@@ -2121,13 +2130,13 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
         {/* ── VERIFY EMAIL (setelah register) ── */}
         {step === "verify" && (
           <form className="space-y-5" onSubmit={handleVerify}>
-            <OtpInput />
+            <OtpInput value={otpCode} onChange={setOtpCode} />
             <ErrorBox />
             <button type="submit" disabled={isLoading || otpCode.length !== 6} className={btnCls(isLoading)}>
               {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2"/> : <CheckCircle2 className="w-5 h-5 mr-2"/>}
               {isLoading ? "Verifying..." : "Activate Account"}
             </button>
-            <ResendRow onBack={() => { setStep("form"); setError(""); setOtpCode(""); }} />
+            <ResendRow onBack={() => { setStep("form"); setError(""); setOtpCode(""); }} onResend={handleResendOTP} countdown={countdown} isLoading={isLoading} />
           </form>
         )}
 
@@ -2154,7 +2163,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
         {/* ── RESET PASSWORD ── */}
         {step === "reset" && (
           <form className="space-y-5" onSubmit={handleReset}>
-            <OtpInput />
+            <OtpInput value={otpCode} onChange={setOtpCode} />
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">New Password</label>
               <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
@@ -2174,7 +2183,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
               {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2"/> : <CheckCircle2 className="w-5 h-5 mr-2"/>}
               {isLoading ? 'Sending...' : 'Verify'}
             </button>
-            <ResendRow onBack={() => { setStep("forgot"); setError(""); setOtpCode(""); }} />
+            <ResendRow onBack={() => { setStep("forgot"); setError(""); setOtpCode(""); }} onResend={handleResendOTP} countdown={countdown} isLoading={isLoading} />
           </form>
         )}
       </div>
@@ -4406,7 +4415,7 @@ const BANK_ACCOUNTS = [
 
 function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, updateBalance, user, lang }: TopupViewProps) {
   const t = T[lang ?? 'en'];
-  const [depositMode, setDepositMode]   = useState<'select' | 'manual' | 'auto' | 'history'>('select');
+  const [depositMode, setDepositMode]   = useState<'select' | 'manual' | 'auto' | 'crypto' | 'history'>('select');
   const [amount,      setAmount]        = useState('');
   const [selectedBank,setSelectedBank]  = useState(BANK_ACCOUNTS[0]);
   const [step,        setStep]          = useState(1); // 1=isi nominal, 2=instruksi, 3=upload bukti
@@ -4416,6 +4425,62 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
   const [isLoading,   setIsLoading]     = useState(false);
   const [myRequests,  setMyRequests]    = useState<any[]>([]);
   const [waUrl,       setWaUrl]         = useState<string | null>(null);
+
+  // Crypto deposit states
+  const [cryptoAmount,   setCryptoAmount]   = useState('');
+  const [cryptoLoading,  setCryptoLoading]  = useState(false);
+  const [cryptoPayLink,  setCryptoPayLink]  = useState<string | null>(null);
+  const [cryptoTrackId,  setCryptoTrackId]  = useState<string | null>(null);
+  const [cryptoStatus,   setCryptoStatus]   = useState<'idle' | 'waiting' | 'paid' | 'expired'>('idle');
+  const [cryptoAmountUSD,setCryptoAmountUSD]= useState<number | null>(null);
+  const cryptoPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Handle crypto invoice creation
+  const handleCryptoDeposit = async () => {
+    const amt = parseInt(cryptoAmount);
+    if (!amt || amt < 10000) { showToast('Minimum deposit is Rp 10,000'); return; }
+    if (!user?.email) return;
+
+    setCryptoLoading(true);
+    try {
+      const res  = await fetch('/api/deposit/crypto', {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders({ 'X-User-Email': user.email }) },
+        body   : JSON.stringify({ email: user.email, amount: amt }),
+      });
+      const data = await res.json();
+      if (!res.ok) { showToast(data.error ?? 'Failed to create payment.'); return; }
+
+      setCryptoPayLink(data.payLink);
+      setCryptoTrackId(data.trackId);
+      setCryptoAmountUSD(data.amountUSD);
+      setCryptoStatus('waiting');
+
+      // Poll status every 10 seconds
+      cryptoPollRef.current = setInterval(async () => {
+        try {
+          const r = await fetch(`/api/deposit/crypto?trackId=${data.trackId}`, { headers: authHeaders({ 'X-User-Email': user.email }) });
+          const d = await r.json();
+          if (d.status === 'Paid') {
+            clearInterval(cryptoPollRef.current!);
+            setCryptoStatus('paid');
+            showToast(`✅ Payment confirmed! Balance has been credited.`);
+            setTimeout(() => { setDepositMode('select'); setCryptoStatus('idle'); setCryptoPayLink(null); }, 3000);
+          } else if (d.status === 'Expired') {
+            clearInterval(cryptoPollRef.current!);
+            setCryptoStatus('expired');
+          }
+        } catch { /* ignore poll error */ }
+      }, 10000);
+
+    } catch { showToast('Network error. Please try again.'); }
+    finally { setCryptoLoading(false); }
+  };
+
+  // Cleanup poll on unmount
+  useEffect(() => {
+    return () => { if (cryptoPollRef.current) clearInterval(cryptoPollRef.current); };
+  }, []);
 
   // Paymenku otomatis
   const [autoChannel,  setAutoChannel]  = useState('qris');
@@ -4537,13 +4602,13 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
             <div className="mt-4 text-xs font-bold text-indigo-600 dark:text-indigo-400">Instant · Secure · Auto →</div>
           </div>
 
-          <div onClick={() => { setDepositMode('manual'); setStep(1); }} className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 p-6 cursor-pointer transition-all group">
-            <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-2xl w-fit mb-4 group-hover:bg-slate-200 dark:group-hover:bg-slate-700 transition-colors">
-              <CreditCard className="w-6 h-6 text-slate-600 dark:text-slate-400" />
+          <div onClick={() => { setDepositMode('crypto'); setCryptoAmount(''); setCryptoStatus('idle'); setCryptoPayLink(null); }} className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-orange-400 dark:hover:border-orange-500 p-6 cursor-pointer transition-all group">
+            <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-2xl w-fit mb-4 group-hover:bg-orange-500 transition-colors">
+              <svg className="w-6 h-6 text-orange-500 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/></svg>
             </div>
-            <h3 className="font-black text-slate-900 dark:text-white text-lg mb-1">{t.manualDeposit}</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">{t.depositManualDesc}</p>
-            <div className="mt-4 text-xs font-bold text-slate-400">Transfer · E-Wallet · Manual →</div>
+            <h3 className="font-black text-slate-900 dark:text-white text-lg mb-1">Crypto Payment</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Pay with any cryptocurrency. USDT, BTC, ETH, and 100+ coins supported.</p>
+            <div className="mt-4 text-xs font-bold text-orange-500">USDT · BTC · ETH · +100 coins →</div>
           </div>
         </div>
       )}
@@ -4834,7 +4899,134 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
         </div>
       )}
 
-      {/* ── RIWAYAT DEPOSIT ── */}
+      {/* ── CRYPTO DEPOSIT (OXAPAY) ── */}
+      {depositMode === 'crypto' && (
+        <div className="space-y-5">
+          <button onClick={() => { setDepositMode('select'); if (cryptoPollRef.current) clearInterval(cryptoPollRef.current); }} className="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+            ← Back
+          </button>
+
+          {/* Idle — input nominal */}
+          {cryptoStatus === 'idle' && (
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6 md:p-8 space-y-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="bg-orange-50 dark:bg-orange-900/20 p-2.5 rounded-2xl">
+                  <svg className="w-6 h-6 text-orange-500" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/></svg>
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-900 dark:text-white">Crypto Payment</h3>
+                  <p className="text-xs text-slate-400">Powered by Oxapay · 100+ coins supported</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-3 text-slate-800 dark:text-slate-200">Deposit Amount (IDR)</label>
+                <div className="relative">
+                  <span className="absolute left-5 top-4 text-slate-400 font-black text-xl">Rp</span>
+                  <input
+                    type="text" inputMode="numeric" value={cryptoAmount}
+                    onChange={e => setCryptoAmount(e.target.value.replace(/\D/g, ''))}
+                    placeholder="50000"
+                    className="w-full px-14 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-orange-500/50 dark:text-white"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {[50000, 100000, 200000, 500000, 1000000].map(q => (
+                    <button key={q} onClick={() => setCryptoAmount(String(q))}
+                      className={"px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors " + (cryptoAmount === String(q) ? 'bg-orange-500 text-white border-orange-500' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-orange-300')}>
+                      {(q/1000).toFixed(0)}rb
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Info supported coins */}
+              <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-800/30 rounded-2xl p-4">
+                <div className="text-xs font-bold text-orange-700 dark:text-orange-400 mb-2">Supported Cryptocurrencies</div>
+                <div className="flex flex-wrap gap-2 text-xs font-bold text-slate-600 dark:text-slate-300">
+                  {['USDT', 'BTC', 'ETH', 'BNB', 'SOL', 'LTC', 'DOGE', 'TRX', '+100 more'].map(c => (
+                    <span key={c} className="bg-white dark:bg-slate-800 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700">{c}</span>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={handleCryptoDeposit}
+                disabled={cryptoLoading || !cryptoAmount || parseInt(cryptoAmount) < 10000}
+                className="w-full py-4 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold rounded-2xl transition-colors active:scale-95 flex items-center justify-center gap-2"
+              >
+                {cryptoLoading ? <RefreshCw className="w-5 h-5 animate-spin" /> : null}
+                {cryptoLoading ? 'Creating Invoice...' : 'Continue to Payment →'}
+              </button>
+            </div>
+          )}
+
+          {/* Waiting — show pay link */}
+          {(cryptoStatus === 'waiting' || cryptoStatus === 'paid') && cryptoPayLink && (
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6 md:p-8 space-y-5">
+              {cryptoStatus === 'paid' ? (
+                <div className="text-center py-4">
+                  <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
+                  </div>
+                  <h3 className="text-xl font-black text-green-600 dark:text-green-400">Payment Confirmed!</h3>
+                  <p className="text-sm text-slate-400 mt-2">Your balance has been credited successfully.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="text-center">
+                    <div className="inline-flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs font-bold px-3 py-1.5 rounded-full border border-amber-200 dark:border-amber-700 mb-4">
+                      <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+                      Waiting for payment · Expires in 30 min
+                    </div>
+                    <h3 className="font-black text-slate-900 dark:text-white text-lg">Complete Your Payment</h3>
+                    {cryptoAmountUSD && (
+                      <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+                        Amount: <span className="font-black text-slate-900 dark:text-white">Rp {parseInt(cryptoAmount).toLocaleString()}</span>
+                        <span className="text-slate-400 mx-1">≈</span>
+                        <span className="font-black text-orange-500">${cryptoAmountUSD} USD</span>
+                      </p>
+                    )}
+                  </div>
+
+                  <a href={cryptoPayLink} target="_blank" rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-3 py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl transition-colors text-base">
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/></svg>
+                    Pay with Crypto
+                  </a>
+
+                  <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30 rounded-2xl p-4 text-xs text-blue-700 dark:text-blue-400 font-medium">
+                    <RefreshCw className="w-4 h-4 shrink-0 animate-spin" />
+                    Checking payment status automatically every 10 seconds...
+                  </div>
+
+                  <button onClick={() => { setCryptoStatus('idle'); setCryptoPayLink(null); if (cryptoPollRef.current) clearInterval(cryptoPollRef.current); }}
+                    className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 transition-colors text-sm">
+                    Cancel Payment
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Expired */}
+          {cryptoStatus === 'expired' && (
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-8 text-center space-y-4">
+              <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto">
+                <AlertCircle className="w-8 h-8 text-red-500" />
+              </div>
+              <h3 className="text-xl font-black text-red-500">Invoice Expired</h3>
+              <p className="text-sm text-slate-400">The payment window has closed. Please create a new invoice.</p>
+              <button onClick={() => { setCryptoStatus('idle'); setCryptoPayLink(null); setCryptoAmount(''); }}
+                className="w-full py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl transition-colors">
+                Try Again
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── RIWAYAT DEPOSIT (placeholder kept) ── */}
       {depositMode === 'history' && (
         <div className="space-y-4">
           {myRequests.length === 0 ? (

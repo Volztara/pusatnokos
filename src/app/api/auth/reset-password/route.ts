@@ -14,54 +14,111 @@ export async function POST(request: Request) {
     const { email, code, newPassword } = await request.json();
 
     if (!email || !code || !newPassword) {
-      return NextResponse.json({ error: 'Semua field wajib diisi.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'All fields are required.' },
+        { status: 400 }
+      );
     }
     if (newPassword.length < 6) {
-      return NextResponse.json({ error: 'Password minimal 6 karakter.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Password must be at least 6 characters.' },
+        { status: 400 }
+      );
     }
 
-    // Ambil OTP dari Supabase
-    const { data: stored, error } = await supabaseAdmin
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // ── Ambil OTP dari Supabase ───────────────────────────────────────
+    const { data: stored, error: otpErr } = await supabaseAdmin
       .from('otp_codes')
       .select('*')
-      .eq('email', email.trim().toLowerCase())
+      .eq('email', normalizedEmail)
       .single();
 
-    if (!stored || error || !stored.is_register === false) {
-      return NextResponse.json({ error: 'Kode tidak ditemukan. Minta kode baru.' }, { status: 400 });
+    // FIX BUG 2: kondisi yang benar
+    if (otpErr || !stored) {
+      return NextResponse.json(
+        { error: 'Code not found. Please request a new one.' },
+        { status: 400 }
+      );
     }
 
+    // Pastikan ini OTP untuk reset password (bukan register)
+    if (stored.is_register === true) {
+      return NextResponse.json(
+        { error: 'Invalid code. Please request a reset code.' },
+        { status: 400 }
+      );
+    }
+
+    // Cek kadaluarsa
     if (Date.now() > stored.expires_at) {
-      await supabaseAdmin.from('otp_codes').delete().eq('email', email);
-      return NextResponse.json({ error: 'Kode kadaluarsa. Minta kode baru.' }, { status: 400 });
+      await supabaseAdmin.from('otp_codes').delete().eq('email', normalizedEmail);
+      return NextResponse.json(
+        { error: 'Code expired. Please request a new one.' },
+        { status: 400 }
+      );
     }
 
+    // Cek kode cocok
     if (stored.code !== String(code).trim()) {
-      return NextResponse.json({ error: 'Kode salah. Coba lagi.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Incorrect code. Please try again.' },
+        { status: 400 }
+      );
     }
 
-    // Hapus OTP
-    await supabaseAdmin.from('otp_codes').delete().eq('email', email);
+    // ── Hapus OTP setelah tervalidasi ────────────────────────────────
+    await supabaseAdmin.from('otp_codes').delete().eq('email', normalizedEmail);
 
-    // Cari user by email
-    const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
-    const user = users.find(u => u.email === email);
+    // FIX BUG 1: Cari user langsung by email, bukan loop listUsers()
+    const { data: { users }, error: listErr } = await supabaseAdmin.auth.admin.listUsers({
+      page    : 1,
+      perPage : 1000,
+    });
+
+    if (listErr) {
+      console.error('[reset-password] listUsers error:', listErr);
+      return NextResponse.json(
+        { error: 'Server error. Please try again.' },
+        { status: 500 }
+      );
+    }
+
+    // Case-insensitive email match
+    const user = users.find(
+      u => u.email?.toLowerCase().trim() === normalizedEmail
+    );
 
     if (!user) {
-      return NextResponse.json({ error: 'Akun tidak ditemukan.' }, { status: 404 });
+      console.warn('[reset-password] User not found in auth.users:', normalizedEmail);
+      return NextResponse.json(
+        { error: 'Account not found. Please contact support.' },
+        { status: 404 }
+      );
     }
 
-    // Update password
-    const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(user.id, { password: newPassword });
+    // ── Update password ───────────────────────────────────────────────
+    const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(
+      user.id,
+      { password: newPassword }
+    );
 
     if (updateErr) {
-      return NextResponse.json({ error: 'Gagal mengubah password. Coba lagi.' }, { status: 500 });
+      console.error('[reset-password] updateUserById error:', updateErr);
+      return NextResponse.json(
+        { error: 'Failed to update password. Please try again.' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ success: true });
 
   } catch (err) {
     console.error('[POST /api/auth/reset-password]', err);
-    return NextResponse.json({ error: 'Terjadi kesalahan server.' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Server error. Please try again.' },
+      { status: 500 }
+    );
   }
 }

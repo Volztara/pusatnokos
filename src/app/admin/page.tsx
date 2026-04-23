@@ -1447,8 +1447,13 @@ function DepositTab({ showToast, isAuthed }: { showToast: (msg: string) => void;
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-3 text-xs text-slate-400 font-medium">
-                    <span className="flex items-center gap-1">📱 {r.bank_name}</span>
-                    <span>🕐 {new Date(r.created_at).toLocaleString('id-ID')}</span>
+                    <span className="flex items-center gap-1">
+                      {r.method?.startsWith('crypto') ? '🪙' : '📱'}
+                      {r.method?.startsWith('crypto')
+                        ? `Crypto (${r.method.replace('crypto_', '').toUpperCase()})`
+                        : r.bank_name ?? r.method ?? 'Transfer'}
+                    </span>
+                    <span>🕐 {new Date(r.created_at).toLocaleString()}</span>
                   </div>
                   {r.note && <div className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded-xl">📝 {r.note}</div>}
                   {r.admin_note && r.status !== 'pending' && (
