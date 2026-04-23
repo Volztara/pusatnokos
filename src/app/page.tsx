@@ -844,23 +844,158 @@ function getAvatarPalette(name: string) {
   return AVATAR_PALETTES[Math.abs(hash) % AVATAR_PALETTES.length];
 }
 
+
+// Komponen gambar logo dengan fallback otomatis ke inisial
+function ServiceLogoImg({
+  src, bg, initial, color,
+}: { src: string; bg: string; initial: string; color: string }) {
+  const [err, setErr] = React.useState(false);
+  if (err) {
+    return (
+      <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-base font-black"
+        style={{ background: bg, color }}>
+        {initial}
+      </div>
+    );
+  }
+  return (
+    <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden"
+      style={{ background: bg }}>
+      <img
+        src={src}
+        alt={initial}
+        width={26}
+        height={26}
+        style={{ width: 26, height: 26, objectFit: 'contain', display: 'block' }}
+        onError={() => setErr(true)}
+        loading="lazy"
+        decoding="async"
+      />
+    </div>
+  );
+}
+
 function getServiceIconByName(name: string): React.ReactNode {
   const n = name.toLowerCase();
-  // Cari background dari SERVICE_LOGO_MAP jika ada (untuk warna konsisten per brand)
+
   for (const [keys, cfg] of SERVICE_LOGO_MAP) {
     if (keys.some(k => n.includes(k))) {
-      return (
-        <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-base font-black" style={{ background: cfg.bg, color: '#4f46e5' }}>
-          {name.charAt(0).toUpperCase()}
-        </div>
-      );
+      const initial = name.charAt(0).toUpperCase();
+
+      if (cfg.type === 'si') {
+        // Simple Icons CDN — SVG logo dengan warna brand asli
+        return (
+          <ServiceLogoImg
+            src={`https://cdn.simpleicons.org/${cfg.slug}/${cfg.color}`}
+            bg={cfg.bg}
+            initial={initial}
+            color={`#${cfg.color}`}
+          />
+        );
+      }
+
+      if (cfg.type === 'fav') {
+        // Google Favicon CDN — favicon resolusi tinggi 64px
+        return (
+          <ServiceLogoImg
+            src={`https://www.google.com/s2/favicons?sz=64&domain=${cfg.domain}`}
+            bg={cfg.bg}
+            initial={initial}
+            color="#4f46e5"
+          />
+        );
+      }
     }
   }
-  // Fallback: warna deterministik dari nama
+
+  // Fallback: inisial dengan warna deterministik dari nama layanan
   const palette = getAvatarPalette(name);
   return (
-    <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-base font-black shrink-0" style={{ background: palette.bg, color: palette.color }}>
+    <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-base font-black shrink-0"
+      style={{ background: palette.bg, color: palette.color }}>
       {name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
+
+// ==========================================
+// APP LOADING SKELETON — tampil saat cek session, mencegah flash landing page
+// ==========================================
+function AppLoadingSkeleton({ isDark }: { isDark: boolean }) {
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-[#060810] flex">
+      {/* Sidebar skeleton (desktop) */}
+      <div className="hidden md:flex flex-col w-64 shrink-0 bg-white dark:bg-[#0d1020] border-r border-slate-200 dark:border-white/[0.07] p-4 gap-3">
+        {/* Logo */}
+        <div className="flex items-center gap-3 px-2 py-3 mb-2">
+          <div className="w-10 h-10 rounded-2xl bg-slate-200 dark:bg-white/[0.08] animate-pulse" />
+          <div className="space-y-1.5">
+            <div className="w-24 h-3 bg-slate-200 dark:bg-white/[0.08] rounded animate-pulse" />
+            <div className="w-16 h-2 bg-slate-100 dark:bg-white/[0.04] rounded animate-pulse" />
+          </div>
+        </div>
+        {/* Nav items */}
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="h-11 rounded-2xl bg-slate-100 dark:bg-white/[0.05] animate-pulse" style={{ opacity: 1 - i * 0.1 }} />
+        ))}
+        <div className="flex-1" />
+        <div className="h-11 rounded-2xl bg-slate-100 dark:bg-white/[0.05] animate-pulse opacity-50" />
+      </div>
+
+      {/* Main content skeleton */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header skeleton */}
+        <div className="h-16 bg-white dark:bg-[#0d1020] border-b border-slate-200 dark:border-white/[0.07] px-4 md:px-8 flex items-center justify-between">
+          <div className="w-32 h-5 bg-slate-200 dark:bg-white/[0.08] rounded-lg animate-pulse" />
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/[0.06] animate-pulse" />
+            <div className="w-24 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 animate-pulse" />
+          </div>
+        </div>
+
+        {/* Content skeleton */}
+        <div className="flex-1 p-4 sm:p-8 space-y-6 overflow-hidden">
+          {/* Balance + stat cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] p-5 space-y-3">
+                <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-white/[0.06] animate-pulse" />
+                <div className="w-20 h-3 bg-slate-200 dark:bg-white/[0.08] rounded animate-pulse" />
+                <div className="w-28 h-6 bg-slate-200 dark:bg-white/[0.08] rounded-lg animate-pulse" />
+              </div>
+            ))}
+          </div>
+
+          {/* Table / list skeleton */}
+          <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] overflow-hidden">
+            <div className="p-5 border-b border-slate-100 dark:border-white/[0.07]">
+              <div className="w-36 h-5 bg-slate-200 dark:bg-white/[0.08] rounded-lg animate-pulse" />
+            </div>
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-5 py-4 border-b border-slate-100 dark:border-white/[0.06] last:border-0" style={{ opacity: 1 - i * 0.1 }}>
+                <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-white/[0.06] animate-pulse shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="w-32 h-3.5 bg-slate-200 dark:bg-white/[0.08] rounded animate-pulse" />
+                  <div className="w-20 h-2.5 bg-slate-100 dark:bg-white/[0.04] rounded animate-pulse" />
+                </div>
+                <div className="w-20 h-8 rounded-xl bg-slate-100 dark:bg-white/[0.06] animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Bottom nav skeleton (mobile) */}
+        <div className="md:hidden h-16 bg-white dark:bg-[#0d1020] border-t border-slate-200 dark:border-white/[0.07] flex items-center justify-around px-2"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex flex-col items-center gap-1">
+              <div className="w-7 h-7 rounded-xl bg-slate-100 dark:bg-white/[0.06] animate-pulse" />
+              <div className="w-10 h-2 rounded bg-slate-100 dark:bg-white/[0.04] animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -870,6 +1005,7 @@ function getServiceIconByName(name: string): React.ReactNode {
 // ==========================================
 export default function App() {
   const [currentView, setCurrentView] = useState<string>('landing');
+  const [isInitializing, setIsInitializing] = useState<boolean>(true); // cegah flash landing page
   const [user, setUser] = useState<UserData | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
@@ -935,6 +1071,52 @@ export default function App() {
       setUser(restoredSession);
       setCurrentView('dashboard');
     }
+    // Selesai cek session — apapun hasilnya, hapus skeleton
+    setIsInitializing(false);
+  }, []);
+
+  // ── Inject mobile CSS fixes (iOS/Android) — sekali saja ──────────────
+  useEffect(() => {
+    if (document.getElementById('_mobile_fix')) return;
+    const style = document.createElement('style');
+    style.id = '_mobile_fix';
+    style.textContent = `
+      /* Prevent iOS input zoom (font-size < 16px triggers auto-zoom) */
+      input, select, textarea { font-size: 16px !important; }
+      @media (min-width: 640px) {
+        input, select, textarea { font-size: inherit !important; }
+      }
+      /* Safe area padding untuk iPhone notch & home indicator */
+      :root {
+        --safe-top: env(safe-area-inset-top, 0px);
+        --safe-bottom: env(safe-area-inset-bottom, 0px);
+        --safe-left: env(safe-area-inset-left, 0px);
+        --safe-right: env(safe-area-inset-right, 0px);
+      }
+      /* Prevent iOS overscroll bounce pada seluruh halaman */
+      html, body {
+        overscroll-behavior: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      /* Tap highlight transparan (sudah ada inline, ini override untuk semua) */
+      * { -webkit-tap-highlight-color: transparent; }
+      /* Cegah text selection tidak disengaja saat scroll mobile */
+      nav, button { user-select: none; -webkit-user-select: none; }
+      /* Smooth momentum scrolling di iOS untuk scrollable areas */
+      .overflow-y-auto, .overflow-x-auto, [style*="overflow"] {
+        -webkit-overflow-scrolling: touch;
+      }
+      /* Minimum touch target 44×44px sesuai Apple HIG & Android Material */
+      button, a[role="button"], [role="tab"] {
+        min-height: 44px;
+        min-width: 44px;
+      }
+      /* Bottom nav: tambah padding safe area untuk home indicator iPhone */
+      nav[class*="fixed"][class*="bottom"] {
+        padding-bottom: max(env(safe-area-inset-bottom, 0px), 4px);
+      }
+    `;
+    document.head.appendChild(style);
   }, []);
 
   // Apply/remove class 'dark' di <html> setiap kali isDarkMode berubah
@@ -1078,7 +1260,10 @@ export default function App() {
         </div>
       )}
 
-      {currentView === 'login' || currentView === 'register' ? (
+      {/* Skeleton saat cek session — mencegah flash landing page */}
+      {isInitializing ? (
+        <AppLoadingSkeleton isDark={isDarkMode} />
+      ) : currentView === 'login' || currentView === 'register' ? (
         <AuthView type={currentView} onNavigate={navigate} onAuth={handleLogin} showToast={showToast} isDarkMode={isDarkMode} />
       ) : currentView === 'dashboard' ? (
         <DashboardLayout user={user} onLogout={handleLogout} showToast={showToast} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} activeServices={activeServices} serviceError={serviceError} countries={countries} selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry} lang={lang} setLang={setLang} />
