@@ -7,9 +7,9 @@ import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title       : 'Pusat Nokos — Platform OTP Indonesia',
-  description : 'Beli nomor OTP virtual untuk semua layanan dengan harga terjangkau. WhatsApp, Telegram, Instagram, dan 500+ layanan lainnya.',
-  keywords    : ['OTP', 'nomor virtual', 'SMS verification', 'Indonesia', 'WhatsApp OTP'],
+  title       : 'Pusat Nokos — Virtual OTP Number Platform',
+  description : 'Buy virtual OTP numbers for all services at the best price. WhatsApp, Telegram, Instagram, and 500+ more. 100% Auto Refund guaranteed.',
+  keywords    : ['OTP', 'virtual number', 'SMS verification', 'OTP platform', 'WhatsApp OTP', 'virtual phone number'],
   authors     : [{ name: 'Pusat Nokos' }],
   manifest    : '/manifest.json',
   appleWebApp : {
@@ -18,15 +18,26 @@ export const metadata: Metadata = {
     title          : 'Pusat Nokos',
   },
   openGraph: {
-    title      : 'Pusat Nokos — Platform OTP Indonesia',
-    description: 'Beli nomor OTP virtual untuk semua layanan dengan harga terjangkau.',
+    title      : 'Pusat Nokos — Virtual OTP Number Platform',
+    description: 'Buy virtual OTP numbers for all services at the best price. 100% Auto Refund guaranteed.',
     type       : 'website',
-    locale     : 'id_ID',
+    locale     : 'en_US',
+    url        : 'https://pusatnokos.com',
+    siteName   : 'Pusat Nokos',
+  },
+  twitter: {
+    card       : 'summary',
+    title      : 'Pusat Nokos — Virtual OTP Number Platform',
+    description: 'Buy virtual OTP numbers instantly. 100% Auto Refund. 500+ services supported.',
   },
   icons: {
     icon       : '/icons/icon-192x192.png',
     apple      : '/icons/icon-192x192.png',
     shortcut   : '/icons/icon-192x192.png',
+  },
+  robots: {
+    index  : true,
+    follow : true,
   },
 };
 
@@ -41,7 +52,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" suppressHydrationWarning style={{ overflowX: 'hidden' }}>
+    <html lang="en" suppressHydrationWarning style={{ overflowX: 'hidden' }}>
       <head>
         <meta charSet="utf-8" />
         <link rel="manifest" href="/manifest.json" />
