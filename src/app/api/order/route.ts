@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     const email    = (body.email    ?? '').trim();
 
     if (!service) {
-      return NextResponse.json({ error: 'Parameter "service" wajib diisi.' }, { status: 400 });
+      return NextResponse.json({ error: 'Parameter "service" is required.' }, { status: 400 });
     }
 
     // Cek blacklist jika email diberikan
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
 
       if (profile?.is_blacklisted) {
         return NextResponse.json(
-          { error: 'Akun kamu telah diblokir. Hubungi admin.' },
+          { error: 'Your account has been suspended. Please contact support.' },
           { status: 403 }
         );
       }
@@ -101,23 +101,25 @@ export async function POST(request: Request) {
     }
 
     const ERROR_MAP: Record<string, string> = {
-      NO_NUMBERS      : 'Stok nomor habis untuk layanan ini. Coba negara lain.',
-      NO_BALANCE      : 'Saldo HeroSMS tidak cukup (hubungi admin).',
-      WRONG_SERVICE   : 'Kode layanan tidak valid.',
-      WRONG_COUNTRY   : 'Kode negara tidak valid.',
-      BAD_ACTION      : 'Permintaan tidak valid ke upstream.',
-      BAD_KEY         : 'API key tidak valid (hubungi admin).',
-      ERROR_SQL       : 'Kesalahan server upstream.',
-      BANNED          : 'Akun API diblokir (hubungi admin).',
-      REPEATED_NUMBER : 'Nomor sudah pernah dipesan untuk layanan ini.',
+      NO_NUMBERS      : 'Number stock is unavailable for this service. Try another country.',
+      NO_BALANCE      : 'Service temporarily unavailable. Please contact support.',
+      WRONG_SERVICE   : 'Invalid service. Please try again.',
+      WRONG_COUNTRY   : 'Invalid country. Please try again.',
+      BAD_ACTION      : 'Invalid request. Please try again.',
+      BAD_KEY         : 'Service temporarily unavailable. Please contact support.',
+      ERROR_SQL       : 'Server error. Please try again later.',
+      BANNED          : 'Service temporarily unavailable. Please contact support.',
+      REPEATED_NUMBER : 'This number has already been used for this service.',
     };
 
-    const friendlyMsg = ERROR_MAP[orderText] ?? `Gagal memesan nomor: ${orderText}`;
-    return NextResponse.json({ error: friendlyMsg, code: orderText }, { status: 422 });
+    // Jangan expose raw error code ke user — hanya log di server
+    const friendlyMsg = ERROR_MAP[orderText] ?? 'Failed to order number. Please try again.';
+    console.error(`[POST /api/order] upstream error: ${orderText}`);
+    return NextResponse.json({ error: friendlyMsg }, { status: 422 });
 
   } catch (err) {
     console.error('[POST /api/order]', err);
-    return NextResponse.json({ error: 'Terjadi kesalahan server.' }, { status: 500 });
+    return NextResponse.json({ error: 'Server error. Please try again.' }, { status: 500 });
   }
 }
 
@@ -127,7 +129,7 @@ export async function GET(request: Request) {
     const id = searchParams.get('id')?.trim();
 
     if (!id) {
-      return NextResponse.json({ error: 'Parameter "id" wajib diisi.' }, { status: 400 });
+      return NextResponse.json({ error: 'Parameter "id" is required.' }, { status: 400 });
     }
 
     const res  = await fetch(
@@ -147,11 +149,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ status: 'ok', otpCode });
     }
 
-    return NextResponse.json({ status: 'unknown', raw: text });
+    return NextResponse.json({ status: 'unknown' });
 
   } catch (err) {
     console.error('[GET /api/order]', err);
-    return NextResponse.json({ error: 'Terjadi kesalahan server.' }, { status: 500 });
+    return NextResponse.json({ error: 'Server error. Please try again.' }, { status: 500 });
   }
 }
 
@@ -163,7 +165,7 @@ export async function PATCH(request: Request) {
 
     if (!id || !action) {
       return NextResponse.json(
-        { error: 'Parameter "id" dan "action" wajib diisi.' },
+        { error: 'Parameters "id" and "action" are required.' },
         { status: 400 }
       );
     }
@@ -177,7 +179,7 @@ export async function PATCH(request: Request) {
     const statusCode = STATUS_CODE[action];
     if (!statusCode) {
       return NextResponse.json(
-        { error: 'Nilai "action" tidak valid. Gunakan "cancel", "done", atau "resend".' },
+        { error: 'Invalid "action" value. Use "cancel", "done", or "resend".' },
         { status: 400 }
       );
     }
@@ -236,12 +238,12 @@ export async function PATCH(request: Request) {
                 user_id    : order.user_id,
                 type       : 'in',
                 amount     : order.price,
-                description: `Refund Pembatalan: ${order.service_name} #${order.id}`,
+                description: `Refund: ${order.service_name} #${order.id}`,
               });
 
-              console.log(`[cancel] Refunded Rp${order.price} to user ${order.user_id} (order #${order.id})`);
+              console.log(`[cancel] Refunded ${order.price} to user ${order.user_id} (order #${order.id})`);
             } else {
-              console.log(`[cancel] Skip — order #${order.id} sudah direfund sebelumnya`);
+              console.log(`[cancel] Skip — order #${order.id} already refunded`);
             }
 
           }
@@ -252,20 +254,22 @@ export async function PATCH(request: Request) {
       }
 
       const MESSAGE: Record<string, string> = {
-        resend: 'Permintaan kirim ulang OTP berhasil dikirim.',
-        done  : 'Pesanan berhasil dikonfirmasi sebagai selesai.',
-        cancel: 'Pesanan berhasil dibatalkan. Saldo akan dikembalikan.',
+        resend: 'OTP resend request sent successfully.',
+        done  : 'Order confirmed as completed.',
+        cancel: 'Order cancelled. Balance will be refunded.',
       };
       return NextResponse.json({ success: true, message: MESSAGE[action] });
     }
 
+    // Log raw error server-side only, don't expose to user
+    console.error(`[PATCH /api/order] upstream error: ${text}`);
     return NextResponse.json(
-      { success: false, error: `Gagal mengubah status: ${text}`, code: text },
+      { success: false, error: 'Failed to update order status. Please try again.' },
       { status: 422 }
     );
 
   } catch (err) {
     console.error('[PATCH /api/order]', err);
-    return NextResponse.json({ error: 'Terjadi kesalahan server.' }, { status: 500 });
+    return NextResponse.json({ error: 'Server error. Please try again.' }, { status: 500 });
   }
 }

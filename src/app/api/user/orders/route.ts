@@ -88,6 +88,7 @@ export async function POST(request: Request) {
       country      : country ?? '6',
       status       : 'waiting',
       is_v2        : isV2 ?? false,
+      refunded     : false,           // ← pastikan default false saat insert
     });
 
     if (error) return NextResponse.json({ error: 'Gagal menyimpan order.' }, { status: 500 });
@@ -110,28 +111,163 @@ export async function POST(request: Request) {
 
 /**
  * PATCH /api/user/orders
- * Update status order
- * Body: { activationId, status, otpCode? }
+ * Update status order + handle REFUND jika status = 'cancelled' atau 'expired'
+ *
+ * Body:
+ *   - email        : string  → Email user (untuk validasi ownership)
+ *   - activationId : string  → ID aktivasi dari provider
+ *   - status       : string  → 'cancelled' | 'expired' | 'success'
+ *   - otpCode?     : string  → (opsional) kode OTP jika status success
+ *
+ * Response:
+ *   - { success: true, refunded: false }               → update biasa
+ *   - { success: true, refunded: true, refundedAmount } → refund berhasil
+ *   - { error: string }                                 → gagal
  */
 export async function PATCH(request: Request) {
   try {
-    const { activationId, status, otpCode } = await request.json();
+    const { email, activationId, status, otpCode } = await request.json();
 
+    // ── Validasi input ────────────────────────────────────────────────
     if (!activationId || !status) {
       return NextResponse.json({ error: 'Parameter tidak lengkap.' }, { status: 400 });
     }
 
-    const updateData: any = { status };
+    // ── FIX #1: Validasi Ownership ────────────────────────────────────
+    // Pastikan order yang di-cancel benar-benar milik user yang request.
+    // Mencegah user cancel order orang lain yang tahu activationId-nya.
+    if (email && status === 'cancelled') {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('email', email.toLowerCase())
+        .single();
+
+      if (!profile) {
+        return NextResponse.json({ error: 'User tidak ditemukan.' }, { status: 404 });
+      }
+
+      const { data: ownerCheck } = await supabaseAdmin
+        .from('orders')
+        .select('id')
+        .eq('activation_id', activationId)
+        .eq('user_id', profile.id)   // ← order harus milik user ini
+        .single();
+
+      if (!ownerCheck) {
+        return NextResponse.json({ error: 'Akses ditolak.' }, { status: 403 });
+      }
+    }
+
+    // ── Ambil data order ──────────────────────────────────────────────
+    const { data: order, error: fetchError } = await supabaseAdmin
+      .from('orders')
+      .select('id, user_id, price, service_name, status, activation_id, refunded')
+      .eq('activation_id', activationId)
+      .single();
+
+    if (fetchError || !order) {
+      return NextResponse.json({ error: 'Order tidak ditemukan.' }, { status: 404 });
+    }
+
+    // ── FIX #2: Double Refund Protection ─────────────────────────────
+    // Cek status='waiting' AND refunded=false sekaligus.
+    // Mencegah double refund jika /api/order dan /api/user/orders
+    // dipanggil bersamaan oleh user/cron.
+    const shouldRefund =
+      (status === 'cancelled' || status === 'expired') &&
+      order.status === 'waiting'  &&
+      order.refunded === false;    // ← BARU: guard kolom refunded
+
+    // ── Siapkan data update ───────────────────────────────────────────
+    const updateData: Record<string, unknown> = { status };
     if (otpCode) updateData.otp_code = otpCode;
 
-    const { error } = await supabaseAdmin
+    // ── FIX #3: Set refunded=true ATOMIC bersamaan update status ──────
+    // Dengan ini, cron job tidak akan bisa refund lagi karena
+    // kolom refunded sudah = true sebelum cron sempat membaca.
+    if (shouldRefund) {
+      updateData.refunded = true;  // ← BARU: atomic set
+    }
+
+    // ── Update status order dengan guard ganda ────────────────────────
+    const { data: updated, error: updateError } = await supabaseAdmin
       .from('orders')
       .update(updateData)
-      .eq('activation_id', activationId);
+      .eq('activation_id', activationId)
+      .eq('status', 'waiting')     // ← Guard 1: hanya jika masih waiting
+      .eq('refunded', false)       // ← Guard 2 (BARU): hanya jika belum direfund
+      .select('id');
 
-    if (error) return NextResponse.json({ error: 'Gagal update order.' }, { status: 500 });
+    // Jika update ke 'success' (tidak butuh guard refund)
+    if (updateError && !shouldRefund) {
+      const { error: fallbackError } = await supabaseAdmin
+        .from('orders')
+        .update(updateData)
+        .eq('activation_id', activationId);
 
-    return NextResponse.json({ success: true });
+      if (fallbackError) {
+        return NextResponse.json({ error: 'Gagal update order.' }, { status: 500 });
+      }
+      return NextResponse.json({ success: true, refunded: false });
+    }
+
+    if (updateError) {
+      return NextResponse.json({ error: 'Gagal update order.' }, { status: 500 });
+    }
+
+    // Tidak ada row yang ter-update → sudah direfund duluan (cron/route lain)
+    if (shouldRefund && (!updated || updated.length === 0)) {
+      console.log(`[PATCH] Skip — order ${activationId} sudah diproses sebelumnya`);
+      return NextResponse.json({
+        success : true,
+        refunded: false,
+        message : 'Order sudah diproses sebelumnya.',
+      });
+    }
+
+    // ── Proses Refund ─────────────────────────────────────────────────
+    if (shouldRefund && order.price > 0) {
+
+      // 1. Kembalikan saldo ke user secara atomic via RPC
+      const { error: balanceError } = await supabaseAdmin.rpc('increment_balance', {
+        p_user_id: order.user_id,
+        p_amount : order.price,
+      });
+
+      if (balanceError) {
+        console.error('[REFUND] Gagal kembalikan saldo:', balanceError);
+        return NextResponse.json(
+          { error: 'Order dibatalkan tapi refund saldo gagal. Hubungi admin.' },
+          { status: 500 }
+        );
+      }
+
+      // 2. Catat mutasi saldo masuk (bukti refund)
+      const reason = status === 'cancelled' ? 'dibatalkan user' : 'waktu habis (auto)';
+      const { error: mutationError } = await supabaseAdmin.from('mutations').insert({
+        user_id    : order.user_id,
+        type       : 'in',
+        amount     : order.price,
+        description: `Refund ${order.service_name} — ${reason}`,
+      });
+
+      if (mutationError) {
+        console.error('[REFUND] Gagal catat mutasi:', mutationError);
+        // Tidak return error — saldo sudah kembali, mutasi hanya catatan
+      }
+
+      // 3. Return sukses dengan info refund
+      return NextResponse.json({
+        success       : true,
+        refunded      : true,
+        refundedAmount: order.price,
+        reason        : status,
+      });
+    }
+
+    // ── Update biasa (contoh: status = 'success') ─────────────────────
+    return NextResponse.json({ success: true, refunded: false });
 
   } catch (err) {
     console.error('[PATCH /api/user/orders]', err);

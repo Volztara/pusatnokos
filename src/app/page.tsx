@@ -215,7 +215,7 @@ const authHeaders = (extra?: Record<string, string>): Record<string, string> => 
 // Fallback kosong — data live dari API, tidak pakai harga hardcoded
 const ALL_SERVICES: Service[] = [];
 
-const CATEGORIES: string[] = ['Semua', 'Chat', 'Social', 'E-Commerce', 'Transport', 'Finance', 'Gaming', 'Streaming', 'Dating', 'Travel', 'Tech', 'Lainnya'];
+const CATEGORIES_BASE: string[] = ['Chat', 'Social', 'E-Commerce', 'Transport', 'Finance', 'Gaming', 'Streaming', 'Dating', 'Travel', 'Tech'];
 
 const PAYMENT_METHODS: PaymentMethod[] = [
   { id: 'qris', name: 'QRIS Otomatis', fee: 0, type: 'qr' },
@@ -253,7 +253,7 @@ const copyToClipboard = async (text: string, fallbackCallback: (msg: string) => 
       document.execCommand('copy');
       fallbackCallback("Disalin: " + text);
     } catch (err) {
-      fallbackCallback('Gagal menyalin');
+      fallbackCallback('Failed to copy');
     }
     document.body.removeChild(textArea);
   }
@@ -308,16 +308,16 @@ const T: Record<Lang, Record<string, string>> = {
     autoDeposit:'Deposit Otomatis', manualDeposit:'Transfer Manual',
     nominalDeposit:'Nominal Deposit', paymentMethod:'Metode Pembayaran',
     balanceIn:'Saldo masuk', totalPay:'Total Bayar', payNow:'Bayar Sekarang',
-    processing:'Memproses...', back:'← Kembali',
+    processing:'Memproses...', back:'← Back',
     // History
     historyTitle:'Riwayat Transaksi',
     // Mutasi
     mutasiTitle:'Buku Mutasi Saldo', mutasiSubtitle:'Catatan rinci pemasukan dan pengeluaran saldo Anda.',
     timeDesc:'Waktu & Deskripsi', nominal:'Nominal',
     // Profile
-    fullName:'Nama Lengkap', updateProfile:'Perbarui Profil',
+    fullName:'Full Name', updateProfile:'Perbarui Profil',
     changePassword:'Ganti Password', currentPass:'Password Saat Ini',
-    newPass:'Password Baru', confirmPass:'Konfirmasi Password Baru',
+    newPass:'Password Baru', confirmPass:'Confirm Password Baru',
     joinedAt:'Bergabung Sejak', totalOrders:'Total Order', totalPurchase:'Total Pembelian',
     savePassword:'Simpan Password Baru', saving:'Menyimpan...',
     // Dashboard greeting
@@ -333,6 +333,17 @@ const T: Record<Lang, Record<string, string>> = {
     // Load more
     loadMore:'Muat lebih banyak', noMoreData:'Tidak ada data lagi',
     noData:'Tidak ada data',
+    // Extra
+    legalDocs:'Dokumen Legal', outOfStock:'Habis', perOTP:'per OTP',
+    allSMS:'Semua SMS Masuk', cancelBtn:'BATAL', waitingBtn:'MENUNGGU',
+    successBtn:'BERHASIL', expiredBtn:'KADALUARSA', pickCol:'Pilih',
+    appDetailCol:'Detail Aplikasi & Waktu', phoneOtpCol:'Nomor HP & Kode OTP',
+    statusCol:'Status', otomatis:'OTOMATIS', categoryAll:'Semua', categoryOthers:'Lainnya',
+    depositAutoDesc:'Berbagai metode pembayaran tersedia. Saldo masuk otomatis setelah bayar.',
+    depositManualDesc:'Transfer ke rekening/QRIS admin, upload bukti, admin approve dalam 1x24 jam.',
+    sortPriceAsc:'Harga Terendah',
+    legalTerms:'Syarat & Ketentuan', legalPrivacy:'Kebijakan Privasi', legalRefund:'Kebijakan Refund', legalDeposit:'Kebijakan Deposit', legalAntiAbuse:'Anti Penyalahgunaan', legalDisclaimer:'Disclaimer', logoutBtn:'Keluar Akun', cancelBtn2:'Batal', confirmBtn:'Ya, Lanjutkan', sortPriceDesc:'Harga Tertinggi', sortStockMost:'Stok Terbanyak',
+    selectCountry:'Pilih Negara', searchCountry:'Cari negara...', depositStatusPending:'Menunggu', depositStatusApproved:'Disetujui', depositStatusRejected:'Ditolak',
   },
   en: {
     // Nav
@@ -383,6 +394,17 @@ const T: Record<Lang, Record<string, string>> = {
     filterCancelled:'❌ Cancelled', filterExpired:'🕐 Expired',
     mutasiAll:'All', mutasiIn:'Income (+)', mutasiOut:'Expense (-)',
     loadMore:'Load more', noMoreData:'No more data', noData:'No data',
+    // Extra
+    legalDocs:'Legal Documents', outOfStock:'Out of Stock', perOTP:'per OTP',
+    allSMS:'All SMS', cancelBtn:'CANCELLED', waitingBtn:'WAITING',
+    successBtn:'SUCCESS', expiredBtn:'EXPIRED', pickCol:'Pick',
+    appDetailCol:'App Detail & Time', phoneOtpCol:'Phone & OTP Code',
+    statusCol:'Status', otomatis:'INSTANT', categoryAll:'All', categoryOthers:'Others',
+    depositAutoDesc:'Various payment methods available. Balance credited automatically after payment.',
+    depositManualDesc:'Transfer to admin account, upload proof, admin approves within 24 hours.',
+    sortPriceAsc:'Lowest Price',
+    legalTerms:'Terms of Service', legalPrivacy:'Privacy Policy', legalRefund:'Refund Policy', legalDeposit:'Deposit Policy', legalAntiAbuse:'Anti-Abuse Policy', legalDisclaimer:'Disclaimer', logoutBtn:'Sign Out', cancelBtn2:'Cancel', confirmBtn:'Yes, Continue', sortPriceDesc:'Highest Price', sortStockMost:'Most Stock',
+    selectCountry:'Select Country', searchCountry:'Search country...', depositStatusPending:'Pending', depositStatusApproved:'Approved', depositStatusRejected:'Rejected',
   },
   zh: {
     // Nav
@@ -433,6 +455,17 @@ const T: Record<Lang, Record<string, string>> = {
     filterCancelled:'❌ 已取消', filterExpired:'🕐 已过期',
     mutasiAll:'全部', mutasiIn:'入账 (+)', mutasiOut:'支出 (-)',
     loadMore:'加载更多', noMoreData:'没有更多数据', noData:'暂无数据',
+    // Extra
+    legalDocs:'法律文件', outOfStock:'缺货', perOTP:'每次OTP',
+    allSMS:'所有短信', cancelBtn:'已取消', waitingBtn:'等待中',
+    successBtn:'成功', expiredBtn:'已过期', pickCol:'选择',
+    appDetailCol:'应用详情 & 时间', phoneOtpCol:'手机号 & OTP',
+    statusCol:'状态', otomatis:'即时', categoryAll:'全部', categoryOthers:'其他',
+    depositAutoDesc:'多种支付方式可选。支付后余额自动到账。',
+    depositManualDesc:'转账至管理员账户，上传凭证，管理员在24小时内审核。',
+    sortPriceAsc:'最低价格',
+    legalTerms:'服务条款', legalPrivacy:'隐私政策', legalRefund:'退款政策', legalDeposit:'充值政策', legalAntiAbuse:'反滥用政策', legalDisclaimer:'免责声明', logoutBtn:'退出登录', cancelBtn2:'取消', confirmBtn:'是的，继续', sortPriceDesc:'最高价格', sortStockMost:'库存最多',
+    selectCountry:'选择国家', searchCountry:'搜索国家...', depositStatusPending:'待处理', depositStatusApproved:'已批准', depositStatusRejected:'已拒绝',
   },
 };
 
@@ -498,11 +531,11 @@ function ConfirmModal({ message, onConfirm, onCancel }: {
         <div className="flex gap-3">
           <button onClick={onCancel}
             className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-            Batal
+            Cancel
           </button>
           <button onClick={onConfirm}
             className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-colors">
-            Ya, Lanjutkan
+            Yes, Continue
           </button>
         </div>
       </div>
@@ -840,7 +873,7 @@ export default function App() {
   const [user, setUser] = useState<UserData | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
-  const [lang, setLang] = useState<Lang>(() => (typeof window !== 'undefined' ? (localStorage.getItem('lang') as Lang) ?? 'id' : 'id'));
+  const [lang, setLang] = useState<Lang>(() => (typeof window !== 'undefined' ? (localStorage.getItem('lang') as Lang) ?? 'en' : 'en'));
   const [services, setServices] = useState<Service[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [serviceError,    setServiceError]    = useState(false);
@@ -1004,14 +1037,14 @@ export default function App() {
     setUser(userData);
     // Simpan session + access_token ke sessionStorage sekaligus
     setSecureSession(userData, accessToken);
-    showToast("Berhasil login, selamat datang " + userData.name + "!"); 
+    showToast("Login successful, welcome " + userData.name + "!"); 
     navigate('dashboard'); 
   };
 
   const handleLogout = () => { 
     setUser(null);
     clearSecureSession();
-    showToast("Anda berhasil keluar dari sistem keamanan."); 
+    showToast("You have been signed out successfully."); 
     navigate('landing'); 
   };
 
@@ -1026,7 +1059,7 @@ export default function App() {
           setUser(null);
           clearSecureSession();
           navigate('login');
-          showToast('Akun Anda telah diblokir oleh admin.');
+          showToast('Your account has been blocked by an admin.');
         }
       } catch { /* abaikan error jaringan */ }
     };
@@ -1093,10 +1126,10 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
   const filteredServices = activeServices.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 5);
 
   const faqs = [
-    { q: "Apa itu Pusat Nokos?", a: "Layanan penyedia nomor virtual sekali pakai untuk menerima SMS OTP verifikasi akun secara aman." },
-    { q: "Apakah akun saya aman?", a: "Sangat aman. Kami menggunakan sistem enkripsi dan perlindungan akun untuk menjamin saldo & transaksi Anda aman." },
-    { q: "Bagaimana jika OTP tidak kunjung masuk?", a: "Jika OTP tidak masuk dalam batas waktu 10-15 menit atau pesanan dibatalkan, saldo Anda akan otomatis dikembalikan 100% ke akun (Auto Refund)." },
-    { q: "Apakah layanan ini aktif 24 Jam?", a: "Tentu, sistem kami beroperasi penuh secara otomatis 24/7. Anda bisa mengakses layanan kapan saja." }
+    { q: "What is Pusat Nokos?", a: "A virtual number service for receiving SMS OTP to safely verify accounts — single-use, instant, and private." },
+    { q: "Is my account secure?", a: "Absolutely. We use encryption and account protection systems to ensure your balance and transactions are always safe." },
+    { q: "What if I don't receive the OTP?", a: "If the OTP doesn't arrive within the time limit or the order is cancelled, your balance is automatically refunded 100% (Auto Refund)." },
+    { q: "Is this service available 24/7?", a: "Yes, our system operates fully automatically around the clock. You can access the service anytime." }
   ];
 
   const scrollToId = (e: React.MouseEvent<HTMLElement>, id: string) => {
@@ -1135,18 +1168,18 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
               <span className="ml-3 text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Pusat Nokos<span className="text-indigo-600">.</span></span>
             </div>
             <div className="hidden md:flex items-center space-x-8">
-              <a href="#beranda" onClick={(e) => scrollToId(e, 'beranda')} className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">Beranda</a>
-              <a href="#cara" onClick={(e) => scrollToId(e, 'cara')} className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">Cara Kerja</a>
-              <a href="#demo" onClick={(e) => scrollToId(e, 'demo')} className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">Harga & Demo</a>
-              <a href="#fitur" onClick={(e) => scrollToId(e, 'fitur')} className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">Fitur Keamanan</a>
+              <a href="#beranda" onClick={(e) => scrollToId(e, 'beranda')} className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">Home</a>
+              <a href="#cara" onClick={(e) => scrollToId(e, 'cara')} className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">How It Works</a>
+              <a href="#demo" onClick={(e) => scrollToId(e, 'demo')} className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">Pricing & Demo</a>
+              <a href="#fitur" onClick={(e) => scrollToId(e, 'fitur')} className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">Security</a>
             </div>
 
             <div className="hidden md:flex items-center space-x-4">
               <button suppressHydrationWarning onClick={() => setIsDarkMode(!isDarkMode)} aria-label="Toggle dark mode" className="p-2 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition">
                 {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
-              <button onClick={() => onNavigate('login')} className="text-sm font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 px-4 py-2.5 rounded-xl transition hover:bg-slate-100 dark:hover:bg-slate-800">Masuk</button>
-              <button onClick={() => onNavigate('register')} className="text-sm font-bold bg-slate-900 dark:bg-indigo-600 text-white px-5 py-2.5 rounded-xl shadow-lg hover:shadow-indigo-500/30 transition-all transform active:scale-95">Mulai Gratis</button>
+              <button onClick={() => onNavigate('login')} className="text-sm font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 px-4 py-2.5 rounded-xl transition hover:bg-slate-100 dark:hover:bg-slate-800">Login</button>
+              <button onClick={() => onNavigate('register')} className="text-sm font-bold bg-slate-900 dark:bg-indigo-600 text-white px-5 py-2.5 rounded-xl shadow-lg hover:shadow-indigo-500/30 transition-all transform active:scale-95">Get Started Free</button>
             </div>
             <div className="md:hidden flex items-center space-x-2">
               <button suppressHydrationWarning onClick={() => setIsDarkMode(!isDarkMode)} aria-label="Toggle dark mode" className="p-2 text-slate-500 dark:text-slate-400">
@@ -1159,11 +1192,11 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
         {isMenuOpen && (
           <div className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 absolute w-full shadow-2xl pb-6 px-4 animate-in slide-in-from-top-4">
             <div className="flex flex-col space-y-2 pt-4">
-              <a href="#demo" onClick={(e) => scrollToId(e, 'demo')} className="font-bold text-slate-800 dark:text-slate-200 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition">Harga & Demo</a>
-              <a href="#fitur" onClick={(e) => scrollToId(e, 'fitur')} className="font-bold text-slate-800 dark:text-slate-200 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition">Fitur Keamanan</a>
+              <a href="#demo" onClick={(e) => scrollToId(e, 'demo')} className="font-bold text-slate-800 dark:text-slate-200 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition">Pricing & Demo</a>
+              <a href="#fitur" onClick={(e) => scrollToId(e, 'fitur')} className="font-bold text-slate-800 dark:text-slate-200 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition">Security</a>
               <hr className="border-slate-100 dark:border-slate-800 my-2" />
-              <button onClick={() => onNavigate('login')} className="w-full font-bold border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-4 py-3.5 rounded-xl">Masuk</button>
-              <button onClick={() => onNavigate('register')} className="w-full font-bold bg-indigo-600 text-white px-4 py-3.5 rounded-xl shadow-md">Mulai Gratis</button>
+              <button onClick={() => onNavigate('login')} className="w-full font-bold border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-4 py-3.5 rounded-xl">Login</button>
+              <button onClick={() => onNavigate('register')} className="w-full font-bold bg-indigo-600 text-white px-4 py-3.5 rounded-xl shadow-md">Get Started Free</button>
             </div>
           </div>
         )}
@@ -1176,21 +1209,21 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
         </div>
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="inline-flex items-center px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-400 text-sm font-bold mb-8 shadow-sm _h1">
-            <span className="flex h-2.5 w-2.5 rounded-full bg-indigo-600 mr-2.5 animate-pulse"></span> Dipercaya 50K+ Pengguna Aktif
+            <span className="flex h-2.5 w-2.5 rounded-full bg-indigo-600 mr-2.5 animate-pulse"></span> Trusted by 50K+ Active Users
           </div>
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-slate-900 dark:text-white mb-6 leading-tight _h2">
-            Verifikasi Akun <br className="hidden sm:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-500">Aman & Terpercaya.</span>
+            Secure Account <br className="hidden sm:block" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-500">Verification.</span>
           </h1>
           <p className="mt-4 text-lg sm:text-xl text-slate-500 dark:text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed _h3">
-            Platform Nomor Kosong (Nokos) Enterprise-level dengan jaminan Auto Refund 100% dan server stabil 24 Jam.
+            Enterprise-level Virtual Number Platform with 100% Auto Refund guarantee and 24/7 stable servers.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center _h4">
             <button onClick={() => onNavigate('register')} className="flex items-center justify-center px-8 py-4 text-base font-bold rounded-2xl text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 shadow-xl hover:shadow-indigo-500/30 transition-all hover:-translate-y-1">
-              Buka Dashboard <ArrowRight className="ml-2 w-5 h-5"/>
+              Open Dashboard <ArrowRight className="ml-2 w-5 h-5"/>
             </button>
             <button onClick={(e) => scrollToId(e, 'fitur')} className="flex items-center justify-center px-8 py-4 border-2 border-slate-200 dark:border-slate-800 text-base font-bold rounded-2xl text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
-              <ShieldCheck className="mr-2 w-5 h-5 text-indigo-600 dark:text-indigo-400"/> Pelajari Fitur
+              <ShieldCheck className="mr-2 w-5 h-5 text-indigo-600 dark:text-indigo-400"/> Explore Features
             </button>
           </div>
 
@@ -1228,7 +1261,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
               style={{ transition: 'transform .2s ease' }}
               onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = ''; }}
-            >+500 lainnya</div>
+            >+500 more</div>
           </div>
 
           {/* Stats strip — animated count-up */}
@@ -1236,10 +1269,10 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">
               <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-slate-100 dark:divide-slate-800">
                 {[
-                  { val: statsOn ? `${cnt500}+` : '0+',  label: 'Layanan Tersedia', icon: <Package className="w-5 h-5 text-indigo-600 dark:text-indigo-400"/>,  bg: 'bg-indigo-50 dark:bg-indigo-900/20', color: 'text-indigo-600 dark:text-indigo-400', i: 0 },
-                  { val: statsOn ? `${cnt50}K+` : '0K+', label: 'Pengguna Aktif',   icon: <Users className="w-5 h-5 text-violet-600 dark:text-violet-400"/>,    bg: 'bg-violet-50 dark:bg-violet-900/20',  color: 'text-violet-600 dark:text-violet-400', i: 1 },
-                  { val: statsOn ? `${cnt99}%`  : '0%',  label: 'Tingkat Sukses',   icon: <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400"/>, bg: 'bg-green-50 dark:bg-green-900/20',    color: 'text-green-600 dark:text-green-400',   i: 2 },
-                  { val: '24/7',                          label: 'Server Online',    icon: <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400"/>,     bg: 'bg-blue-50 dark:bg-blue-900/20',      color: 'text-blue-600 dark:text-blue-400',     i: 3 },
+                  { val: statsOn ? `${cnt500}+` : '0+',  label: 'Services Available', icon: <Package className="w-5 h-5 text-indigo-600 dark:text-indigo-400"/>,  bg: 'bg-indigo-50 dark:bg-indigo-900/20', color: 'text-indigo-600 dark:text-indigo-400', i: 0 },
+                  { val: statsOn ? `${cnt50}K+` : '0K+', label: 'Active Users',        icon: <Users className="w-5 h-5 text-violet-600 dark:text-violet-400"/>,    bg: 'bg-violet-50 dark:bg-violet-900/20',  color: 'text-violet-600 dark:text-violet-400', i: 1 },
+                  { val: statsOn ? `${cnt99}%`  : '0%',  label: 'Success Rate',        icon: <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400"/>, bg: 'bg-green-50 dark:bg-green-900/20',    color: 'text-green-600 dark:text-green-400',   i: 2 },
+                  { val: '24/7',                          label: 'Server Online',       icon: <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400"/>,     bg: 'bg-blue-50 dark:bg-blue-900/20',      color: 'text-blue-600 dark:text-blue-400',     i: 3 },
                 ].map(s => (
                   <div
                     key={s.label}
@@ -1273,16 +1306,16 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <FadeInSection>
             <div className="text-center mb-16">
-              <div className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest text-sm mb-3">Cara Kerja</div>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">Hanya 3 Langkah Mudah</h2>
+              <div className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest text-sm mb-3">How It Works</div>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">Just 3 Simple Steps</h2>
             </div>
           </FadeInSection>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
             <div className="hidden md:block absolute top-10 left-[18%] right-[18%] h-0.5 bg-gradient-to-r from-indigo-200 via-violet-200 to-indigo-200 dark:from-indigo-800 dark:via-violet-800 dark:to-indigo-800"/>
             {[
-              { step: '01', icon: <Wallet className="w-7 h-7 text-indigo-600 dark:text-indigo-400"/>, title: 'Deposit Saldo', desc: 'Top up saldo via QRIS atau Virtual Account bank manapun. Diproses otomatis dalam hitungan detik.' },
-              { step: '02', icon: <ShoppingCart className="w-7 h-7 text-violet-600 dark:text-violet-400"/>, title: 'Pilih & Beli Nomor', desc: 'Cari layanan yang kamu butuhkan, pilih negara, dan klik Beli Nomor. Nomor langsung aktif.' },
-              { step: '03', icon: <CheckCircle className="w-7 h-7 text-green-600 dark:text-green-400"/>, title: 'Terima Kode OTP', desc: 'Kode OTP masuk otomatis ke dashboard kamu dalam hitungan detik. Salin & gunakan!' },
+              { step: '01', icon: <Wallet className="w-7 h-7 text-indigo-600 dark:text-indigo-400"/>, title: 'Add Balance', desc: 'Top up your balance using available payment methods. Processed automatically in seconds.' },
+              { step: '02', icon: <ShoppingCart className="w-7 h-7 text-violet-600 dark:text-violet-400"/>, title: 'Pick & Buy Number', desc: 'Find the service you need, select a country, and click Buy Number. Number is instantly active.' },
+              { step: '03', icon: <CheckCircle className="w-7 h-7 text-green-600 dark:text-green-400"/>, title: 'Receive OTP Code', desc: 'OTP code appears automatically in your dashboard within seconds. Copy & use it!' },
             ].map((s, i) => (
               <FadeInSection key={i} delay={i * 130}>
                 <div
@@ -1309,12 +1342,12 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
             <div className="bg-slate-800 dark:bg-slate-800/50 rounded-[2rem] p-2 border border-slate-700 shadow-2xl">
               <div className="bg-white dark:bg-slate-900 rounded-3xl overflow-hidden text-slate-800 dark:text-slate-200 flex flex-col h-[500px]">
                 <div className="bg-indigo-50/50 dark:bg-slate-800/50 p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                  <div><h3 className="font-bold text-lg dark:text-white">Cek Harga Layanan Real-time</h3><p className="text-xs text-slate-500 dark:text-slate-400">Cari aplikasi yang Anda butuhkan</p></div>
+                  <div><h3 className="font-bold text-lg dark:text-white">Check Real-time Service Prices</h3><p className="text-xs text-slate-500 dark:text-slate-400">Find the app you need</p></div>
                 </div>
                 <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
                   <div className="relative">
                     <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                    <input type="text" placeholder="Contoh: Shopee, Telegram..." className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-12 pr-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 text-base font-medium transition-shadow dark:text-white" id="search-service" name="search" aria-label="Cari layanan" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                    <input type="text" placeholder="e.g. Shopee, Telegram..." className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-12 pr-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 text-base font-medium transition-shadow dark:text-white" id="search-service" name="search" aria-label="Search service" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                   </div>
                 </div>
                 <div className="overflow-y-auto flex-1 bg-slate-50/50 dark:bg-slate-900/50 p-3">
@@ -1339,28 +1372,28 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
                     <div key={s.id} className="bg-white dark:bg-slate-800 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex justify-between items-center mb-3 hover:border-indigo-200 dark:hover:border-indigo-500 transition-colors">
                       <div className="flex items-center space-x-4">
                         <div className="bg-slate-50 dark:bg-slate-700 p-2.5 rounded-xl border border-slate-100 dark:border-slate-600">{s.icon}</div>
-                        <div><div className="font-bold text-sm text-slate-900 dark:text-white">{s.name}</div><div className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase mt-0.5">Stok: <span className="text-green-600 dark:text-green-400">{s.stock}</span></div></div>
+                        <div><div className="font-bold text-sm text-slate-900 dark:text-white">{s.name}</div><div className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase mt-0.5">Stock: <span className="text-green-600 dark:text-green-400">{s.stock}</span></div></div>
                       </div>
                       <div className="text-right">
                         <div className="font-black text-indigo-600 dark:text-indigo-400 text-sm">Rp {s.price.toLocaleString('id-ID')}</div>
-                        <button onClick={() => { showToast('Silakan login untuk mulai membeli!'); onNavigate('login'); }} className="text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-3.5 py-1.5 rounded-lg mt-1.5 hover:bg-indigo-600 hover:text-white transition-colors">BELI NOMOR</button>
+                        <button onClick={() => { showToast('Please login to start buying!'); onNavigate('login'); }} className="text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-3.5 py-1.5 rounded-lg mt-1.5 hover:bg-indigo-600 hover:text-white transition-colors">BUY NUMBER</button>
                       </div>
                     </div>
-                  )) : <div className="text-center py-16 text-slate-400 text-sm font-medium"><Search className="w-10 h-10 mx-auto text-slate-300 mb-3"/>Aplikasi tidak ditemukan.</div>}
+                  )) : <div className="text-center py-16 text-slate-400 text-sm font-medium"><Search className="w-10 h-10 mx-auto text-slate-300 mb-3"/>No services found.</div>}
                 </div>
               </div>
             </div>
           </div>
           <div className="order-1 lg:order-2 text-center lg:text-left">
-            <h2 className="text-indigo-400 font-bold tracking-wide uppercase mb-3 text-sm">Transparan & Real-time</h2>
-            <h3 className="text-4xl lg:text-5xl font-extrabold mb-6 leading-tight">Harga Termurah,<br/>Stok Selalu Tersedia.</h3>
+            <h2 className="text-indigo-400 font-bold tracking-wide uppercase mb-3 text-sm">Transparent & Real-time</h2>
+            <h3 className="text-4xl lg:text-5xl font-extrabold mb-6 leading-tight">Lowest Prices,<br/>Always In Stock.</h3>
             <p className="text-lg text-slate-400 mb-8 leading-relaxed">
-              Coba cari aplikasi di panel demo tanpa perlu mendaftar. Kami menjamin ketersediaan stok nomor <i>fresh</i> diperbarui secara real-time dari puluhan negara.
+              Try searching for services in the demo panel without signing up. We guarantee <i>fresh</i> number stock updated in real-time from dozens of countries.
             </p>
             <ul className="space-y-4 text-left inline-block lg:block">
-              <li className="flex items-center text-slate-300 font-medium"><CheckCircle2 className="w-6 h-6 text-indigo-400 mr-3 shrink-0"/> Harga layanan mulai dari Rp 1.000 / OTP.</li>
-              <li className="flex items-center text-slate-300 font-medium"><CheckCircle2 className="w-6 h-6 text-indigo-400 mr-3 shrink-0"/> Transaksi dienkripsi penuh (End-to-End).</li>
-              <li className="flex items-center text-slate-300 font-medium"><CheckCircle2 className="w-6 h-6 text-indigo-400 mr-3 shrink-0"/> Kualitas nomor premium, tingkat sukses 99%.</li>
+              <li className="flex items-center text-slate-300 font-medium"><CheckCircle2 className="w-6 h-6 text-indigo-400 mr-3 shrink-0"/> Service prices starting from Rp 1,000 / OTP.</li>
+              <li className="flex items-center text-slate-300 font-medium"><CheckCircle2 className="w-6 h-6 text-indigo-400 mr-3 shrink-0"/> Fully encrypted transactions (End-to-End).</li>
+              <li className="flex items-center text-slate-300 font-medium"><CheckCircle2 className="w-6 h-6 text-indigo-400 mr-3 shrink-0"/> Premium number quality, 99% success rate.</li>
             </ul>
           </div>
         </div>
@@ -1371,8 +1404,8 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <FadeInSection>
             <div className="text-center max-w-2xl mx-auto mb-16">
-              <h2 className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider mb-2 text-sm">Keamanan & Kepercayaan</h2>
-              <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white sm:text-4xl">Platform Enterprise-Level</h3>
+              <h2 className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider mb-2 text-sm">Security & Trust</h2>
+              <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white sm:text-4xl">Enterprise-Level Platform</h3>
             </div>
           </FadeInSection>
           <FadeInSection delay={100}>
@@ -1387,7 +1420,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
                 <div className="relative z-10">
                   <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mb-5"><ShieldAlert className="w-7 h-7 text-indigo-600 dark:text-indigo-400"/></div>
                   <h4 className="text-xl font-bold mb-2 text-slate-900 dark:text-white">Auto Refund 100%</h4>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md leading-relaxed">Sistem pintar kami melacak setiap OTP secara real-time. Jika dalam waktu tunggu kode tidak masuk, saldo Anda dikembalikan utuh otomatis tanpa potongan.</p>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md leading-relaxed">Our smart system tracks every OTP in real-time. If the code doesn't arrive within the waiting period, your balance is automatically returned in full with no deductions.</p>
                 </div>
                 <RefreshCw className="absolute -right-4 -bottom-12 w-64 h-64 text-indigo-600 opacity-5 group-hover:opacity-10 transition-transform duration-700 group-hover:rotate-180" />
               </div>
@@ -1400,8 +1433,8 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
               >
                 <div className="relative z-10">
                   <Wallet className="w-12 h-12 text-green-400 mb-5"/>
-                  <h4 className="text-xl font-bold mb-2">Transaksi Instan</h4>
-                  <p className="text-indigo-100 text-sm leading-relaxed">Deposit via QRIS & VA diproses hitungan detik. Riwayat tercatat transparan.</p>
+                  <h4 className="text-xl font-bold mb-2">Instant Transactions</h4>
+                  <p className="text-indigo-100 text-sm leading-relaxed">Deposits processed automatically in seconds. History recorded transparently.</p>
                 </div>
                 <Zap className="w-40 h-40 text-white opacity-10 absolute -right-8 -bottom-8 group-hover:scale-110 transition-transform duration-500" />
               </div>
@@ -1414,8 +1447,8 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
               >
                 <div className="relative z-10">
                   <div className="w-14 h-14 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl flex items-center justify-center mb-5"><EyeOff className="w-7 h-7 text-slate-700 dark:text-slate-300"/></div>
-                  <h4 className="text-xl font-bold mb-2 text-slate-900 dark:text-white">Privasi Terjaga</h4>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Jauhkan nomor pribadi Anda dari ancaman spam, telemarketing, atau kebocoran data.</p>
+                  <h4 className="text-xl font-bold mb-2 text-slate-900 dark:text-white">Privacy Protected</h4>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Keep your personal number safe from spam, telemarketing, or data breaches.</p>
                 </div>
               </div>
               {/* Box 4: Server Stabil (Besar Gelap) */}
@@ -1427,8 +1460,8 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
               >
                 <div className="w-full sm:w-2/3 relative z-10">
                   <Server className="w-12 h-12 text-blue-400 mb-5"/>
-                  <h4 className="text-xl font-bold mb-2">Infrastruktur Stabil 99.9%</h4>
-                  <p className="text-slate-400 text-sm leading-relaxed">Kami menggunakan teknologi server mutakhir untuk menjamin platform tetap responsif dan dapat diakses 24 jam penuh tanpa hambatan.</p>
+                  <h4 className="text-xl font-bold mb-2">99.9% Stable Infrastructure</h4>
+                  <p className="text-slate-400 text-sm leading-relaxed">We use cutting-edge server technology to ensure the platform stays responsive and accessible 24 hours a day without interruption.</p>
                 </div>
                 <Globe className="hidden sm:block w-48 h-48 text-white opacity-5 absolute -right-6 top-1/2 -translate-y-1/2 transition-transform duration-[20s] group-hover:rotate-180" />
               </div>
@@ -1442,15 +1475,15 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <FadeInSection>
             <div className="text-center mb-12">
-              <div className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest text-sm mb-3">Testimoni</div>
-              <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white">Dipercaya Ribuan Pengguna</h2>
+              <div className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest text-sm mb-3">Testimonials</div>
+              <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white">Trusted by Thousands of Users</h2>
             </div>
           </FadeInSection>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {[
-              { name: 'Andi R.', role: 'Reseller Online', text: 'Langsung berhasil buat akun marketplace baru. OTP masuk cepat banget, gak sampai 30 detik. Recommended!', rating: 5 },
-              { name: 'Siti N.', role: 'Freelancer', text: 'Auto refund beneran jalan pas nomor saya gagal terima OTP. Saldo balik dalam hitungan detik. Jujur dan amanah!', rating: 5 },
-              { name: 'Budi S.', role: 'Developer', text: 'Stok nomornya banyak dan variatif. Bisa pilih dari berbagai negara. Harga juga bersaing, paling murah yang pernah saya coba.', rating: 5 },
+              { name: 'Andi R.', role: 'Online Reseller', text: 'Instantly created a new marketplace account. OTP came in super fast, less than 30 seconds. Highly recommended!', rating: 5 },
+              { name: 'Siti N.', role: 'Freelancer', text: 'Auto refund actually worked when my number failed to receive OTP. Balance returned in seconds. Honest and trustworthy!', rating: 5 },
+              { name: 'Budi S.', role: 'Developer', text: 'Huge and varied number stock. Can choose from many countries. Prices are competitive — the cheapest I\'ve ever tried.', rating: 5 },
             ].map((t, i) => (
               <FadeInSection key={i} delay={i * 120}>
                 <div
@@ -1481,7 +1514,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
       <div id="faq" className="bg-[#fafafa] dark:bg-slate-950 py-24 border-t border-slate-200 dark:border-slate-800/50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           <FadeInSection>
-            <div className="text-center mb-12"><h2 className="text-3xl font-extrabold text-slate-900 dark:text-white">Pertanyaan yang Sering Diajukan</h2></div>
+            <div className="text-center mb-12"><h2 className="text-3xl font-extrabold text-slate-900 dark:text-white">Frequently Asked Questions</h2></div>
           </FadeInSection>
           <div className="space-y-4">
             {faqs.map((faq, i) => (
@@ -1509,14 +1542,14 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
         </div>
         <FadeInSection>
           <div className="max-w-3xl mx-auto px-4 text-center relative z-10">
-            <h2 className="text-4xl sm:text-5xl font-black text-white mb-6 leading-tight">Siap Mulai Verifikasi<br/>Tanpa Ribet?</h2>
-            <p className="text-indigo-100 text-lg mb-10">Daftar gratis sekarang. Tidak perlu kartu kredit. Langsung bisa beli nomor OTP pertama kamu.</p>
+            <h2 className="text-4xl sm:text-5xl font-black text-white mb-6 leading-tight">Ready to Verify<br/>Without the Hassle?</h2>
+            <p className="text-indigo-100 text-lg mb-10">Sign up for free. No credit card required. Buy your first OTP number right away.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button onClick={() => onNavigate('register')} className="flex items-center justify-center gap-2 px-8 py-4 bg-white text-indigo-600 font-black text-base rounded-2xl hover:bg-indigo-50 shadow-xl transition-all hover:-translate-y-0.5 active:scale-95">
-                Daftar Gratis Sekarang <ArrowRight className="w-5 h-5"/>
+                Get Started Free <ArrowRight className="w-5 h-5"/>
               </button>
               <button onClick={() => onNavigate('login')} className="flex items-center justify-center gap-2 px-8 py-4 border-2 border-white/30 text-white font-bold text-base rounded-2xl hover:bg-white/10 transition-all">
-                Sudah punya akun? Masuk
+                Already have an account? Login
               </button>
             </div>
           </div>
@@ -1531,25 +1564,25 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
                 <img src="/logo.png" className="h-8 w-8 rounded-xl object-cover" alt="Pusat Nokos" />
                 <span className="ml-2 text-base font-black text-slate-900 dark:text-white">Pusat Nokos.</span>
               </div>
-              <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">Platform Nomor Kosong (Nokos) otomatis nomor 1 di Indonesia untuk verifikasi OTP yang aman dan terpercaya.</p>
+              <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">Platform penyedia nomor virtual otomatis terpercaya untuk verifikasi OTP yang aman dan cepat.</p>
             </div>
             <div>
-              <h4 className="font-bold text-slate-900 dark:text-white mb-3 uppercase text-xs tracking-wider">Layanan</h4>
+              <h4 className="font-bold text-slate-900 dark:text-white mb-3 uppercase text-xs tracking-wider">Services</h4>
               <ul className="space-y-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                <li><a href="#demo" onClick={(e)=>scrollToId(e as any, 'demo')} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Daftar Harga Realtime</a></li>
-                <li><a href="#" onClick={() => {onNavigate('login'); showToast("Login untuk melakukan deposit");}} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Deposit Saldo</a></li>
+                <li><a href="#demo" onClick={(e)=>scrollToId(e as any, 'demo')} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Real-time Pricing</a></li>
+                <li><a href="#" onClick={() => {onNavigate('login'); showToast("Login to deposit");}} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Add Balance</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-slate-900 dark:text-white mb-3 uppercase text-xs tracking-wider">Perusahaan</h4>
+              <h4 className="font-bold text-slate-900 dark:text-white mb-3 uppercase text-xs tracking-wider">Company</h4>
               <ul className="space-y-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                <li><a href="#" onClick={(e)=>{e.preventDefault(); setShowSyarat(true);}} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Syarat & Ketentuan</a></li>
-                <li><a href="#" onClick={(e)=>{e.preventDefault(); setShowPrivasi(true);}} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Kebijakan Privasi</a></li>
-                <li><a href="#faq" onClick={(e)=>scrollToId(e as any, 'faq')} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Bantuan FAQ</a></li>
+                <li><a href="#" onClick={(e)=>{e.preventDefault(); setShowSyarat(true);}} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Terms of Service</a></li>
+                <li><a href="#" onClick={(e)=>{e.preventDefault(); setShowPrivasi(true);}} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Privacy Policy</a></li>
+                <li><a href="#faq" onClick={(e)=>scrollToId(e as any, 'faq')} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Help & FAQ</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-slate-900 dark:text-white mb-3 uppercase text-xs tracking-wider">Hubungi Kami</h4>
+              <h4 className="font-bold text-slate-900 dark:text-white mb-3 uppercase text-xs tracking-wider">Contact Us</h4>
               <ul className="space-y-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
                 <li>
                   <a href={`https://wa.me/${CS_WA}?text=Halo%20CS%20Pusat%20Nokos%2C%20saya%20butuh%20bantuan.`} target="_blank" rel="noopener noreferrer" className="flex items-center hover:text-green-600 dark:hover:text-green-400 transition-colors gap-1.5">
@@ -1573,10 +1606,10 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
             </div>
           </div>
           <div className="border-t border-slate-100 dark:border-slate-800 pt-4 flex flex-row justify-between items-center gap-2">
-            <div className="text-slate-400 dark:text-slate-500 text-xs">&copy; {new Date().getFullYear()} Pusat Nokos. Hak cipta dilindungi.</div>
+            <div className="text-slate-400 dark:text-slate-500 text-xs">&copy; {new Date().getFullYear()} Pusat Nokos. All rights reserved.</div>
             <div className="flex gap-2 shrink-0">
               <span className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded text-[10px] font-bold text-slate-500 dark:text-slate-400">E2E</span>
-              <span className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded text-[10px] font-bold text-slate-500 dark:text-slate-400">QRIS / VA</span>
+              <span className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded text-[10px] font-bold text-slate-500 dark:text-slate-400">E2E Encrypted</span>
             </div>
           </div>
         </div>
@@ -1590,39 +1623,51 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
                 <div className="bg-indigo-100 dark:bg-indigo-900/40 p-2.5 rounded-2xl"><ShieldCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /></div>
                 <div>
                   <h2 className="text-lg font-black text-slate-900 dark:text-white">Syarat & Ketentuan</h2>
-                  <p className="text-xs text-slate-400">Terakhir diperbarui: Januari 2025</p>
+                  <p className="text-xs text-slate-400">Terakhir diperbarui: April 2026</p>
                 </div>
               </div>
               <button onClick={() => setShowSyarat(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
             </div>
             <div className="overflow-y-auto p-6 space-y-5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
               <section>
-                <h3 className="font-bold text-slate-900 dark:text-white mb-2">1. Penerimaan Syarat</h3>
-                <p>Dengan menggunakan layanan Pusat Nokos, Anda menyetujui seluruh syarat dan ketentuan yang berlaku. Jika Anda tidak menyetujui, harap hentikan penggunaan layanan ini.</p>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">1. Acceptance of Terms</h3>
+                <p>By accessing, registering for, or using Pusat Nokos services in any form, you are deemed to have read, understood, and agreed to all the terms and conditions stated here. If you do not agree to any part of these terms, you must immediately stop using our services.</p>
               </section>
               <section>
-                <h3 className="font-bold text-slate-900 dark:text-white mb-2">2. Penggunaan Layanan</h3>
-                <p>Layanan Pusat Nokos hanya boleh digunakan untuk keperluan yang sah dan legal. Dilarang keras menggunakan layanan ini untuk penipuan, spam, atau aktivitas ilegal lainnya. Akun yang terindikasi penyalahgunaan akan diblokir tanpa pemberitahuan.</p>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">2. Service Description</h3>
+                <p>Pusat Nokos is a virtual phone number (virtual number) provider platform used to receive OTP (One-Time Password) codes from various digital services. Our service is on-demand, meaning numbers are provided in real-time from third-party providers and their availability cannot be fully guaranteed by Pusat Nokos.</p>
               </section>
               <section>
-                <h3 className="font-bold text-slate-900 dark:text-white mb-2">3. Saldo & Transaksi</h3>
-                <p>Saldo yang telah di-deposit tidak dapat ditarik kembali dalam bentuk uang tunai. Setiap transaksi pembelian nomor OTP bersifat final. Refund otomatis hanya berlaku jika OTP tidak berhasil diterima dalam batas waktu yang ditentukan.</p>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">3. Terms of Use</h3>
+                <p>Pusat Nokos services may only be used for lawful, legal purposes that comply with applicable laws and regulations in the user's jurisdiction. Users are strictly prohibited from using this service for: (a) fraud, phishing, or social engineering; (b) registering fake accounts or violating third-party service terms; (c) distributing spam, malware, or harmful content; (d) any illegal activity. Violations will result in permanent account suspension without balance compensation.</p>
               </section>
               <section>
-                <h3 className="font-bold text-slate-900 dark:text-white mb-2">4. Ketersediaan Layanan</h3>
-                <p>Kami tidak menjamin ketersediaan layanan 100% tanpa gangguan. Stok nomor dapat berubah sewaktu-waktu tergantung ketersediaan dari penyedia. Kami berhak melakukan pemeliharaan sistem kapan saja.</p>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">4. Balance, Deposit & Refund</h3>
+                <p>Balance deposited into your Pusat Nokos account is non-refundable to bank accounts and cannot be withdrawn as cash. Balance can only be used to purchase services on our platform. Automatic balance refund (100% Auto Refund) will be issued when: (a) an OTP code is not received within the allotted time; or (b) the user actively cancels an order before OTP is received. Refunds are processed directly to account balance in seconds.</p>
               </section>
               <section>
-                <h3 className="font-bold text-slate-900 dark:text-white mb-2">5. Tanggung Jawab Pengguna</h3>
-                <p>Pengguna bertanggung jawab penuh atas keamanan akun dan kata sandi masing-masing. Jangan berbagi informasi akun kepada pihak lain. Segala kerugian akibat kelalaian pengguna adalah tanggung jawab pengguna sendiri.</p>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">5. Service Availability & Quality</h3>
+                <p>Pusat Nokos strives to deliver the highest possible uptime but does not guarantee 100% uninterrupted service availability. Number stock for each country and service may change at any time depending on upstream provider availability. We reserve the right to perform system maintenance at any time with or without prior notice.</p>
               </section>
               <section>
-                <h3 className="font-bold text-slate-900 dark:text-white mb-2">6. Perubahan Ketentuan</h3>
-                <p>Pusat Nokos berhak mengubah syarat dan ketentuan ini kapan saja. Perubahan akan diberitahukan melalui platform kami. Penggunaan berkelanjutan setelah perubahan berarti Anda menyetujui ketentuan baru.</p>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">6. Responsibility & Limitation of Liability</h3>
+                <p>Users are fully responsible for the security of their account, email, and password. Pusat Nokos is not responsible for losses arising from: user negligence, unauthorized access to user accounts, or third-party service failures beyond our control. Under any circumstances, Pusat Nokos's total liability to users shall not exceed the value of the user's active balance at the time of the incident.</p>
               </section>
               <section>
-                <h3 className="font-bold text-slate-900 dark:text-white mb-2">7. Kontak</h3>
-                <p>Untuk pertanyaan terkait syarat dan ketentuan, hubungi kami melalui WhatsApp CS atau email cs@pusatnokos.com.</p>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">7. Account Suspension & Termination</h3>
+                <p>Pusat Nokos reserves the right to unilaterally suspend or terminate user accounts if indications of terms violations, fraudulent activity, or system abuse are found. Suspension decisions are final and do not require detailed explanations in order to maintain overall platform security.</p>
+              </section>
+              <section>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">8. Changes to Terms</h3>
+                <p>Pusat Nokos reserves the right to modify, update, or revoke any part or all of these terms at any time without special notice. Changes take effect immediately upon publication on our platform. Continued use of the service after changes constitutes your acceptance of the updated terms.</p>
+              </section>
+              <section>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">9. Governing Law</h3>
+                <p>These terms are governed and interpreted in accordance with applicable law. Any disputes arising from use of the service will be resolved amicably where possible, and if no agreement is reached, through applicable legal mechanisms.</p>
+              </section>
+              <section>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">10. Contact Us</h3>
+                <p>For questions, complaints, or clarifications regarding these terms, please contact our team via WhatsApp at 087862306726 or via our official email at cs@pusatnokos.com. Our team is ready to help at any time.</p>
               </section>
             </div>
             <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
@@ -1641,39 +1686,43 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
                 <div className="bg-green-100 dark:bg-green-900/40 p-2.5 rounded-2xl"><ShieldAlert className="w-5 h-5 text-green-600 dark:text-green-400" /></div>
                 <div>
                   <h2 className="text-lg font-black text-slate-900 dark:text-white">Kebijakan Privasi</h2>
-                  <p className="text-xs text-slate-400">Terakhir diperbarui: Januari 2025</p>
+                  <p className="text-xs text-slate-400">Terakhir diperbarui: April 2026</p>
                 </div>
               </div>
               <button onClick={() => setShowPrivasi(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
             </div>
             <div className="overflow-y-auto p-6 space-y-5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
               <section>
-                <h3 className="font-bold text-slate-900 dark:text-white mb-2">1. Data yang Kami Kumpulkan</h3>
-                <p>Kami mengumpulkan data yang Anda berikan saat registrasi seperti nama dan alamat email. Kami juga mencatat data transaksi, riwayat penggunaan layanan, dan informasi teknis seperti alamat IP untuk keperluan keamanan.</p>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">1. Data We Collect</h3>
+                <p>Pusat Nokos mengumpulkan data yang Anda berikan secara langsung pada saat registrasi, antara lain: nama lengkap dan alamat email. Selain itu, kami secara otomatis mencatat data operasional yang diperlukan untuk menjalankan layanan, meliputi: riwayat transaksi dan pembelian nomor OTP, riwayat mutasi saldo, informasi teknis seperti alamat IP dan jenis perangkat untuk keperluan keamanan dan pencegahan penipuan.</p>
               </section>
               <section>
-                <h3 className="font-bold text-slate-900 dark:text-white mb-2">2. Penggunaan Data</h3>
-                <p>Data Anda digunakan untuk: mengelola akun dan transaksi, meningkatkan kualitas layanan, mengirim notifikasi penting terkait akun Anda, serta mencegah penipuan dan penyalahgunaan layanan.</p>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">2. Tujuan Penggunaan Data</h3>
+                <p>Data yang kami kumpulkan digunakan semata-mata untuk keperluan operasional layanan, meliputi: (a) pengelolaan akun dan autentikasi pengguna; (b) pemrosesan transaksi dan pengembalian saldo (refund); (c) peningkatan kualitas dan keandalan layanan secara berkelanjutan; (d) pengiriman notifikasi penting terkait akun dan transaksi Anda; (e) deteksi dan pencegahan penipuan, penyalahgunaan, serta aktivitas tidak sah; (f) pemenuhan kewajiban hukum dan regulasi yang berlaku.</p>
               </section>
               <section>
-                <h3 className="font-bold text-slate-900 dark:text-white mb-2">3. Keamanan Data</h3>
-                <p>Kami menerapkan enkripsi dan langkah keamanan standar industri untuk melindungi data Anda. Kata sandi disimpan dalam format terenkripsi dan tidak dapat diakses oleh siapapun, termasuk tim kami.</p>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">3. Keamanan & Perlindungan Data</h3>
+                <p>Kami menerapkan standar keamanan industri untuk melindungi data Anda, termasuk enkripsi data saat transmisi (TLS/HTTPS) dan saat penyimpanan. Kata sandi pengguna disimpan dalam format hash terenkripsi menggunakan algoritma yang aman dan tidak dapat dibaca oleh siapapun, termasuk seluruh tim internal Pusat Nokos. Akses ke data pengguna dibatasi hanya kepada personel yang membutuhkan akses tersebut untuk menjalankan tugasnya.</p>
               </section>
               <section>
-                <h3 className="font-bold text-slate-900 dark:text-white mb-2">4. Berbagi Data</h3>
-                <p>Kami tidak menjual atau menyewakan data pribadi Anda kepada pihak ketiga. Data hanya dibagikan kepada mitra penyedia layanan yang diperlukan untuk operasional (seperti penyedia nomor OTP) dengan standar keamanan yang ketat.</p>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">4. Pembagian Data kepada Pihak Ketiga</h3>
+                <p>Pusat Nokos does not sell, rent, or trade your personal data to any third party for commercial purposes. User data may only be shared under the following conditions: (a) with OTP number service provider partners required to process your transactions, under binding confidentiality agreements; (b) with legal authorities when required by valid law or court order; (c) in the event of a business acquisition or merger, where data will remain protected under equivalent terms.</p>
               </section>
               <section>
-                <h3 className="font-bold text-slate-900 dark:text-white mb-2">5. Cookie & Penyimpanan Lokal</h3>
-                <p>Kami menggunakan localStorage untuk menyimpan sesi login Anda agar tidak perlu login ulang setiap kali. Anda dapat menghapus data ini kapan saja melalui pengaturan browser.</p>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">5. Penyimpanan Sesi & Data Lokal</h3>
+                <p>Untuk kenyamanan penggunaan, kami menyimpan data sesi login Anda secara terenkripsi di sessionStorage perangkat Anda. Data ini bersifat sementara dan akan dihapus otomatis saat browser atau tab ditutup. Kami tidak menggunakan cookie pihak ketiga untuk pelacakan aktivitas pengguna di luar platform kami.</p>
               </section>
               <section>
-                <h3 className="font-bold text-slate-900 dark:text-white mb-2">6. Hak Pengguna</h3>
-                <p>Anda berhak meminta penghapusan akun dan seluruh data pribadi Anda kapan saja dengan menghubungi CS kami. Proses penghapusan akan diselesaikan dalam maksimal 7 hari kerja.</p>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">6. Retensi Data</h3>
+                <p>We retain account and transaction data for as long as your account is active or as required to operate the service. Transaction history is kept for audit and financial reconciliation purposes. After account deletion, personal data will be anonymised or permanently deleted within 30 business days, unless required by law to be retained longer.</p>
               </section>
               <section>
-                <h3 className="font-bold text-slate-900 dark:text-white mb-2">7. Perubahan Kebijakan</h3>
-                <p>Kebijakan privasi ini dapat diperbarui sewaktu-waktu. Kami akan memberitahu perubahan signifikan melalui platform kami. Pertanyaan hubungi: cs@pusatnokos.com</p>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">7. Hak-Hak Pengguna</h3>
+                <p>You have the full right to: (a) access and review your personal data we hold; (b) request correction of inaccurate data; (c) request deletion of your account and all personal data at any time; (d) object to certain data processing. To exercise these rights, please contact our CS team. Account deletion will be processed within a maximum of 7 business days.</p>
+              </section>
+              <section>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2">8. Privacy Policy Changes</h3>
+                <p>This privacy policy may be updated at any time to reflect changes in our service practices or applicable regulations. Significant changes will be notified via platform notifications or registered email. Continued use of the service after changes are published constitutes your acceptance. For questions about this policy, please contact us at cs@pusatnokos.com.</p>
               </section>
             </div>
             <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
@@ -1848,7 +1897,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
     setError('');
     if (!name)  { setError('Nama wajib diisi.'); return; }
     if (password.length < 6) { setError('Password minimal 6 karakter.'); return; }
-    if (password !== confirmPass) { setError('Konfirmasi password tidak cocok.'); return; }
+    if (password !== confirmPass) { setError('Passwords do not match.'); return; }
     if (!turnstileToken) { setError('Harap selesaikan verifikasi CAPTCHA.'); return; }
     setIsLoading(true);
     try {
@@ -1910,7 +1959,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
     setError('');
     if (otpCode.length !== 6) { setError('Kode harus 6 digit.'); return; }
     if (password.length < 6)  { setError('Password minimal 6 karakter.'); return; }
-    if (password !== confirmPass) { setError('Konfirmasi password tidak cocok.'); return; }
+    if (password !== confirmPass) { setError('Passwords do not match.'); return; }
     setIsLoading(true);
     try {
       const res  = await fetch('/api/auth/reset-password', {
@@ -1919,7 +1968,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Gagal reset password.'); return; }
-      showToast('Password berhasil diubah! Silakan login.');
+      showToast('Password changed successfully! Please login.');
       setStep('form');
       setPassword(''); setConfirmPass(''); setOtpCode('');
       onNavigate('login');
@@ -1937,10 +1986,10 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
         body: JSON.stringify({ email, name, isRegister: !isReset && !isLogin, isReset }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? 'Gagal kirim ulang.'); return; }
+      if (!res.ok) { setError(data.error ?? 'Failed to resend.'); return; }
       setCountdown(60); setOtpCode('');
       showToast('Kode baru telah dikirim!');
-    } catch { setError('Gagal kirim ulang.'); }
+    } catch { setError('Failed to resend.'); }
     finally { setIsLoading(false); }
   };
 
@@ -1955,7 +2004,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
 
   const OtpInput = () => (
     <div>
-      <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Kode Verifikasi (6 digit)</label>
+      <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Verification Code (6 digits)</label>
       <input
         type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6} required autoFocus
         value={otpCode} onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
@@ -1968,24 +2017,24 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
 
   const ResendRow = ({ onBack }: { onBack: () => void }) => (
     <div className="flex items-center justify-between pt-2">
-      <button type="button" onClick={onBack} className="text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-indigo-600 transition">← Kembali</button>
+      <button type="button" onClick={onBack} className="text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-indigo-600 transition">← Back</button>
       <button type="button" onClick={handleResendOTP} disabled={countdown > 0 || isLoading} className="text-sm font-bold text-indigo-600 dark:text-indigo-400 disabled:text-slate-400 disabled:cursor-not-allowed transition">
-        {countdown > 0 ? `Kirim ulang (${countdown}s)` : "Kirim Ulang"}
+        {countdown > 0 ? `Resend (${countdown}s)` : "Resend"}
       </button>
     </div>
   );
 
   const titles: Record<string, string> = {
-    form:   isLogin ? "Selamat Datang Kembali" : "Buat Akun Nokos",
-    verify : "Verifikasi Email",
-    forgot : "Lupa Password",
+    form:   isLogin ? "Welcome Back" : "Create Account",
+    verify : "Verify Email",
+    forgot : "Forgot Password",
     reset  : "Reset Password",
   };
   const subtitles: Record<string, React.ReactNode> = {
-    form:   <>{isLogin ? "Belum punya akun? " : "Sudah punya akun? "}<button onClick={() => onNavigate(isLogin ? "register" : "login")} className="font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 transition">{isLogin ? "Daftar Sekarang" : "Masuk di sini"}</button></>,
-    verify : <span>Kode dikirim ke <strong className="text-slate-800 dark:text-white">{email}</strong></span>,
-    forgot : "Masukkan email untuk menerima kode reset",
-    reset  : <span>Kode reset dikirim ke <strong className="text-slate-800 dark:text-white">{email}</strong></span>,
+    form:   <>{isLogin ? "Don't have an account? " : "Already have an account? "}<button onClick={() => onNavigate(isLogin ? "register" : "login")} className="font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 transition">{isLogin ? "Sign Up" : "Login"}</button></>,
+    verify : <span>Code sent to <strong className="text-slate-800 dark:text-white">{email}</strong></span>,
+    forgot : "Enter your email to receive a reset code",
+    reset  : <span>Reset code sent to <strong className="text-slate-800 dark:text-white">{email}</strong></span>,
   };
 
   return (
@@ -2005,15 +2054,15 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
         {step === "form" && isLogin && (
           <form className="space-y-5" onSubmit={handleLogin}>
             <div>
-              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Alamat Email</label>
+              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Email Address</label>
               <div className="relative"><Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input id="login-email" name="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="Email kamu" aria-label="Email" />
+                <input id="login-email" name="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="Your email" aria-label="Email" />
               </div>
             </div>
             <div>
               <div className="flex justify-between items-center mb-1.5">
                 <label className="block text-sm font-bold text-slate-800 dark:text-slate-200">Password</label>
-                <button type="button" onClick={() => { setStep("forgot"); setError(""); }} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800">Lupa password?</button>
+                <button type="button" onClick={() => { setStep("forgot"); setError(""); }} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800">Forgot password?</button>
               </div>
               <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
                 <input id="login-password" name="password" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="••••••••" aria-label="Password" />
@@ -2025,7 +2074,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
             <div ref={turnstileLoginRef} className="flex justify-center" />
             <button type="submit" disabled={isLoading || !turnstileToken} className={btnCls(isLoading)}>
               {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2"/> : null}
-              {isLoading ? "Memproses..." : "Masuk ke Dashboard"}
+              {isLoading ? "Processing..." : "Login to Dashboard"}
             </button>
           </form>
         )}
@@ -2034,28 +2083,28 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
         {step === "form" && !isLogin && (
           <form className="space-y-5" onSubmit={handleRegister}>
             <div>
-              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Nama Lengkap</label>
+              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Full Name</label>
               <div className="relative"><User className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input id="reg-name" name="name" type="text" required value={name} onChange={e => setName(e.target.value)} className={inputCls} placeholder="Nama Anda" aria-label="Nama" />
+                <input id="reg-name" name="name" type="text" required value={name} onChange={e => setName(e.target.value)} className={inputCls} placeholder="Your Name" aria-label="Name" />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Alamat Email</label>
+              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Email Address</label>
               <div className="relative"><Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input id="login-email" name="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="Email kamu" aria-label="Email" />
+                <input id="login-email" name="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="Your email" aria-label="Email" />
               </div>
             </div>
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Password</label>
               <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input id="reg-password" name="password" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="Min. 6 karakter" aria-label="Password baru" />
+                <input id="reg-password" name="password" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="Min. 6 characters" aria-label="New password" />
                 <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showPassword ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}</button>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Konfirmasi Password</label>
+              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Confirm Password</label>
               <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input id="reg-confirm" name="confirm_password" type={showConfirm ? "text" : "password"} required value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className={inputCls + " pr-12"} placeholder="Ulangi password" aria-label="Konfirmasi password" />
+                <input id="reg-confirm" name="confirm_password" type={showConfirm ? "text" : "password"} required value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className={inputCls + " pr-12"} placeholder="Repeat password" aria-label="Confirm password" />
                 <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showConfirm ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}</button>
               </div>
             </div>
@@ -2064,7 +2113,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
             <div ref={turnstileRegisterRef} className="flex justify-center" />
             <button type="submit" disabled={isLoading || !turnstileToken} className={btnCls(isLoading)}>
               {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2"/> : null}
-              {isLoading ? "Mengirim Kode..." : "Daftar Sekarang"}
+              {isLoading ? "Sending Code..." : "Sign Up"}
             </button>
           </form>
         )}
@@ -2076,7 +2125,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
             <ErrorBox />
             <button type="submit" disabled={isLoading || otpCode.length !== 6} className={btnCls(isLoading)}>
               {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2"/> : <CheckCircle2 className="w-5 h-5 mr-2"/>}
-              {isLoading ? "Memverifikasi..." : "Aktifkan Akun"}
+              {isLoading ? "Verifying..." : "Activate Account"}
             </button>
             <ResendRow onBack={() => { setStep("form"); setError(""); setOtpCode(""); }} />
           </form>
@@ -2086,18 +2135,18 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
         {step === "forgot" && (
           <form className="space-y-5" onSubmit={handleForgotSend}>
             <div>
-              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Alamat Email</label>
+              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Email Address</label>
               <div className="relative"><Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input id="login-email" name="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="Email kamu" aria-label="Email" />
+                <input id="login-email" name="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="Your email" aria-label="Email" />
               </div>
             </div>
             <ErrorBox />
             <button type="submit" disabled={isLoading} className={btnCls(isLoading)}>
               {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2"/> : <Mail className="w-5 h-5 mr-2"/>}
-              {isLoading ? "Mengirim..." : "Kirim Kode Reset"}
+              {isLoading ? "Sending..." : "Send Reset Code"}
             </button>
             <div className="text-center pt-2">
-              <button type="button" onClick={() => { setStep("form"); setError(""); }} className="text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-indigo-600 transition">← Kembali ke Login</button>
+              <button type="button" onClick={() => { setStep("form"); setError(""); }} className="text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-indigo-600 transition">← Back to Login</button>
             </div>
           </form>
         )}
@@ -2107,23 +2156,23 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
           <form className="space-y-5" onSubmit={handleReset}>
             <OtpInput />
             <div>
-              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Password Baru</label>
+              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">New Password</label>
               <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input id="reg-password" name="password" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="Min. 6 karakter" aria-label="Password baru" />
+                <input id="reg-password" name="password" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="Min. 6 characters" aria-label="New password" />
                 <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showPassword ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}</button>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Konfirmasi Password</label>
+              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Confirm Password</label>
               <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input id="reset-confirm" name="confirm_password" type={showConfirm ? "text" : "password"} required value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className={inputCls + " pr-12"} placeholder="Ulangi password baru" aria-label="Konfirmasi password baru" />
+                <input id="reset-confirm" name="confirm_password" type={showConfirm ? "text" : "password"} required value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className={inputCls + " pr-12"} placeholder="Repeat new password" aria-label="Confirm new password" />
                 <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showConfirm ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}</button>
               </div>
             </div>
             <ErrorBox />
             <button type="submit" disabled={isLoading || otpCode.length !== 6} className={btnCls(isLoading)}>
               {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2"/> : <CheckCircle2 className="w-5 h-5 mr-2"/>}
-              {isLoading ? 'Mengirim...' : 'Verifikasi'}
+              {isLoading ? 'Sending...' : 'Verify'}
             </button>
             <ResendRow onBack={() => { setStep("forgot"); setError(""); setOtpCode(""); }} />
           </form>
@@ -2163,7 +2212,13 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
   const [autoRetryQueue, setAutoRetryQueue] = useState<{serviceName: string; serviceCode: string; price: number; icon: React.ReactNode}[]>([]);
 
   const [showGuide, setShowGuide] = useState<boolean>(true);
-  const [showSyaratDash, setShowSyaratDash] = useState<boolean>(false);
+  const [showSyaratDash,     setShowSyaratDash]     = useState<boolean>(false);
+  const [showPrivasiDash,    setShowPrivasiDash]    = useState<boolean>(false);
+  const [showRefundDash,     setShowRefundDash]     = useState<boolean>(false);
+  const [showDepositDash,    setShowDepositDash]    = useState<boolean>(false);
+  const [showAntiAbuseDash,  setShowAntiAbuseDash]  = useState<boolean>(false);
+  const [showDisclaimerDash, setShowDisclaimerDash] = useState<boolean>(false);
+  const [showLegalMenu,      setShowLegalMenu]      = useState<boolean>(false);
   // Blacklist nomor yang pernah gagal/expired (shared ke BuyView)
   const failedNumbers = useRef<Set<string>>(new Set());
 
@@ -2295,17 +2350,17 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
 
     // ✅ Kirim activationId → backend cegah double refund via idempotency check
     await updateBalance(orderToCancel.price, 'add', orderToCancel.activationId);
-    // Update status order di Supabase
+    // Update status order di Supabase + kirim email untuk validasi ownership
     fetch('/api/user/orders', {
       method : 'PATCH',
       headers: authHeaders(),
-      body   : JSON.stringify({ activationId: orderToCancel.activationId, status: 'cancelled' }),
+      body   : JSON.stringify({ email: user?.email, activationId: orderToCancel.activationId, status: 'cancelled' }),
     }).catch(() => {});
 
     setOrders(current => current.map(order =>
       order.id === orderId ? { ...order, status: 'cancelled', timeLeft: 0 } : order
     ));
-    showToast('Pesanan dibatalkan. Saldo Rp ' + orderToCancel.price.toLocaleString('id-ID') + ' dikembalikan.');
+    showToast('Order cancelled. Balance Rp ' + orderToCancel.price.toLocaleString('id-ID') + ' refunded.');
     // ✅ Refresh saldo dari DB agar tampilan selalu akurat
     setTimeout(() => refreshBalance(), 1000);
   };
@@ -2374,7 +2429,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
           if (data.status === 'ok') {
             if (order.isV2 && Array.isArray(data.otpCodes) && data.otpCodes.length > 0) {
               const otpCodes = data.otpCodes.map((code: string, i: number) => ({
-                service: order.bundleServices?.[i] ?? `Layanan ${i + 1}`,
+                service: order.bundleServices?.[i] ?? `Service ${i + 1}`,
                 code,
               }));
               setOrders(current => current.map(o =>
@@ -2393,7 +2448,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                 o.id === order.id ? { ...o, status: 'success', otpCode: data.otpCode, autoDismissAt: Date.now() + 10 * 60 * 1000 } : o
               ));
               fetch('/api/user/orders', { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ activationId: order.activationId, status: 'success', otpCode: data.otpCode }) }).catch(() => {});
-              showToast(`Berhasil! Kode OTP ${order.serviceName} masuk.`);
+              showToast(`OTP code for ${order.serviceName} received!`);
               addNotif(`🔑 OTP ${order.serviceName}: ${data.otpCode}`);
               setTimeout(() => {
                 setOrders(cur => cur.map(o =>
@@ -2412,8 +2467,8 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
             fetch('/api/user/orders', { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ activationId: order.activationId, status: 'cancelled' }) }).catch(() => {});
             // ✅ Kirim activationId → backend cegah double refund via idempotency check
             await updateBalance(order.price, 'add', order.activationId);
-            showToast(`Nomor ${order.serviceName} dibatalkan provider. Saldo Rp ${order.price.toLocaleString('id-ID')} dikembalikan.`);
-            addNotif(`↩ Refund Rp ${order.price.toLocaleString('id-ID')} untuk ${order.serviceName} berhasil dikembalikan.`);
+            showToast(`Number ${order.serviceName} cancelled by provider. Balance Rp ${order.price.toLocaleString()} refunded.`);
+            addNotif(`↩ Refund Rp ${order.price.toLocaleString('id-ID')} untuk ${order.serviceName} berhasil refunded.`);
             // ✅ Refresh saldo dari DB
             setTimeout(() => refreshBalance(), 1000);
           }
@@ -2447,7 +2502,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
             expiredOrders.forEach(order => {
               // ✅ Refund ditangani SEPENUHNYA oleh cron job — tidak refund dari frontend
               // Ini mencegah race condition antara frontend timer dan cron job
-              showToast(`⏱ Nomor ${order.serviceName} kadaluarsa. Saldo akan dikembalikan otomatis.`);
+              showToast(`⏱ Number ${order.serviceName} expired. Balance will be auto refunded.`);
               if (order.number) failedNumbers.current.add(order.number);
               setAutoRetryQueue(prev => [...prev, {
                 serviceName: order.serviceName,
@@ -2495,12 +2550,31 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
             </button>
           ))}
         </div>
-        {/* Bottom sidebar: Syarat */}
-        <div className="p-5 border-t border-slate-100 dark:border-slate-800">
-          <button onClick={() => setShowSyaratDash(true)} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
-            <ShieldCheck className="w-5 h-5 text-indigo-400 shrink-0" />
-            Syarat & Ketentuan
+        {/* Bottom sidebar: Dokumen Legal */}
+        <div className="p-5 border-t border-slate-100 dark:border-slate-800 relative">
+          <button onClick={() => setShowLegalMenu(v => !v)} className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="w-5 h-5 text-indigo-400 shrink-0" />
+              {t.legalDocs}
+            </div>
+            <ChevronDown className={"w-4 h-4 transition-transform " + (showLegalMenu ? 'rotate-180' : '')} />
           </button>
+          {showLegalMenu && (
+            <div className="mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-lg overflow-hidden">
+              {[
+                { label: t.legalTerms,    icon: <ShieldCheck className="w-4 h-4 text-indigo-400" />,  action: () => { setShowSyaratDash(true);     setShowLegalMenu(false); } },
+                { label: t.legalPrivacy,     icon: <ShieldAlert className="w-4 h-4 text-green-400" />,  action: () => { setShowPrivasiDash(true);    setShowLegalMenu(false); } },
+                { label: t.legalRefund,      icon: <RotateCcw   className="w-4 h-4 text-blue-400" />,   action: () => { setShowRefundDash(true);     setShowLegalMenu(false); } },
+                { label: t.legalDeposit,     icon: <CreditCard  className="w-4 h-4 text-amber-400" />,  action: () => { setShowDepositDash(true);    setShowLegalMenu(false); } },
+                { label: t.legalAntiAbuse,   icon: <ShieldAlert className="w-4 h-4 text-red-400" />,    action: () => { setShowAntiAbuseDash(true);  setShowLegalMenu(false); } },
+                { label: t.legalDisclaimer,            icon: <AlertCircle className="w-4 h-4 text-orange-400" />, action: () => { setShowDisclaimerDash(true); setShowLegalMenu(false); } },
+              ].map(item => (
+                <button key={item.label} onClick={item.action} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs transition-colors border-b border-slate-100 dark:border-slate-700 last:border-0">
+                  {item.icon}{item.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -2600,10 +2674,24 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                   {isDarkMode ? 'Mode Terang' : 'Mode Gelap'}
                 </button>
                 <button onClick={() => { setShowSyaratDash(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
-                  <ShieldCheck className="w-5 h-5 text-indigo-400 shrink-0" />
-                  Syarat & Ketentuan
+                  <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0" />{t.legalTerms}
                 </button>
-                <button onClick={onLogout} className="w-full font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 py-4 rounded-2xl flex justify-center items-center transition-colors"><LogOut className="w-5 h-5 mr-2"/> Keluar Akun</button>
+                <button onClick={() => { setShowPrivasiDash(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
+                  <ShieldAlert className="w-4 h-4 text-green-400 shrink-0" />{t.legalPrivacy}
+                </button>
+                <button onClick={() => { setShowRefundDash(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
+                  <RotateCcw className="w-4 h-4 text-blue-400 shrink-0" />{t.legalRefund}
+                </button>
+                <button onClick={() => { setShowDepositDash(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
+                  <CreditCard className="w-4 h-4 text-amber-400 shrink-0" />{t.legalDeposit}
+                </button>
+                <button onClick={() => { setShowAntiAbuseDash(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
+                  <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />{t.legalAntiAbuse}
+                </button>
+                <button onClick={() => { setShowDisclaimerDash(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
+                  <AlertCircle className="w-4 h-4 text-orange-400 shrink-0" />{t.legalDisclaimer}
+                </button>
+                <button onClick={onLogout} className="w-full font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 py-4 rounded-2xl flex justify-center items-center transition-colors"><LogOut className="w-5 h-5 mr-2"/> {t.logoutBtn}</button>
               </div>
             </div>
           </div>
@@ -2623,11 +2711,11 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]" style={{paddingBottom:"env(safe-area-inset-bottom, 12px)"}}>
         <div className="flex items-stretch h-16 sm:h-[60px]">
           {[
-            { id: 'buy',      label: 'Beli',      icon: <ShoppingCart className="w-5 h-5" /> },
-            { id: 'topup',    label: 'Deposit',   icon: <CreditCard className="w-5 h-5" /> },
-            { id: 'dashboard',label: 'Home',      icon: <BarChart2 className="w-5 h-5" /> },
-            { id: 'history',  label: 'Riwayat',   icon: <History className="w-5 h-5" /> },
-            { id: 'profile',  label: 'Akun',      icon: <Settings className="w-5 h-5" /> },
+            { id: 'buy',      label: t.buy,        icon: <ShoppingCart className="w-5 h-5" /> },
+            { id: 'topup',    label: t.topup,      icon: <CreditCard className="w-5 h-5" /> },
+            { id: 'dashboard',label: 'Home',       icon: <BarChart2 className="w-5 h-5" /> },
+            { id: 'history',  label: t.history,    icon: <History className="w-5 h-5" /> },
+            { id: 'profile',  label: t.profile,    icon: <Settings className="w-5 h-5" /> },
           ].map(item => (
             <button
               key={item.id}
@@ -2676,43 +2764,43 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                   icon: <CreditCard className="w-5 h-5 text-indigo-500" />,
                   bg: 'bg-indigo-50 dark:bg-indigo-900/30',
                   step: '01',
-                  title: 'Deposit Saldo Terlebih Dahulu',
-                  desc: 'Sebelum membeli nomor OTP, kamu harus mengisi saldo terlebih dahulu. Buka menu Deposit Saldo, pilih metode pembayaran (QRIS, DANA, GoPay, SeaBank, atau Bank Jago), masukkan nominal, lalu upload bukti transfer. Tim CS akan memverifikasi dalam waktu singkat.',
+                  title: 'Add Balance First',
+                  desc: 'Before buying an OTP number, you need to top up your balance. Open the Deposit menu, select an available payment method, enter the amount, and complete the payment. Balance is credited automatically in seconds.',
                 },
                 {
                   icon: <ShoppingCart className="w-5 h-5 text-violet-500" />,
                   bg: 'bg-violet-50 dark:bg-violet-900/30',
                   step: '02',
-                  title: 'Pilih Layanan yang Ingin Diverifikasi',
-                  desc: 'Buka menu Beli Nomor, cari aplikasi yang ingin kamu verifikasi seperti WhatsApp, Telegram, Instagram, Shopee, dan lainnya. Pastikan saldo mencukupi sebelum membeli. Kamu juga bisa gunakan Mode Bundle untuk membeli beberapa layanan sekaligus dengan 1 nomor.',
+                  title: 'Choose the Service to Verify',
+                  desc: 'Open the Buy Number menu, search for the app you want to verify such as WhatsApp, Telegram, Instagram, and more. Make sure your balance is sufficient. You can also use Bundle Mode to buy multiple services at once with one number.',
                 },
                 {
                   icon: <Zap className="w-5 h-5 text-amber-500" />,
                   bg: 'bg-amber-50 dark:bg-amber-900/30',
                   step: '03',
-                  title: 'Tunggu Kode OTP Masuk',
-                  desc: 'Setelah membeli nomor, gunakan nomor tersebut untuk mendaftar di aplikasi yang dituju. Kode OTP akan masuk otomatis dalam tampilan Pesanan Aktif. Setiap nomor aktif selama 20 menit. Jika OTP tidak masuk, saldo akan dikembalikan 100% secara otomatis (Auto Refund).',
+                  title: 'Wait for the OTP Code',
+                  desc: 'After purchasing a number, use it to register on your target app. The OTP code will appear automatically in Active Orders. Each number stays active for 20 minutes. If no OTP arrives, your balance is refunded 100% automatically (Auto Refund).',
                 },
                 {
                   icon: <RefreshCw className="w-5 h-5 text-green-500" />,
                   bg: 'bg-green-50 dark:bg-green-900/30',
                   step: '04',
                   title: 'Auto Refund & Auto Retry',
-                  desc: 'Jika nomor kadaluarsa sebelum OTP masuk, sistem akan otomatis mengembalikan saldo dan mencoba mencari nomor baru (Auto Retry). Kamu tidak perlu khawatir kehilangan saldo. Riwayat transaksi bisa dilihat di menu Riwayat Transaksi dan Mutasi Saldo.',
+                  desc: 'If a number expires before the OTP arrives, the system automatically refunds your balance and tries to find a new number (Auto Retry). You never have to worry about losing balance. Transaction history is available in the History and Balance tabs.',
                 },
                 {
                   icon: <Star className="w-5 h-5 text-orange-500" />,
                   bg: 'bg-orange-50 dark:bg-orange-900/30',
                   step: '05',
-                  title: 'Tips Agar OTP Berhasil',
-                  desc: 'Pilih layanan dengan stok yang cukup (tidak Kosong). Gunakan nomor segera setelah dibeli. Jika satu nomor gagal, sistem otomatis mencoba nomor lain. Untuk layanan populer seperti WhatsApp dan Telegram, stok selalu tersedia.',
+                  title: 'Tips for a Successful OTP',
+                  desc: 'Choose a service with sufficient stock (not Empty). Use the number immediately after purchase. If one number fails, the system automatically tries another. For popular services like WhatsApp and Telegram, stock is always available.',
                 },
                 {
                   icon: <MessageSquare className="w-5 h-5 text-blue-500" />,
                   bg: 'bg-blue-50 dark:bg-blue-900/30',
                   step: '06',
-                  title: 'Butuh Bantuan? Hubungi CS Kami',
-                  desc: `Tim Customer Service kami siap membantu 24/7. Hubungi via WhatsApp ke 087862306726 atau Telegram ${CS_TELEGRAM}. Sertakan username, nominal, dan screenshot jika ada kendala deposit. Kami akan merespons secepat mungkin.`,
+                  title: 'Need Help? Contact Our CS',
+                  desc: `Our Customer Service team is available 24/7. Reach us via WhatsApp at 087862306726 or Telegram ${CS_TELEGRAM}. Include your username, amount, and screenshot for any deposit issues. We'll respond as fast as possible.`,
                 },
               ].map(item => (
                 <div key={item.step} className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
@@ -2753,19 +2841,21 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                 <div className="bg-indigo-100 dark:bg-indigo-900/40 p-2.5 rounded-2xl"><ShieldCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /></div>
                 <div>
                   <h2 className="text-lg font-black text-slate-900 dark:text-white">Syarat & Ketentuan</h2>
-                  <p className="text-xs text-slate-400">Terakhir diperbarui: Januari 2025</p>
+                  <p className="text-xs text-slate-400">Terakhir diperbarui: April 2026</p>
                 </div>
               </div>
               <button onClick={() => setShowSyaratDash(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
             </div>
             <div className="overflow-y-auto p-6 space-y-5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
               {[
-                { title: '1. Penerimaan Syarat', content: 'Dengan menggunakan layanan Pusat Nokos, Anda menyetujui seluruh syarat dan ketentuan yang berlaku.' },
-                { title: '2. Penggunaan Layanan', content: 'Layanan hanya boleh digunakan untuk keperluan sah dan legal. Dilarang keras untuk penipuan, spam, atau aktivitas ilegal. Akun yang terindikasi penyalahgunaan akan diblokir.' },
-                { title: '3. Saldo & Transaksi', content: 'Saldo yang telah di-deposit tidak dapat ditarik dalam bentuk uang tunai. Refund otomatis hanya berlaku jika OTP tidak berhasil diterima dalam batas waktu yang ditentukan.' },
-                { title: '4. Ketersediaan Layanan', content: 'Kami tidak menjamin ketersediaan layanan 100% tanpa gangguan. Stok nomor dapat berubah sewaktu-waktu.' },
-                { title: '5. Tanggung Jawab Pengguna', content: 'Pengguna bertanggung jawab penuh atas keamanan akun dan kata sandi masing-masing. Jangan berbagi informasi akun kepada pihak lain.' },
-                { title: '6. Perubahan Ketentuan', content: 'Pusat Nokos berhak mengubah syarat dan ketentuan ini kapan saja. Penggunaan berkelanjutan berarti Anda menyetujui ketentuan baru.' },
+                { title: '1. Acceptance of Terms', content: 'By accessing, registering for, or using Pusat Nokos services in any form, you are deemed to have read, understood, and agreed to all applicable terms and conditions. If you do not agree, you must immediately stop using our services.' },
+                { title: '2. Service Description', content: 'Pusat Nokos is a virtual phone number provider platform for receiving OTP codes from various digital services. The service is on-demand and number availability depends on third-party providers.' },
+                { title: '3. Terms of Use', content: 'Services may only be used for lawful and legal purposes. It is strictly forbidden to use the service for fraud, fake account registration, spam distribution, or any illegal activity. Violations result in permanent account suspension without balance compensation.' },
+                { title: '4. Balance, Deposit & Refund', content: 'Deposited balance is non-refundable to bank accounts. A 100% automatic balance refund is issued when OTP is not received within the time limit, or when the user cancels an order before OTP is received. Refunds are processed directly to account balance in seconds.' },
+                { title: '5. Limitation of Liability', content: 'Pusat Nokos is not responsible for losses due to user negligence, unauthorized account access, or third-party service failures. Pusat Nokos total liability will not exceed the user active balance value at the time of the incident.' },
+                { title: '6. Account Suspension', content: 'Pusat Nokos reserves the right to unilaterally and finally suspend or terminate accounts that show indications of violating terms, committing fraud, or abusing the system.' },
+                { title: '7. Changes to Terms', content: 'Pusat Nokos reserves the right to change these terms at any time. Changes take effect immediately upon publication. Continued use means you accept the updated terms.' },
+                { title: '8. Contact Us', content: 'For questions regarding these terms, contact us via WhatsApp at 087862306726 or email cs@pusatnokos.com.' },
               ].map(s => (
                 <section key={s.title}>
                   <h3 className="font-bold text-slate-900 dark:text-white mb-2">{s.title}</h3>
@@ -2779,9 +2869,161 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
           </div>
         </div>
       )}
+
+      {/* ── Modal Kebijakan Privasi Dashboard ────────────────────────── */}
+      {showPrivasiDash && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowPrivasiDash(false)}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="bg-green-100 dark:bg-green-900/40 p-2.5 rounded-2xl"><ShieldAlert className="w-5 h-5 text-green-600 dark:text-green-400" /></div>
+                <div>
+                  <h2 className="text-lg font-black text-slate-900 dark:text-white">Kebijakan Privasi</h2>
+                  <p className="text-xs text-slate-400">Terakhir diperbarui: April 2026</p>
+                </div>
+              </div>
+              <button onClick={() => setShowPrivasiDash(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="overflow-y-auto p-6 space-y-5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              {[
+                { title: '1. Data We Collect', content: 'Pusat Nokos collects data you provide upon registration (name, email), as well as operational data such as transaction history, balance mutations, and technical information (IP address, device type) for security and fraud prevention purposes.' },
+                { title: '2. How We Use Your Data', content: 'Data is used for: account management and authentication, transaction processing and refunds, service quality improvement, sending important notifications, and detecting and preventing fraud and abuse.' },
+                { title: '3. Data Security', content: 'We apply TLS/HTTPS encryption for data transmission and encryption at rest. Passwords are stored in an encrypted hash format that cannot be read by anyone, including our internal team.' },
+                { title: '4. Sharing Data with Third Parties', content: 'We do not sell or trade your personal data. Data is only shared with OTP number provider partners required to process transactions (under confidentiality agreements), or with legal authorities when required by law.' },
+                { title: '5. Session & Local Storage', content: 'Login sessions are stored encrypted in your device sessionStorage and deleted automatically when the browser is closed. We do not use third-party cookies to track activity outside our platform.' },
+                { title: '6. Data Retention', content: 'Account and transaction data is retained while the account is active. After account deletion, personal data will be anonymised or permanently deleted within a maximum of 30 business days, unless required by law to be retained longer.' },
+                { title: '7. Your Rights', content: 'You have the right to: access your personal data, request correction of inaccurate data, request deletion of your account and all data, and object to certain data processing. Contact our CS team to exercise these rights.' },
+                { title: '8. Policy Changes', content: 'This policy may be updated at any time. Significant changes will be communicated via platform notifications or registered email. Continued use constitutes acceptance of changes. Questions: cs@pusatnokos.com' },
+              ].map(s => (
+                <section key={s.title}>
+                  <h3 className="font-bold text-slate-900 dark:text-white mb-2">{s.title}</h3>
+                  <p>{s.content}</p>
+                </section>
+              ))}
+            </div>
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
+              <button onClick={() => setShowPrivasiDash(false)} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-2xl transition-colors">Saya Mengerti</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Kebijakan Refund ─────────────────────────────────── */}
+      {showRefundDash && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowRefundDash(false)}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="bg-blue-100 dark:bg-blue-900/40 p-2.5 rounded-2xl"><RotateCcw className="w-5 h-5 text-blue-600 dark:text-blue-400" /></div>
+                <div><h2 className="text-lg font-black text-slate-900 dark:text-white">Kebijakan Refund & Pembatalan</h2><p className="text-xs text-slate-400">Terakhir diperbarui: April 2026</p></div>
+              </div>
+              <button onClick={() => setShowRefundDash(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="overflow-y-auto p-6 space-y-5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              {[
+                { title: '1. 100% Auto Refund Guarantee', content: 'Pusat Nokos guarantees 100% balance refund when an OTP code is not received within the time limit, or when the user cancels before OTP arrives. Refunds are processed automatically to account balance in seconds with no deductions.' },
+                { title: '2. Approved Refund Conditions', content: 'Refunds are processed automatically when: (a) the order time limit expires without OTP arriving; (b) the user clicks "Cancel" before OTP is received; (c) the upstream provider cancels the number unilaterally.' },
+                { title: '3. Rejected Refund Conditions', content: 'Refunds are not processed when: (a) an OTP code has already been successfully displayed even if unused; (b) the order status is "Completed"; (c) indications of system manipulation to obtain a refund illegitimately are detected.' },
+                { title: '4. Balance Cannot Be Cashed Out', content: 'Refunded balance, like all other balance, is non-refundable to bank accounts or digital wallets. Balance can only be used to purchase services on the Pusat Nokos platform.' },
+                { title: '5. OTP Waiting Period', content: 'Each order has a maximum time limit of 20 minutes. If no OTP arrives within that time, the system automatically cancels the order and refunds the balance with no action required from the user.' },
+                { title: '6. Refund Disputes', content: 'If a refund does not process as expected, contact CS via WhatsApp 087862306726 or cs@pusatnokos.com including your order ID and screenshot as proof.' },
+              ].map(s => (<section key={s.title}><h3 className="font-bold text-slate-900 dark:text-white mb-2">{s.title}</h3><p>{s.content}</p></section>))}
+            </div>
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
+              <button onClick={() => setShowRefundDash(false)} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-2xl transition-colors">Saya Mengerti</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Kebijakan Deposit ───────────────────────────────────── */}
+      {showDepositDash && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowDepositDash(false)}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="bg-amber-100 dark:bg-amber-900/40 p-2.5 rounded-2xl"><CreditCard className="w-5 h-5 text-amber-600 dark:text-amber-400" /></div>
+                <div><h2 className="text-lg font-black text-slate-900 dark:text-white">Kebijakan Deposit</h2><p className="text-xs text-slate-400">Terakhir diperbarui: April 2026</p></div>
+              </div>
+              <button onClick={() => setShowDepositDash(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="overflow-y-auto p-6 space-y-5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              {[
+                { title: '1. Payment Methods', content: 'Pusat Nokos accepts deposits via various available payment methods. All payment methods are verified and safe to use.' },
+                { title: '2. Deposit Process & Timing', content: 'Balance is credited automatically within seconds up to a maximum of 5 minutes after payment confirmation. If balance has not arrived after 5 minutes, contact our CS immediately.' },
+                { title: '3. Minimum Deposit', content: 'Minimum deposit amount can be seen on the Deposit page in your dashboard and may change at any time.' },
+                { title: '4. Transaction Fees', content: 'A service fee (admin fee) from the payment provider varies per method. Fees are displayed transparently before payment confirmation.' },
+                { title: '5. Failed or Pending Deposits', content: 'Deposits pending for more than 30 minutes are automatically cancelled. If funds were deducted but balance did not arrive, contact CS with proof of payment.' },
+                { title: '6. Balance Cannot Be Withdrawn', content: 'Deposited balance is final and cannot be withdrawn to a bank account. Please make sure you understand this before depositing.' },
+                { title: '7. Transaction Security', content: 'All transactions are encrypted through certified payment gateways. Pusat Nokos does not store credit card data or user banking information.' },
+              ].map(s => (<section key={s.title}><h3 className="font-bold text-slate-900 dark:text-white mb-2">{s.title}</h3><p>{s.content}</p></section>))}
+            </div>
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
+              <button onClick={() => setShowDepositDash(false)} className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-2xl transition-colors">Saya Mengerti</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Anti Penyalahgunaan ─────────────────────────────────── */}
+      {showAntiAbuseDash && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowAntiAbuseDash(false)}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="bg-red-100 dark:bg-red-900/40 p-2.5 rounded-2xl"><ShieldAlert className="w-5 h-5 text-red-600 dark:text-red-400" /></div>
+                <div><h2 className="text-lg font-black text-slate-900 dark:text-white">Kebijakan Anti Penyalahgunaan</h2><p className="text-xs text-slate-400">Terakhir diperbarui: April 2026</p></div>
+              </div>
+              <button onClick={() => setShowAntiAbuseDash(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="overflow-y-auto p-6 space-y-5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              {[
+                { title: '1. Prohibited Use', content: 'It is strictly forbidden to use the service for: fraud or phishing, bot/fake account registration, spam or malware distribution, money laundering, or any other illegal activities.' },
+                { title: '2. Automatic Detection System', content: 'We operate a real-time abuse detection system that monitors abnormal usage patterns, high cancellation frequency, VPN/proxy usage, and transaction patterns indicating bots.' },
+                { title: '3. Consequences of Violations', content: 'Accounts proven or suspected of abuse will be: suspended for investigation, permanently blocked without notice, and balance may be seized without compensation.' },
+                { title: '4. Multi-Account Prohibition', content: 'Each user may only have one active account. Duplicating accounts to avoid blocking or gain illegitimate benefits will result in all associated accounts being blocked.' },
+                { title: '5. Reporting Abuse', content: 'Report suspicious activity to cs@pusatnokos.com. Reporter identity is kept confidential.' },
+                { title: '6. Right to Investigate', content: 'Pusat Nokos reserves the right to investigate suspected accounts at any time. During investigation, accounts may be temporarily suspended without obligation to provide specific reasons.' },
+              ].map(s => (<section key={s.title}><h3 className="font-bold text-slate-900 dark:text-white mb-2">{s.title}</h3><p>{s.content}</p></section>))}
+            </div>
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
+              <button onClick={() => setShowAntiAbuseDash(false)} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-2xl transition-colors">Saya Mengerti</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Disclaimer ──────────────────────────────────────────── */}
+      {showDisclaimerDash && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowDisclaimerDash(false)}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="bg-orange-100 dark:bg-orange-900/40 p-2.5 rounded-2xl"><AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" /></div>
+                <div><h2 className="text-lg font-black text-slate-900 dark:text-white">Disclaimer / Penyangkalan</h2><p className="text-xs text-slate-400">Terakhir diperbarui: April 2026</p></div>
+              </div>
+              <button onClick={() => setShowDisclaimerDash(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="overflow-y-auto p-6 space-y-5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              {[
+                { title: '1. Nature of Service', content: 'Pusat Nokos is a technical intermediary OTP number provider and is not affiliated with any platform that uses OTP verification services.' },
+                { title: '2. Usage Responsibility', content: 'Users are solely responsible for how they use OTP numbers. Pusat Nokos is not responsible for any consequences including account suspension on third-party platforms or financial losses.' },
+                { title: '3. No Success Guarantee', content: 'Pusat Nokos does not guarantee that every number will successfully receive an OTP. Failure depends on many factors outside our control. Failures within the time limit receive a 100% Auto Refund.' },
+                { title: '4. Third-Party Platform Changes', content: 'Pusat Nokos cannot control policy changes by third-party platforms that may affect the availability or effectiveness of our service.' },
+                { title: '5. Information Limitations', content: 'Prices, stock, and success rates are real-time and subject to change. We strive to present accurate data but do not guarantee absolute accuracy at all times.' },
+                { title: '6. Legal Jurisdiction', content: 'The service operates in accordance with applicable law. Users from various regions are responsible for ensuring their use of the service complies with the laws and regulations of their respective jurisdictions.' },
+              ].map(s => (<section key={s.title}><h3 className="font-bold text-slate-900 dark:text-white mb-2">{s.title}</h3><p>{s.content}</p></section>))}
+            </div>
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
+              <button onClick={() => setShowDisclaimerDash(false)} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-2xl transition-colors">Saya Mengerti</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 interface BuyViewProps {
   balance: number;
   setBalance: React.Dispatch<React.SetStateAction<number>>;
@@ -2817,7 +3059,7 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
   notices: { id: number; title: string; content: string; type: string }[];
   lang?: Lang;
 }) {
-  const t = T[lang ?? 'id'];
+  const t = T[lang ?? 'en'];
   const fmtIDR = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 
   // Stats dari DB (akurat, semua order)
@@ -2970,7 +3212,7 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
         {[
           { label: t.buyTitle,       tab: 'buy',     icon: <ShoppingCart className="w-5 h-5" />, color: 'bg-indigo-600 text-white' },
           { label: t.topup,  tab: 'topup',   icon: <Wallet className="w-5 h-5" />,       color: 'bg-green-600 text-white' },
-          { label: 'Riwayat',        tab: 'history', icon: <History className="w-5 h-5" />,       color: 'bg-slate-800 dark:bg-slate-700 text-white' },
+          { label: t.history,            tab: 'history', icon: <History className="w-5 h-5" />,       color: 'bg-slate-800 dark:bg-slate-700 text-white' },
         ].map(a => (
           <button key={a.tab} onClick={() => setActiveTab(a.tab)} className={`${a.color} rounded-2xl p-4 flex items-center gap-3 font-bold text-sm hover:opacity-90 transition-opacity active:scale-95`}>
             {a.icon} {a.label}
@@ -3064,10 +3306,11 @@ function FlagImg({ countryId, size = 20 }: { countryId: string; size?: number })
 }
 
 // ── Custom Country Dropdown ──────────────────────────────────────────
-function CountryDropdown({ countries, value, onChange }: {
+function CountryDropdown({ countries, value, onChange, t }: {
   countries: Country[];
   value: string;
   onChange: (val: string) => void;
+  t: Record<string, string>;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -3092,14 +3335,14 @@ function CountryDropdown({ countries, value, onChange }: {
 
   return (
     <div ref={ref} className="relative w-full sm:w-64">
-      <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Negara Server</label>
+      <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{t.serverCountry}</label>
       <button
         type="button"
         onClick={() => { setOpen(v => !v); setSearch(''); }}
         className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm"
       >
         <FlagImg countryId={value} size={20} />
-        <span className="flex-1 text-left truncate">{selected?.name.replace(/^\p{Emoji_Presentation}+\s*/u, '') ?? 'Pilih Negara'}</span>
+        <span className="flex-1 text-left truncate">{selected?.name.replace(/^\p{Emoji_Presentation}+\s*/u, '') ?? t.selectCountry}</span>
         <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -3113,7 +3356,7 @@ function CountryDropdown({ countries, value, onChange }: {
                 autoFocus
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Cari negara..."
+                placeholder={t.searchCountry}
                 className="w-full pl-8 pr-3 py-2 text-base bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white font-medium"
               />
             </div>
@@ -3147,15 +3390,16 @@ function CountryDropdown({ countries, value, onChange }: {
 }
 
 // ── Custom Sort Dropdown ─────────────────────────────────────────────
-const SORT_OPTIONS = [
-  { value: 'default',    label: 'Rekomendasi',  icon: '⭐' },
-  { value: 'price_asc',  label: 'Harga Terendah', icon: '↓' },
-  { value: 'price_desc', label: 'Harga Tertinggi', icon: '↑' },
-  { value: 'stock_desc', label: 'Stok Terbanyak',  icon: '📦' },
+const getSortOptions = (t: Record<string, string>) => [
+  { value: 'default',    label: t.recommended,      icon: '⭐' },
+  { value: 'price_asc',  label: t.sortPriceAsc,     icon: '↓' },
+  { value: 'price_desc', label: t.sortPriceDesc,    icon: '↑' },
+  { value: 'stock_desc', label: t.sortStockMost,    icon: '📦' },
 ];
-function SortDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function SortDropdown({ value, onChange, t }: { value: string; onChange: (v: string) => void; t: Record<string, string> }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const SORT_OPTIONS = getSortOptions(t);
   const selected = SORT_OPTIONS.find(o => o.value === value) ?? SORT_OPTIONS[0];
 
   useEffect(() => {
@@ -3168,7 +3412,7 @@ function SortDropdown({ value, onChange }: { value: string; onChange: (v: string
 
   return (
     <div ref={ref} className="relative w-full sm:w-auto">
-      <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Urutkan</label>
+      <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 ml-1">{t.sort}</label>
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
@@ -3226,7 +3470,7 @@ function MobileCountryChip({ countries, value, onChange }: { countries: Country[
       {open && (
         <div className="absolute top-full mt-1 left-0 w-64 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
           <div className="p-2 border-b border-slate-100 dark:border-slate-800">
-            <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari negara..." className="w-full px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none dark:text-white" />
+            <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Search country..." className="w-full px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none dark:text-white" />
           </div>
           <div className="overflow-y-auto max-h-52">
             {filtered.map(c => {
@@ -3248,9 +3492,10 @@ function MobileCountryChip({ countries, value, onChange }: { countries: Country[
   );
 }
 
-function MobileSortChip({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function MobileSortChip({ value, onChange, t }: { value: string; onChange: (v: string) => void; t: Record<string, string> }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const SORT_OPTIONS = getSortOptions(t);
   const selected = SORT_OPTIONS.find(o => o.value === value) ?? SORT_OPTIONS[0];
 
   useEffect(() => {
@@ -3286,9 +3531,9 @@ function MobileSortChip({ value, onChange }: { value: string; onChange: (v: stri
 }
 
 function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOrder, favorites, setFavorites, setMutasi, activeServices, serviceError, countries, selectedCountry, setSelectedCountry, user, updateBalance, autoRetryQueue, setAutoRetryQueue, failedNumbers, lang }: BuyViewProps) {
-  const t = T[lang ?? 'id'];
+  const t = T[lang ?? 'en'];
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeCategory, setActiveCategory] = useState<string>('Semua');
+  const [activeCategory, setActiveCategory] = useState<string>('ALL');
   const [sortOrder, setSortOrder] = useState<string>('default');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
@@ -3328,7 +3573,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
     if (matchedService && balance >= matchedService.price) {
       setTimeout(() => handleBuy(matchedService), 1500);
     } else {
-      showToast(`Tidak bisa auto-retry ${retry.serviceName}: saldo tidak cukup atau layanan tidak ditemukan.`);
+      showToast(`Cannot auto-retry ${retry.serviceName}: insufficient balance or service not found.`);
     }
   }, [autoRetryQueue, isProcessing]);
   const [isBundleMode, setIsBundleMode] = useState<boolean>(false);
@@ -3362,7 +3607,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
   const handleBuyBundle = async () => {
     if (isProcessing) return;
     if (bundleServices.length < 2) { showToast('Pilih minimal 2 layanan untuk bundle.'); return; }
-    if (balance < bundleTotalPrice) { showToast('Saldo tidak cukup! Silakan Deposit terlebih dahulu.'); return; }
+    if (balance < bundleTotalPrice) { showToast('Insufficient balance! Please deposit first.'); return; }
 
     setIsProcessing(true);
     try {
@@ -3386,7 +3631,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
           const badNames = bundleServices.map(s => s.name).join(', ');
           friendlyMsg = `Layanan berikut tidak mendukung Mode Bundle: ${badNames}. Pilih layanan lain (misal: WhatsApp, Telegram, Shopee).`;
         } else if (rawErr.includes('balance') || rawErr.includes('saldo')) {
-          friendlyMsg = 'Saldo tidak cukup untuk bundle ini.';
+          friendlyMsg = 'Insufficient balance for this bundle.';
         } else if (rawErr.includes('stock') || rawErr.includes('stok')) {
           friendlyMsg = 'Stok nomor habis untuk salah satu layanan yang dipilih.';
         }
@@ -3412,7 +3657,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         otpCodes       : [],
       };
       setOrders(prev => [newOrder, ...prev]);
-      setMutasi(prev => [{ id: Date.now(), date: new Date().toLocaleString('id-ID'), type: 'out', amount: bundleTotalPrice, desc: 'Bundle: ' + newOrder.serviceName }, ...prev]);
+      setMutasi(prev => [{ id: Date.now(), date: new Date().toLocaleString(), type: 'out', amount: bundleTotalPrice, desc: 'Bundle: ' + newOrder.serviceName }, ...prev]);
       // Simpan order bundle ke Supabase
       if (user?.email) {
         fetch('/api/user/orders', {
@@ -3454,9 +3699,9 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
       });
       const data = await res.json();
       if (data.success) showToast("Permintaan kirim ulang OTP dikirim!");
-      else showToast(data.error ?? "Gagal kirim ulang OTP.");
+      else showToast(data.error ?? "Failed to resend OTP.");
     } catch {
-      showToast("Kesalahan jaringan saat kirim ulang.");
+      showToast("Network error.saat kirim ulang.");
     }
   };
 
@@ -3467,7 +3712,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
   }, [activeCategory, selectedCountry, sortOrder]);
 
   let displayServices = sourceServices.filter(s => 
-    (activeCategory === 'Semua' || s.category === activeCategory) && 
+    (activeCategory === 'ALL' || s.category === activeCategory) && 
     s.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -3496,7 +3741,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
   const handleBuy = async (service: Service) => {
     if (isProcessing) return;
     if (balance < service.price) { 
-      showToast('Saldo tidak cukup! Silakan Deposit terlebih dahulu.'); 
+      showToast('Insufficient balance! Please deposit first.'); 
       return; 
     }
     if (!service.code) {
@@ -3552,7 +3797,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         otpCode: null,
       };
       setOrders(prev => [newOrder, ...prev]);
-      setMutasi(prev => [{ id: Date.now(), date: new Date().toLocaleString('id-ID'), type: 'out', amount: service.price, desc: "Beli " + service.name }, ...prev]);
+      setMutasi(prev => [{ id: Date.now(), date: new Date().toLocaleString(), type: 'out', amount: service.price, desc: 'Buy ' + service.name }, ...prev]);
       // Simpan order ke Supabase
       if (user?.email) {
         fetch('/api/user/orders', {
@@ -3560,7 +3805,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
           body: JSON.stringify({ email: user.email, activationId: data.activationId, serviceCode: service.code, serviceName: service.name, phone: data.phone, price: service.price, country: selectedCountry }),
         }).catch(() => {});
       }
-      showToast("Berhasil memesan " + service.name + " — " + data.phone);
+      showToast("Successfully ordered " + service.name + " — " + data.phone);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
       showToast('Terjadi kesalahan jaringan. Coba lagi.');
@@ -3612,7 +3857,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
           <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-2xl border border-indigo-100 dark:border-indigo-800 shrink-0 mb-0.5">
             <Globe className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <CountryDropdown countries={countries} value={selectedCountry} onChange={setSelectedCountry} />
+          <CountryDropdown countries={countries} value={selectedCountry} onChange={setSelectedCountry} t={t} />
         </div>
         <div className="hidden xl:block w-px h-12 bg-slate-200 dark:bg-slate-800 mx-2 mb-0.5"></div>
         {/* Search */}
@@ -3624,7 +3869,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
           </div>
         </div>
         {/* Sort */}
-        <SortDropdown value={sortOrder} onChange={setSortOrder} />
+        <SortDropdown value={sortOrder} onChange={setSortOrder} t={t} />
       </div>
 
       {/* ── MOBILE: Floating pill pesanan aktif ── */}
@@ -3649,7 +3894,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         <div className="bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2.5 mb-2">
           <div className="flex gap-2">
             <MobileCountryChip countries={countries} value={selectedCountry} onChange={setSelectedCountry} />
-            <MobileSortChip value={sortOrder} onChange={setSortOrder} />
+            <MobileSortChip value={sortOrder} onChange={setSortOrder} t={t} />
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 dark:text-slate-500" />
@@ -3660,10 +3905,10 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         <div className="relative">
           <div className="pointer-events-none absolute right-0 top-0 bottom-2 w-10 bg-gradient-to-l from-[#fafafa] dark:from-[#020617] to-transparent z-10" />
           <div className="flex overflow-x-auto gap-2 pb-2" style={{scrollbarWidth:'none', msOverflowStyle:'none', WebkitOverflowScrolling:'touch'}}>
-            {CATEGORIES.map(cat => (
-              <button key={cat} onClick={() => setActiveCategory(cat)}
-                className={"flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border-2 transition-all " + (activeCategory === cat ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700')}>
-                {cat}
+            {[{key:'ALL', label: t.categoryAll}, ...CATEGORIES_BASE.map(c => ({key:c, label:c})), {key:'Lainnya', label: t.categoryOthers}].map(cat => (
+              <button key={cat.key} onClick={() => setActiveCategory(cat.key)}
+                className={"flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border-2 transition-all " + (activeCategory === cat.key ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700')}>
+                {cat.label}
               </button>
             ))}
           </div>
@@ -3674,10 +3919,10 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
       <div className="hidden md:block relative">
         <div className="pointer-events-none absolute right-0 top-0 bottom-2 w-12 bg-gradient-to-l from-[#fafafa] dark:from-[#020617] to-transparent z-10" />
         <div className="flex overflow-x-auto gap-3 pb-2 px-1" style={{scrollbarWidth:'none', msOverflowStyle:'none', WebkitOverflowScrolling:'touch'}}>
-          {CATEGORIES.map(cat => (
-            <button key={cat} onClick={() => setActiveCategory(cat)}
-              className={"flex-shrink-0 px-6 py-3 rounded-xl text-sm font-bold whitespace-nowrap border-2 transition-all " + (activeCategory === cat ? 'bg-indigo-600 dark:bg-indigo-600 text-white border-indigo-600 dark:border-indigo-600 shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500')}>
-              {cat}
+          {[{key:'ALL', label: t.categoryAll}, ...CATEGORIES_BASE.map(c => ({key:c, label:c})), {key:'Lainnya', label: t.categoryOthers}].map(cat => (
+            <button key={cat.key} onClick={() => setActiveCategory(cat.key)}
+              className={"flex-shrink-0 px-6 py-3 rounded-xl text-sm font-bold whitespace-nowrap border-2 transition-all " + (activeCategory === cat.key ? 'bg-indigo-600 dark:bg-indigo-600 text-white border-indigo-600 dark:border-indigo-600 shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500')}>
+              {cat.label}
             </button>
           ))}
         </div>
@@ -3692,10 +3937,10 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
             <table className="w-full text-left min-w-[650px]">
               <thead className="bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 text-[11px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-bold sticky top-0 z-10 shadow-sm">
                 <tr>
-                  <th className="p-5 sm:px-6 w-2/5">Layanan App</th>
-                  <th className="p-5 sm:px-6 w-1/5">Stok Server</th>
-                  <th className="p-5 sm:px-6 w-1/5">Harga / OTP</th>
-                  <th className="p-5 sm:px-6 text-right w-1/5">{isBundleMode ? 'Pilih' : 'Aksi'}</th>
+                  <th className="p-5 sm:px-6 w-2/5">{t.serviceCol}</th>
+                  <th className="p-5 sm:px-6 w-1/5">{t.stockCol}</th>
+                  <th className="p-5 sm:px-6 w-1/5">{t.priceCol}</th>
+                  <th className="p-5 sm:px-6 text-right w-1/5">{isBundleMode ? t.pickCol : t.actionCol}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -3731,7 +3976,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                               <div className="font-bold text-slate-900 dark:text-white text-[15px] truncate max-w-[180px] sm:max-w-none">{s.name}</div>
                               <div className="flex items-center gap-1.5 mt-0.5">
                                 <div className="text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800/50 inline-block font-bold uppercase tracking-wider whitespace-nowrap shrink-0">{s.category}</div>
-                                {s.outOfStock && <div className="text-[10px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded border border-red-200 dark:border-red-800/50 font-bold uppercase tracking-wider">Stok Habis</div>}
+                                {s.outOfStock && <div className="text-[10px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded border border-red-200 dark:border-red-800/50 font-bold uppercase tracking-wider">{t.outOfStock}</div>}
                                 {serviceSuccessRates[s.name] !== undefined && (
                                   <div className={`text-[10px] px-2 py-0.5 rounded border font-bold uppercase tracking-wider ${serviceSuccessRates[s.name] >= 70 ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50' : serviceSuccessRates[s.name] >= 40 ? 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50' : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50'}`}>✓ {serviceSuccessRates[s.name]}% sukses</div>
                                 )}
@@ -3743,12 +3988,12 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                       <td className="p-5 sm:px-6">
                         <span className={"inline-flex items-center text-sm font-bold px-3 py-1.5 rounded-lg border " + (s.outOfStock ? 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50' : 'text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700')}>
                           <span className={"w-2 h-2 rounded-full mr-2 shrink-0 " + (s.outOfStock ? 'bg-red-500' : 'bg-green-500')}></span>
-                          {s.outOfStock ? 'Kosong' : s.stock.toLocaleString()}
+                          {s.outOfStock ? 'Empty' : s.stock.toLocaleString()}
                         </span>
                       </td>
                       <td className="p-5 sm:px-6">
                         <div className="font-black text-slate-900 dark:text-white text-base">Rp {s.price.toLocaleString('id-ID')}</div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">per OTP</div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">{t.perOTP}</div>
                       </td>
                       <td className="p-5 sm:px-6 text-right">
                         {isBundleMode ? (
@@ -3757,7 +4002,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                           </button>
                         ) : (
                           <button onClick={() => !s.outOfStock && handleBuy(s)} disabled={isProcessing || s.outOfStock} className={"text-white px-6 py-3.5 rounded-xl text-sm font-bold shadow-md w-full max-w-36 ml-auto transition-all flex justify-center items-center " + (s.outOfStock ? 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed' : isProcessing ? 'bg-indigo-400 cursor-wait' : 'bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:shadow-lg active:scale-95')}>
-                            {s.outOfStock ? 'Habis' : isProcessing ? <RefreshCw className="w-4 h-4 animate-spin"/> : 'Beli Nomor'}
+                            {s.outOfStock ? t.outOfStock : isProcessing ? <RefreshCw className="w-4 h-4 animate-spin"/>  : t.buyBtn}
                           </button>
                         )}
                       </td>
@@ -3807,7 +4052,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                       <span className="text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-800/50 font-bold uppercase tracking-wider">{s.category}</span>
                       <span className={"inline-flex items-center text-[10px] font-bold gap-1 " + (s.outOfStock ? 'text-red-500 dark:text-red-400' : 'text-slate-500 dark:text-slate-400')}>
                         <span className={"w-1.5 h-1.5 rounded-full shrink-0 " + (s.outOfStock ? 'bg-red-500' : 'bg-green-500')}></span>
-                        {s.outOfStock ? 'Kosong' : s.stock.toLocaleString()}
+                        {s.outOfStock ? 'Empty' : s.stock.toLocaleString()}
                       </span>
                       {serviceSuccessRates[s.name] !== undefined && (
                         <span className={`text-[10px] px-1.5 py-0.5 rounded border font-bold ${serviceSuccessRates[s.name] >= 70 ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50' : serviceSuccessRates[s.name] >= 40 ? 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50' : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50'}`}>✓ {serviceSuccessRates[s.name]}%</span>
@@ -3819,7 +4064,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                   <div className="flex flex-col items-end gap-1.5 shrink-0">
                     <div className="text-right">
                       <div className="font-black text-slate-900 dark:text-white text-sm">Rp {s.price.toLocaleString('id-ID')}</div>
-                      <div className="text-[10px] text-slate-400 dark:text-slate-500">per OTP</div>
+                      <div className="text-[10px] text-slate-400 dark:text-slate-500">{t.perOTP}</div>
                     </div>
                     {isBundleMode ? (
                       <button onClick={() => !s.outOfStock && toggleBundle(s.id)} disabled={s.outOfStock} className={"w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all " + (s.outOfStock ? 'border-slate-200 dark:border-slate-700 opacity-40 cursor-not-allowed' : bundleSelected.has(s.id) ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 dark:border-slate-600')}>
@@ -3827,7 +4072,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                       </button>
                     ) : (
                       <button onClick={() => !s.outOfStock && handleBuy(s)} disabled={isProcessing || s.outOfStock} className={"text-white text-xs font-bold px-3 py-2 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1 " + (s.outOfStock ? 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed' : isProcessing ? 'bg-indigo-400 cursor-wait' : 'bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500')}>
-                        {s.outOfStock ? 'Habis' : isProcessing ? <RefreshCw className="w-3 h-3 animate-spin"/> : 'Beli'}
+                        {s.outOfStock ? t.outOfStock : isProcessing ? <RefreshCw className="w-3 h-3 animate-spin"/> : t.buyBtn}
                       </button>
                     )}
                   </div>
@@ -3962,9 +4207,9 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                           onClick={() => onCancelOrder(o.id)} 
                           disabled={o.timeLeft > 900}
                           className={"py-3 rounded-xl text-[11px] font-bold border transition-colors active:scale-95 " + (o.timeLeft > 900 ? 'bg-white/5 text-white/30 border-white/10 cursor-not-allowed' : 'bg-red-500/20 text-red-300 hover:bg-red-500 hover:text-white border-red-500/30')}
-                          title={o.timeLeft > 900 ? 'Tunggu 5 menit sebelum bisa membatalkan' : 'Batalkan pesanan'}
+                          title={o.timeLeft > 900 ? 'Wait 5 minutes before cancelling' : 'Cancel order'}
                         >
-                          BATAL
+                          {t.cancel}
                         </button>
                       </div>
                     )}
@@ -4013,7 +4258,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                       {/* Semua SMS masuk */}
                       {o.allSms && o.allSms.length > 0 && (
                         <div className="mt-3">
-                          <span className="text-[10px] uppercase text-indigo-200 font-bold tracking-wider mb-2 block">Semua SMS Masuk ({o.allSms.length})</span>
+                          <span className="text-[10px] uppercase text-indigo-200 font-bold tracking-wider mb-2 block">{t.allSMS} ({o.allSms.length})</span>
                           <div className="space-y-2 max-h-40 overflow-y-auto">
                             {o.allSms.map((sms, i) => (
                               <div key={i} className="bg-white/10 rounded-xl px-3 py-2.5 text-xs text-indigo-100 cursor-pointer hover:bg-white/20 transition-colors" onClick={() => copyToClipboard(sms.text, showToast)}>
@@ -4035,13 +4280,13 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                               if (Array.isArray(data) && data.length > 0) {
                                 setOrders(cur => cur.map(x => x.id === o.id ? { ...x, allSms: data } : x));
                               } else {
-                                showToast('Belum ada SMS lain yang masuk.');
+                                showToast('No other SMS received yet.');
                               }
                             } catch { showToast('Gagal mengambil SMS.'); }
                           }}
                           className="mt-2 w-full text-[11px] font-bold text-indigo-300 hover:text-white py-2 border border-indigo-400/30 hover:border-indigo-300 rounded-xl transition-colors"
                         >
-                          Lihat Semua SMS
+                          {t.viewAllSMS}
                         </button>
                       )}
                     </div>
@@ -4097,7 +4342,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
           <div className="bg-white dark:bg-slate-900 rounded-none sm:rounded-3xl shadow-2xl border-0 sm:border border-slate-200 dark:border-slate-800 w-full sm:max-w-md p-5 sm:p-6 max-h-screen overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <div>
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Semua SMS Masuk</div>
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{t.allSMS}</div>
                 <div className="text-lg font-black text-slate-900 dark:text-white">{smsModal.name}</div>
               </div>
               <button onClick={() => setSmsModal(null)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors">
@@ -4160,7 +4405,7 @@ const BANK_ACCOUNTS = [
 ];
 
 function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, updateBalance, user, lang }: TopupViewProps) {
-  const t = T[lang ?? 'id'];
+  const t = T[lang ?? 'en'];
   const [depositMode, setDepositMode]   = useState<'select' | 'manual' | 'auto' | 'history'>('select');
   const [amount,      setAmount]        = useState('');
   const [selectedBank,setSelectedBank]  = useState(BANK_ACCOUNTS[0]);
@@ -4252,7 +4497,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
       const nominal = parseInt(amount).toLocaleString('id-ID');
       const userName = user.name ?? user.email;
       const metodePembayaran = selectedBank.id === 'qris' ? 'QRIS (INSTANT)' : selectedBank.name;
-      const waMsg = `Halo Admin PusatNokos, saya ingin melakukan konfirmasi Top Up Saldo.\n*Detail Top Up:*\n- Username: *${userName}*\n- Nominal: *Rp ${nominal}*\n- Metode Pembayaran: *${metodePembayaran}*\nBerikut saya lampirkan bukti transfernya.`;
+      const waMsg = `Hello Admin PusatNokos, I would like to confirm a Balance Top Up.\n*Top Up Details:*\n- Username: *${userName}*\n- Amount: *Rp ${nominal}*\n- Payment Method: *${metodePembayaran}*\nI have attached the transfer proof below.`;
       setWaUrl(`https://wa.me/${CS_WA}?text=${encodeURIComponent(waMsg)}`);
       setStep(4); // step sukses
       fetchMyRequests();
@@ -4261,9 +4506,9 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
   };
 
   const STATUS_CFG: Record<string, { label: string; color: string; bg: string; border: string }> = {
-    pending : { label: 'Menunggu',   color: 'text-amber-600 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-900/20',  border: 'border-amber-200 dark:border-amber-800/50' },
-    approved: { label: 'Disetujui',  color: 'text-green-600 dark:text-green-400',  bg: 'bg-green-50 dark:bg-green-900/20',  border: 'border-green-200 dark:border-green-800/50' },
-    rejected: { label: 'Ditolak',    color: 'text-red-600 dark:text-red-400',      bg: 'bg-red-50 dark:bg-red-900/20',      border: 'border-red-200 dark:border-red-800/50' },
+    pending : { label: t.depositStatusPending,  color: 'text-amber-600 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-900/20',  border: 'border-amber-200 dark:border-amber-800/50' },
+    approved: { label: t.depositStatusApproved, color: 'text-green-600 dark:text-green-400',  bg: 'bg-green-50 dark:bg-green-900/20',  border: 'border-green-200 dark:border-green-800/50' },
+    rejected: { label: t.depositStatusRejected, color: 'text-red-600 dark:text-red-400',      bg: 'bg-red-50 dark:bg-red-900/20',      border: 'border-red-200 dark:border-red-800/50' },
   };
 
   return (
@@ -4283,22 +4528,22 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
       {depositMode === 'select' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div onClick={() => { setDepositMode('auto'); }} className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-indigo-200 dark:border-indigo-700 hover:border-indigo-500 dark:hover:border-indigo-400 p-6 cursor-pointer transition-all group relative overflow-hidden">
-            <div className="absolute top-3 right-3 bg-green-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">OTOMATIS</div>
+            <div className="absolute top-3 right-3 bg-green-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">{t.otomatis}</div>
             <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-2xl w-fit mb-4 group-hover:bg-indigo-600 transition-colors">
               <Zap className="w-6 h-6 text-indigo-600 dark:text-indigo-400 group-hover:text-white transition-colors" />
             </div>
-            <h3 className="font-black text-slate-900 dark:text-white text-lg mb-1">Deposit Otomatis</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">QRIS, Virtual Account, atau E-Wallet. Saldo masuk otomatis setelah bayar.</p>
-            <div className="mt-4 text-xs font-bold text-indigo-600 dark:text-indigo-400">QRIS · BRI · BNI · Mandiri · DANA →</div>
+            <h3 className="font-black text-slate-900 dark:text-white text-lg mb-1">{t.autoDeposit}</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{t.depositAutoDesc}</p>
+            <div className="mt-4 text-xs font-bold text-indigo-600 dark:text-indigo-400">Instant · Secure · Auto →</div>
           </div>
 
           <div onClick={() => { setDepositMode('manual'); setStep(1); }} className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 p-6 cursor-pointer transition-all group">
             <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-2xl w-fit mb-4 group-hover:bg-slate-200 dark:group-hover:bg-slate-700 transition-colors">
               <CreditCard className="w-6 h-6 text-slate-600 dark:text-slate-400" />
             </div>
-            <h3 className="font-black text-slate-900 dark:text-white text-lg mb-1">Transfer Manual</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Transfer ke rekening/QRIS admin, upload bukti, admin approve dalam 1x24 jam.</p>
-            <div className="mt-4 text-xs font-bold text-slate-400">SeaBank · DANA · GoPay · Bank Jago · QRIS →</div>
+            <h3 className="font-black text-slate-900 dark:text-white text-lg mb-1">{t.manualDeposit}</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{t.depositManualDesc}</p>
+            <div className="mt-4 text-xs font-bold text-slate-400">Transfer · E-Wallet · Manual →</div>
           </div>
         </div>
       )}
@@ -4307,7 +4552,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
       {depositMode === 'auto' && (
         <div className="space-y-5">
           <button onClick={() => setDepositMode('select')} className="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-            ← Kembali
+            ← Back
           </button>
 
           {/* Pilih nominal */}
@@ -4399,7 +4644,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
               </a>
               <button onClick={() => { setPayUrl(null); setAutoAmount(''); setDepositMode('history'); }}
                 className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 transition-colors text-sm">
-                Lihat Riwayat Deposit
+                View Deposit History
               </button>
             </div>
           ) : (
@@ -4519,7 +4764,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                 <p className="text-xs text-slate-400 mt-3">Transfer sesuai nominal agar lebih mudah diverifikasi admin.</p>
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setStep(1)} className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">← Kembali</button>
+                <button onClick={() => setStep(1)} className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">← Back</button>
                 <button onClick={() => setStep(3)} className="flex-1 py-3.5 bg-slate-900 dark:bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-600 dark:hover:bg-indigo-700 transition-colors">Sudah Transfer →</button>
               </div>
             </div>
@@ -4552,10 +4797,10 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                 <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Misal: transfer dari BCA atas nama Budi" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-base font-medium outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white resize-none h-20" />
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setStep(2)} className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">← Kembali</button>
+                <button onClick={() => setStep(2)} className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">← Back</button>
                 <button onClick={handleSubmitManual} disabled={isLoading} className="flex-1 py-3.5 bg-green-600 text-white font-bold rounded-2xl hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                   {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                  {isLoading ? 'Mengirim...' : 'Kirim Request'}
+                  {isLoading ? 'Sending...' : 'Kirim Request'}
                 </button>
               </div>
             </div>
@@ -4582,7 +4827,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
               </a>
               <button onClick={() => { setStep(1); setAmount(''); setProof(null); setProofName(''); setNote(''); setWaUrl(null); setDepositMode('history'); }}
                 className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 transition-colors text-sm">
-                Lihat Riwayat Deposit
+                View Deposit History
               </button>
             </div>
           )}
@@ -4643,7 +4888,7 @@ interface ApiHistoryItem {
 }
 
 function HistoryView({ orders, user, lang }: HistoryViewProps) {
-  const t = T[lang ?? 'id'];
+  const t = T[lang ?? 'en'];
   const [isLoading, setIsLoading]       = useState<boolean>(true);
   const [apiHistory, setApiHistory]     = useState<ApiHistoryItem[]>([]);
   const [page, setPage]                 = useState(1);
@@ -4685,9 +4930,9 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
           errStr.includes('server')
         );
         if (isExpired) {
-          showHistoryToast('Nomor ini sudah kadaluarsa di provider dan tidak bisa diaktifkan ulang. Silakan beli nomor baru untuk layanan yang sama.');
+          showHistoryToast('This number has expired at the provider and cannot be reactivated. Please buy a new number for the same service.');
         } else {
-          showHistoryToast(costData.error ?? 'Gagal cek harga reaktivasi.');
+          showHistoryToast(costData.error ?? 'Failed to check price.reaktivasi.');
         }
         return;
       }
@@ -4707,13 +4952,13 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
       } else {
         const errStr2 = typeof data.error === 'string' ? data.error.toLowerCase() : '';
         if (errStr2.includes('upstream') || errStr2.includes('server') || errStr2.includes('404')) {
-          showHistoryToast('Reaktivasi gagal — nomor sudah kadaluarsa. Beli nomor baru untuk layanan ini.');
+          showHistoryToast('Reactivation failed — number has expired. Buy a new number for this service.');
         } else {
-          showHistoryToast(data.error ?? 'Gagal reaktivasi.');
+          showHistoryToast(data.error ?? 'Reactivation failed.');
         }
       }
     } catch {
-      showHistoryToast('Kesalahan jaringan. Periksa koneksi dan coba lagi.');
+      showHistoryToast('Network error. Periksa koneksi dan coba lagi.');
     } finally {
       setReactivating(null);
     }
@@ -4817,10 +5062,10 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
           <table className="w-full text-left">
             <thead className="bg-slate-50/80 dark:bg-slate-950/80 border-b border-slate-100 dark:border-slate-800">
               <tr>
-                <th className="p-5 sm:px-6 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Detail Aplikasi & Waktu</th>
-                <th className="p-5 sm:px-6 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Nomor HP & Kode OTP</th>
-                <th className="p-5 sm:px-6 text-right text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Status</th>
-                <th className="p-5 sm:px-6 text-right text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Aksi</th>
+                <th className="p-5 sm:px-6 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{t.appDetailCol}</th>
+                <th className="p-5 sm:px-6 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{t.phoneOtpCol}</th>
+                <th className="p-5 sm:px-6 text-right text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{t.statusCol}</th>
+                <th className="p-5 sm:px-6 text-right text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{t.actionCol}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -4845,7 +5090,7 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
                     <tr key={'local-' + o.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
                       <td className="p-5 sm:px-6"><div className="font-bold text-base text-slate-900 dark:text-white">{o.serviceName}</div><div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{o.date}</div></td>
                       <td className="p-5 sm:px-6"><span className="font-mono font-bold text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg dark:text-slate-300">{o.number}</span>{o.otpCode && <span className="text-sm font-black text-green-700 dark:text-green-400 ml-3 inline-flex items-start gap-1.5"><span className="shrink-0">OTP:</span><span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 tracking-widest break-all leading-snug">{o.otpCode}</span></span>}</td>
-                      <td className="p-5 sm:px-6 text-right"><span className={"px-3.5 py-1.5 text-[11px] font-black rounded-lg border uppercase tracking-wider " + (STATUS_COLOR[o.status] ?? STATUS_COLOR['cancelled'])}>{o.status === 'cancelled' ? 'BATAL' : o.status === 'waiting' ? 'MENUNGGU' : o.status === 'success' ? 'BERHASIL' : 'KADALUARSA'}</span></td>
+                      <td className="p-5 sm:px-6 text-right"><span className={"px-3.5 py-1.5 text-[11px] font-black rounded-lg border uppercase tracking-wider " + (STATUS_COLOR[o.status] ?? STATUS_COLOR['cancelled'])}>{o.status === 'cancelled' ? t.cancelBtn : o.status === 'waiting' ? t.waitingBtn : o.status === 'success' ? t.successBtn : t.expiredBtn}</span></td>
                       <td className="p-5 sm:px-6 text-right">—</td>
                     </tr>
                   ))}
@@ -4857,7 +5102,7 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
                       <td className="p-5 sm:px-6 text-right">
                         {a.status === 'success' && a.activationId && (
                           <button disabled={reactivating === a.activationId}
-                            onClick={async () => { setReactivating(a.activationId); try { const costRes = await fetch(`/api/reactivation?id=${a.activationId}`); const costData = await costRes.json(); if (!costRes.ok) { const e = typeof costData.error === 'string' ? costData.error.toLowerCase() : ''; showHistoryToast(e.includes('404')||e.includes('upstream')||e.includes('server')||e.includes('not found')||e.includes('invalid') ? 'Nomor sudah kadaluarsa. Beli nomor baru.' : (costData.error ?? 'Gagal cek harga.')); return; } const konfirm = await showConfirm(`Pakai nomor ${a.phone} lagi? Biaya: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`); if (!konfirm) return; const res = await fetch('/api/reactivation', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ id: a.activationId, service: a.service }) }); const data = await res.json(); if (!res.ok) { const e2 = typeof data.error === 'string' ? data.error.toLowerCase() : ''; showHistoryToast(e2.includes('upstream')||e2.includes('server') ? 'Reaktivasi gagal — nomor kadaluarsa.' : (data.error ?? 'Gagal reaktivasi.')); return; } showHistoryToast(`Berhasil! Nomor ${data.phone} siap dipakai lagi.`); } catch { showHistoryToast('Kesalahan jaringan.'); } finally { setReactivating(null); } }}
+                            onClick={async () => { setReactivating(a.activationId); try { const costRes = await fetch(`/api/reactivation?id=${a.activationId}`); const costData = await costRes.json(); if (!costRes.ok) { const e = typeof costData.error === 'string' ? costData.error.toLowerCase() : ''; showHistoryToast(e.includes('404')||e.includes('upstream')||e.includes('server')||e.includes('not found')||e.includes('invalid') ? 'Number has expired. Please buy a new one.' : (costData.error ?? 'Failed to check price.')); return; } const konfirm = await showConfirm(`Reuse number ${a.phone}? Cost: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`); if (!konfirm) return; const res = await fetch('/api/reactivation', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ id: a.activationId, service: a.service }) }); const data = await res.json(); if (!res.ok) { const e2 = typeof data.error === 'string' ? data.error.toLowerCase() : ''; showHistoryToast(e2.includes('upstream')||e2.includes('server') ? 'Reactivation failed — number expired.' : (data.error ?? 'Reactivation failed.')); return; } showHistoryToast(`Success! Number ${data.phone} is ready to use again.`); } catch { showHistoryToast('Network error.'); } finally { setReactivating(null); } }}
                             className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 rounded-lg text-[11px] font-black hover:bg-indigo-600 hover:text-white transition-colors disabled:opacity-50 flex items-center gap-1">
                             {reactivating === a.activationId ? <RefreshCw className="w-3 h-3 animate-spin" /> : null}Pakai Lagi
                           </button>
@@ -4893,7 +5138,7 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
                 <div key={'m-local-' + o.id} className="p-4 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div><div className="font-bold text-sm text-slate-900 dark:text-white">{o.serviceName}</div><div className="text-xs text-slate-400 mt-0.5">{o.date}</div></div>
-                    <span className={"px-2.5 py-1 text-[10px] font-black rounded-lg border uppercase shrink-0 " + (STATUS_COLOR[o.status] ?? STATUS_COLOR['cancelled'])}>{o.status === 'cancelled' ? 'BATAL' : o.status === 'waiting' ? 'MENUNGGU' : o.status === 'success' ? 'BERHASIL' : 'KADALUARSA'}</span>
+                    <span className={"px-2.5 py-1 text-[10px] font-black rounded-lg border uppercase shrink-0 " + (STATUS_COLOR[o.status] ?? STATUS_COLOR['cancelled'])}>{o.status === 'cancelled' ? t.cancelBtn : o.status === 'waiting' ? t.waitingBtn : o.status === 'success' ? t.successBtn : t.expiredBtn}</span>
                   </div>
                   <div className="font-mono text-xs bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 inline-block">{o.number}</div>
                   {o.otpCode && <div className="flex items-start gap-1.5 text-xs font-black text-green-700 dark:text-green-400"><span className="shrink-0">OTP:</span><span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 tracking-widest break-all leading-snug">{o.otpCode}</span></div>}
@@ -4909,7 +5154,7 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
                   {a.otpCode && <div className="flex items-start gap-1.5 text-xs font-black text-green-700 dark:text-green-400"><span className="shrink-0">OTP:</span><span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 tracking-widest break-all leading-snug">{a.otpCode}</span></div>}
                   {a.status === 'success' && a.activationId && (
                     <button disabled={reactivating === a.activationId}
-                      onClick={async () => { setReactivating(a.activationId); try { const costRes = await fetch(`/api/reactivation?id=${a.activationId}`); const costData = await costRes.json(); if (!costRes.ok) { const e = typeof costData.error === 'string' ? costData.error.toLowerCase() : ''; showHistoryToast(e.includes('404')||e.includes('upstream')||e.includes('server') ? 'Nomor sudah kadaluarsa. Beli nomor baru.' : (costData.error ?? 'Gagal cek harga.')); return; } const konfirm = await showConfirm(`Pakai nomor ${a.phone} lagi? Biaya: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`); if (!konfirm) return; const res = await fetch('/api/reactivation', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ id: a.activationId, service: a.service }) }); const data = await res.json(); if (!res.ok) { const e2 = typeof data.error === 'string' ? data.error.toLowerCase() : ''; showHistoryToast(e2.includes('upstream')||e2.includes('server') ? 'Reaktivasi gagal — nomor kadaluarsa.' : (data.error ?? 'Gagal reaktivasi.')); return; } showHistoryToast(`Berhasil! Nomor ${data.phone} siap dipakai lagi.`); } catch { showHistoryToast('Kesalahan jaringan.'); } finally { setReactivating(null); } }}
+                      onClick={async () => { setReactivating(a.activationId); try { const costRes = await fetch(`/api/reactivation?id=${a.activationId}`); const costData = await costRes.json(); if (!costRes.ok) { const e = typeof costData.error === 'string' ? costData.error.toLowerCase() : ''; showHistoryToast(e.includes('404')||e.includes('upstream')||e.includes('server') ? 'Number has expired. Please buy a new one.' : (costData.error ?? 'Failed to check price.')); return; } const konfirm = await showConfirm(`Reuse number ${a.phone}? Cost: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`); if (!konfirm) return; const res = await fetch('/api/reactivation', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ id: a.activationId, service: a.service }) }); const data = await res.json(); if (!res.ok) { const e2 = typeof data.error === 'string' ? data.error.toLowerCase() : ''; showHistoryToast(e2.includes('upstream')||e2.includes('server') ? 'Reactivation failed — number expired.' : (data.error ?? 'Reactivation failed.')); return; } showHistoryToast(`Success! Number ${data.phone} is ready to use again.`); } catch { showHistoryToast('Network error.'); } finally { setReactivating(null); } }}
                       className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 rounded-xl text-xs font-black active:scale-95 transition-all disabled:opacity-50">
                       {reactivating === a.activationId ? <RefreshCw className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}Pakai Lagi
                     </button>
@@ -4949,7 +5194,7 @@ interface MutasiViewProps {
 }
 
 function MutasiView({ mutasi, user, lang }: MutasiViewProps) {
-  const t = T[lang ?? 'id'];
+  const t = T[lang ?? 'en'];
   const [isLoading, setIsLoading]         = useState<boolean>(true);
   const [dbMutasi, setDbMutasi]           = useState<Mutasi[]>([]);
   const [page, setPage]                   = useState(1);
@@ -5087,7 +5332,7 @@ interface ProfileViewProps {
 }
 
 function ProfileView({ user, showToast, lang }: ProfileViewProps) {
-  const t = T[lang ?? 'id'];
+  const t = T[lang ?? 'en'];
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Info akun
@@ -5131,7 +5376,7 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
     e.preventDefault();
     setPassError('');
     if (newPass.length < 8) { setPassError('Password baru minimal 8 karakter.'); return; }
-    if (newPass !== confirmPass) { setPassError('Konfirmasi password tidak cocok.'); return; }
+    if (newPass !== confirmPass) { setPassError('Passwords do not match.'); return; }
     setPassLoading(true);
     try {
       const r = await fetch('/api/user/change-password', {
@@ -5186,7 +5431,7 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
         </div>
         <form className="space-y-6 pt-8 border-t border-slate-100 dark:border-slate-800" onSubmit={handleSave}>
           <div>
-            <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">Nama Lengkap</label>
+            <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">Full Name</label>
             <input type="text" className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none font-bold text-slate-500 dark:text-slate-400 cursor-not-allowed text-base" defaultValue={user?.name} disabled />
           </div>
           <div className="pt-2">
@@ -5269,7 +5514,7 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
           </div>
           {/* Password Baru */}
           <div>
-            <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">Password Baru</label>
+            <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">New Password</label>
             <div className="relative">
               <input
                 type={showNew ? 'text' : 'password'}
@@ -5307,7 +5552,7 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
                 type={showConfirm ? 'text' : 'password'}
                 value={confirmPass}
                 onChange={e => setConfirmPass(e.target.value)}
-                placeholder="Ulangi password baru"
+                placeholder="Repeat new password"
                 required
                 className={inputCls + ' pr-12' + (confirmPass && confirmPass !== newPass ? ' border-red-400 focus:ring-red-400/30' : '')}
               />
