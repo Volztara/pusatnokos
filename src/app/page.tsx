@@ -521,7 +521,7 @@ function ConfirmModal({ message, onConfirm, onCancel }: {
 }) {
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center px-4" style={{background:'rgba(0,0,0,0.5)'}}>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 max-w-sm w-full">
+      <div className="bg-white dark:bg-[#0a0d16] rounded-2xl shadow-2xl border border-slate-200 dark:border-white/[0.09] p-6 max-w-sm w-full">
         <div className="flex items-start gap-3 mb-5">
           <div className="bg-amber-50 dark:bg-amber-900/20 p-2 rounded-xl shrink-0">
             <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400"/>
@@ -530,7 +530,7 @@ function ConfirmModal({ message, onConfirm, onCancel }: {
         </div>
         <div className="flex gap-3">
           <button onClick={onCancel}
-            className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+            className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-white/[0.09] text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/[0.07] transition-colors">
             Cancel
           </button>
           <button onClick={onConfirm}
@@ -1069,7 +1069,7 @@ export default function App() {
   }, [user?.email]);
 
   return (
-    <div className="relative text-slate-800 dark:text-slate-200 font-sans selection:bg-indigo-200 selection:text-indigo-900 bg-slate-50 dark:bg-slate-950 min-h-screen transition-colors duration-300" style={{WebkitTapHighlightColor:"transparent"}}>
+    <div className="relative text-slate-800 dark:text-slate-200 font-sans selection:bg-indigo-200 selection:text-indigo-900 bg-slate-50 dark:bg-[#060810] min-h-screen transition-colors duration-300" style={{WebkitTapHighlightColor:"transparent"}}>
       
       {/* GLOBAL TOAST NOTIFICATION */}
       {toastMsg && (
@@ -1140,7 +1140,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
   };
 
   return (
-    <div className="min-h-screen bg-[#fafafa] dark:bg-[#020617] transition-colors duration-300" style={{minHeight:"100svh", overflowX:"clip"}}>
+    <div className="min-h-screen bg-[#f8f9fc] dark:bg-[#050810] transition-colors duration-300" style={{minHeight:"100svh", overflowX:"clip"}}>
       <style>{`
         @keyframes _heroIn { from { opacity:0; transform:translateY(22px); } to { opacity:1; transform:translateY(0); } }
         ._h1{animation:_heroIn .55s ease .05s both}
@@ -1148,6 +1148,22 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
         ._h3{animation:_heroIn .55s ease .35s both}
         ._h4{animation:_heroIn .55s ease .50s both}
         ._h5{animation:_heroIn .55s ease .65s both}
+        @keyframes _orb1 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(60px,-40px) scale(1.1)} 66%{transform:translate(-30px,50px) scale(0.95)} }
+        @keyframes _orb2 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(-50px,60px) scale(1.05)} 66%{transform:translate(70px,-30px) scale(0.9)} }
+        ._orb1{animation:_orb1 18s ease-in-out infinite}
+        ._orb2{animation:_orb2 22s ease-in-out infinite}
+        ._dot-grid{background-image:radial-gradient(circle,#6366f130 1px,transparent 1px);background-size:28px 28px}
+        .dark ._dot-grid{background-image:radial-gradient(circle,#6366f118 1px,transparent 1px)}
+        ._glow-text{text-shadow:0 0 80px rgba(99,102,241,0.3)}
+        .dark ._glow-text{text-shadow:0 0 80px rgba(139,92,246,0.5),0 0 160px rgba(99,102,241,0.2)}
+        .dark ._glass-card{background:linear-gradient(135deg,rgba(255,255,255,0.07) 0%,rgba(255,255,255,0.02) 100%);border:1px solid rgba(255,255,255,0.08);backdrop-filter:blur(12px)}
+        ._glass-card{background:rgba(255,255,255,0.95);border:1px solid rgba(255,255,255,0.9)}
+        ._chip{transition:transform .2s ease,box-shadow .2s ease}
+        ._chip:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(99,102,241,0.2)}
+        .dark ._bento-hover:hover{box-shadow:0 0 0 1px rgba(99,102,241,0.4),0 20px 40px rgba(0,0,0,0.4)!important}
+        ._bento-hover:hover{box-shadow:0 20px 40px rgba(0,0,0,0.08)!important}
+        @keyframes _spin-slow{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+        ._spin-slow{animation:_spin-slow 30s linear infinite}
       `}</style>
       <a href={`https://wa.me/${CS_WA}?text=Halo%20CS%20Pusat%20Nokos%2C%20saya%20butuh%20bantuan.`} target="_blank" rel="noopener noreferrer" aria-label="Hubungi Customer Service via WhatsApp"
         className="fixed bottom-6 right-4 z-[90] md:bottom-8 md:right-8 bg-[#25D366] text-white shadow-[0_4px_20px_rgba(37,211,102,0.5)] hover:bg-[#1ebd5a] transition-all hover:scale-105 flex items-center gap-2 group
@@ -1160,7 +1176,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
         </div>
       </a>
 
-      <nav className="fixed w-full z-50 top-0 transition-all bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200/50 dark:border-slate-800/50">
+      <nav className="fixed w-full z-50 top-0 transition-all bg-white/70 dark:bg-[#050810]/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-white/[0.06]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 sm:h-20 items-center">
             <div className="flex items-center cursor-pointer" onClick={() => onNavigate('landing')}>
@@ -1178,7 +1194,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
               <button suppressHydrationWarning onClick={() => setIsDarkMode(!isDarkMode)} aria-label="Toggle dark mode" className="p-2 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition">
                 {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
-              <button onClick={() => onNavigate('login')} className="text-sm font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 px-4 py-2.5 rounded-xl transition hover:bg-slate-100 dark:hover:bg-slate-800">Login</button>
+              <button onClick={() => onNavigate('login')} className="text-sm font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 px-4 py-2.5 rounded-xl transition hover:bg-slate-100 dark:hover:bg-white/[0.07]">Login</button>
               <button onClick={() => onNavigate('register')} className="text-sm font-bold bg-slate-900 dark:bg-indigo-600 text-white px-5 py-2.5 rounded-xl shadow-lg hover:shadow-indigo-500/30 transition-all transform active:scale-95">Get Started Free</button>
             </div>
             <div className="md:hidden flex items-center space-x-2">
@@ -1190,12 +1206,12 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
           </div>
         </div>
         {isMenuOpen && (
-          <div className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 absolute w-full shadow-2xl pb-6 px-4 animate-in slide-in-from-top-4">
+          <div className="md:hidden bg-white dark:bg-[#0a0d16] border-b border-slate-100 dark:border-white/[0.07] absolute w-full shadow-2xl pb-6 px-4 animate-in slide-in-from-top-4">
             <div className="flex flex-col space-y-2 pt-4">
-              <a href="#demo" onClick={(e) => scrollToId(e, 'demo')} className="font-bold text-slate-800 dark:text-slate-200 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition">Pricing & Demo</a>
-              <a href="#fitur" onClick={(e) => scrollToId(e, 'fitur')} className="font-bold text-slate-800 dark:text-slate-200 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition">Security</a>
-              <hr className="border-slate-100 dark:border-slate-800 my-2" />
-              <button onClick={() => onNavigate('login')} className="w-full font-bold border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-4 py-3.5 rounded-xl">Login</button>
+              <a href="#demo" onClick={(e) => scrollToId(e, 'demo')} className="font-bold text-slate-800 dark:text-slate-200 p-3 hover:bg-slate-50 dark:hover:bg-white/[0.07] rounded-xl transition">Pricing & Demo</a>
+              <a href="#fitur" onClick={(e) => scrollToId(e, 'fitur')} className="font-bold text-slate-800 dark:text-slate-200 p-3 hover:bg-slate-50 dark:hover:bg-white/[0.07] rounded-xl transition">Security</a>
+              <hr className="border-slate-100 dark:border-white/[0.07] my-2" />
+              <button onClick={() => onNavigate('login')} className="w-full font-bold border-2 border-slate-200 dark:border-white/[0.09] text-slate-700 dark:text-slate-200 px-4 py-3.5 rounded-xl">Login</button>
               <button onClick={() => onNavigate('register')} className="w-full font-bold bg-indigo-600 text-white px-4 py-3.5 rounded-xl shadow-md">Get Started Free</button>
             </div>
           </div>
@@ -1203,31 +1219,37 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
       </nav>
 
       {/* HERO SECTION */}
-      <div id="beranda" className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 text-center">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 pointer-events-none">
-          <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-[min(800px,100vw)] h-[600px] bg-indigo-500/15 dark:bg-indigo-500/10 blur-[120px] rounded-full"></div>
+      <div id="beranda" className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 text-center overflow-hidden">
+        {/* Dot grid background */}
+        <div className="_dot-grid absolute inset-0 -z-10 opacity-60" />
+        {/* Animated orbs */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 pointer-events-none overflow-hidden">
+          <div className="_orb1 absolute top-[-10%] left-[15%] w-[500px] h-[500px] bg-indigo-500/20 dark:bg-indigo-600/15 blur-[120px] rounded-full" />
+          <div className="_orb2 absolute top-[10%] right-[10%] w-[400px] h-[400px] bg-violet-500/15 dark:bg-violet-600/10 blur-[100px] rounded-full" />
+          <div className="absolute bottom-0 left-[30%] w-[300px] h-[300px] bg-cyan-400/10 dark:bg-cyan-500/05 blur-[90px] rounded-full" />
         </div>
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="inline-flex items-center px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-400 text-sm font-bold mb-8 shadow-sm _h1">
-            <span className="flex h-2.5 w-2.5 rounded-full bg-indigo-600 mr-2.5 animate-pulse"></span> Trusted by 50K+ Active Users
+          <div className="inline-flex items-center px-4 py-2 rounded-full _glass-card border shadow-sm text-indigo-700 dark:text-indigo-300 text-sm font-bold mb-8 _h1">
+            <span className="flex h-2 w-2 rounded-full bg-indigo-500 mr-2.5 animate-pulse"></span> Trusted by 50K+ Active Users
           </div>
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-slate-900 dark:text-white mb-6 leading-tight _h2">
+          <h1 className="_glow-text text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-slate-900 dark:text-white mb-6 leading-tight _h2">
             Secure Account <br className="hidden sm:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-500">Verification.</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-600">Verification.</span>
           </h1>
           <p className="mt-4 text-lg sm:text-xl text-slate-500 dark:text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed _h3">
             Enterprise-level Virtual Number Platform with 100% Auto Refund guarantee and 24/7 stable servers.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center _h4">
-            <button onClick={() => onNavigate('register')} className="flex items-center justify-center px-8 py-4 text-base font-bold rounded-2xl text-white bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 shadow-xl hover:shadow-indigo-500/30 transition-all hover:-translate-y-1">
+            <button onClick={() => onNavigate('register')} className="relative flex items-center justify-center px-8 py-4 text-base font-bold rounded-2xl text-white overflow-hidden group shadow-xl shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all hover:-translate-y-1" style={{background:'linear-gradient(135deg,#4f46e5,#7c3aed)'}}>
+              <span className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
               Open Dashboard <ArrowRight className="ml-2 w-5 h-5"/>
             </button>
-            <button onClick={(e) => scrollToId(e, 'fitur')} className="flex items-center justify-center px-8 py-4 border-2 border-slate-200 dark:border-slate-800 text-base font-bold rounded-2xl text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
-              <ShieldCheck className="mr-2 w-5 h-5 text-indigo-600 dark:text-indigo-400"/> Explore Features
+            <button onClick={(e) => scrollToId(e, 'fitur')} className="flex items-center justify-center px-8 py-4 border border-slate-200 dark:border-white/10 text-base font-bold rounded-2xl text-slate-700 dark:text-slate-300 _glass-card hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-all hover:-translate-y-0.5">
+              <ShieldCheck className="mr-2 w-5 h-5 text-indigo-500 dark:text-indigo-400"/> Explore Features
             </button>
           </div>
 
-          {/* Floating app chips — pakai Google Favicon agar semua logo tampil */}
+          {/* Floating app chips */}
           <div className="flex items-center justify-center gap-2 flex-wrap mt-10 _h5">
             {[
               { name: 'WhatsApp',  domain: 'whatsapp.com'   },
@@ -1239,58 +1261,26 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
               { name: 'TikTok',    domain: 'tiktok.com'     },
               { name: 'Facebook',  domain: 'facebook.com'   },
             ].map(app => (
-              <div
-                key={app.name}
-                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 flex items-center gap-1.5 shadow-sm text-xs font-bold text-slate-600 dark:text-slate-300 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
-                style={{ transition: 'transform .2s ease, box-shadow .2s ease' }}
-                onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-3px)'; d.style.boxShadow = '0 6px 16px rgba(0,0,0,0.10)'; }}
-                onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; d.style.boxShadow = ''; }}
-              >
-                <img
-                  src={`https://www.google.com/s2/favicons?domain=${app.domain}&sz=32`}
-                  width={14} height={14}
-                  className="w-3.5 h-3.5 object-contain"
-                  alt={app.name}
-                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                />
+              <div key={app.name} className="_chip _glass-card border rounded-xl px-3 py-1.5 flex items-center gap-1.5 shadow-sm text-xs font-bold text-slate-600 dark:text-slate-300">
+                <img src={`https://www.google.com/s2/favicons?domain=${app.domain}&sz=32`} width={14} height={14} className="w-3.5 h-3.5 object-contain" alt={app.name} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 {app.name}
               </div>
             ))}
-            <div
-              className="bg-indigo-50 dark:bg-slate-800 border border-indigo-100 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-indigo-500 dark:text-indigo-400"
-              style={{ transition: 'transform .2s ease' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = ''; }}
-            >+500 more</div>
+            <div className="_chip _glass-card border border-indigo-200/50 dark:border-indigo-500/20 rounded-xl px-3 py-1.5 text-xs font-bold text-indigo-500 dark:text-indigo-400">+500 more</div>
           </div>
 
-          {/* Stats strip — animated count-up */}
+          {/* Stats strip */}
           <div ref={statsRef} className="mt-14 max-w-3xl mx-auto">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">
-              <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-slate-100 dark:divide-slate-800">
+            <div className="_glass-card border rounded-3xl shadow-sm overflow-hidden">
+              <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-slate-100 dark:divide-white/[0.06]">
                 {[
-                  { val: statsOn ? `${cnt500}+` : '0+',  label: 'Services Available', icon: <Package className="w-5 h-5 text-indigo-600 dark:text-indigo-400"/>,  bg: 'bg-indigo-50 dark:bg-indigo-900/20', color: 'text-indigo-600 dark:text-indigo-400', i: 0 },
-                  { val: statsOn ? `${cnt50}K+` : '0K+', label: 'Active Users',        icon: <Users className="w-5 h-5 text-violet-600 dark:text-violet-400"/>,    bg: 'bg-violet-50 dark:bg-violet-900/20',  color: 'text-violet-600 dark:text-violet-400', i: 1 },
-                  { val: statsOn ? `${cnt99}%`  : '0%',  label: 'Success Rate',        icon: <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400"/>, bg: 'bg-green-50 dark:bg-green-900/20',    color: 'text-green-600 dark:text-green-400',   i: 2 },
-                  { val: '24/7',                          label: 'Server Online',       icon: <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400"/>,     bg: 'bg-blue-50 dark:bg-blue-900/20',      color: 'text-blue-600 dark:text-blue-400',     i: 3 },
+                  { val: statsOn ? `${cnt500}+` : '0+',  label: 'Services Available', icon: <Package className="w-5 h-5 text-indigo-500"/>,  color: 'text-indigo-600 dark:text-indigo-400', i: 0 },
+                  { val: statsOn ? `${cnt50}K+` : '0K+', label: 'Active Users',        icon: <Users className="w-5 h-5 text-violet-500"/>,    color: 'text-violet-600 dark:text-violet-400', i: 1 },
+                  { val: statsOn ? `${cnt99}%`  : '0%',  label: 'Success Rate',        icon: <TrendingUp className="w-5 h-5 text-emerald-500"/>, color: 'text-emerald-600 dark:text-emerald-400', i: 2 },
+                  { val: '24/7',                          label: 'Server Online',       icon: <Activity className="w-5 h-5 text-sky-500"/>,     color: 'text-sky-600 dark:text-sky-400', i: 3 },
                 ].map(s => (
-                  <div
-                    key={s.label}
-                    className="flex flex-col items-center justify-center py-7 px-4 text-center gap-2"
-                    style={{
-                      opacity: 1,
-                      transform: 'translateY(0)',
-                      transition: `opacity .5s ease ${s.i * 110}ms, transform .5s ease ${s.i * 110}ms`,
-                    }}
-                    onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-4px)'; }}
-                    onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(0)'; }}
-                  >
-                    <div
-                      className={`w-10 h-10 ${s.bg} rounded-2xl flex items-center justify-center`}
-                      style={{ transition: 'transform .3s ease' }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.18) rotate(8deg)'; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = ''; }}
-                    >{s.icon}</div>
+                  <div key={s.label} className="flex flex-col items-center justify-center py-7 px-4 text-center gap-2 hover:-translate-y-1 transition-transform">
+                    <div className="w-10 h-10 bg-slate-50 dark:bg-white/5 rounded-2xl flex items-center justify-center border border-slate-100 dark:border-white/[0.06]">{s.icon}</div>
                     <div className={`text-3xl font-black ${s.color}`}>{s.val}</div>
                     <div className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-tight">{s.label}</div>
                   </div>
@@ -1302,8 +1292,9 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
       </div>
 
       {/* CARA KERJA */}
-      <div id="cara" className="py-24 bg-slate-50 dark:bg-slate-950 border-y border-slate-200 dark:border-slate-800/50">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+      <div id="cara" className="py-24 bg-slate-50/80 dark:bg-[#07090f] border-y border-slate-200/70 dark:border-white/[0.04] relative overflow-hidden">
+        <div className="absolute inset-0 _dot-grid opacity-40 pointer-events-none" />
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 relative">
           <FadeInSection>
             <div className="text-center mb-16">
               <div className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest text-sm mb-3">How It Works</div>
@@ -1311,21 +1302,21 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
             </div>
           </FadeInSection>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-            <div className="hidden md:block absolute top-10 left-[18%] right-[18%] h-0.5 bg-gradient-to-r from-indigo-200 via-violet-200 to-indigo-200 dark:from-indigo-800 dark:via-violet-800 dark:to-indigo-800"/>
+            <div className="hidden md:block absolute top-10 left-[18%] right-[18%] h-px bg-gradient-to-r from-transparent via-indigo-300 dark:via-indigo-500/40 to-transparent"/>
             {[
-              { step: '01', icon: <Wallet className="w-7 h-7 text-indigo-600 dark:text-indigo-400"/>, title: 'Add Balance', desc: 'Top up your balance using available payment methods. Processed automatically in seconds.' },
-              { step: '02', icon: <ShoppingCart className="w-7 h-7 text-violet-600 dark:text-violet-400"/>, title: 'Pick & Buy Number', desc: 'Find the service you need, select a country, and click Buy Number. Number is instantly active.' },
-              { step: '03', icon: <CheckCircle className="w-7 h-7 text-green-600 dark:text-green-400"/>, title: 'Receive OTP Code', desc: 'OTP code appears automatically in your dashboard within seconds. Copy & use it!' },
+              { step: '01', icon: <Wallet className="w-7 h-7 text-indigo-500"/>, title: 'Add Balance', desc: 'Top up your balance using available payment methods. Processed automatically in seconds.', glow: 'rgba(99,102,241,0.15)' },
+              { step: '02', icon: <ShoppingCart className="w-7 h-7 text-violet-500"/>, title: 'Pick & Buy Number', desc: 'Find the service you need, select a country, and click Buy Number. Number is instantly active.', glow: 'rgba(139,92,246,0.15)' },
+              { step: '03', icon: <CheckCircle className="w-7 h-7 text-emerald-500"/>, title: 'Receive OTP Code', desc: 'OTP code appears automatically in your dashboard within seconds. Copy & use it!', glow: 'rgba(16,185,129,0.15)' },
             ].map((s, i) => (
               <FadeInSection key={i} delay={i * 130}>
                 <div
-                  className="relative bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm text-center hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors"
-                  style={{ transition: 'transform .25s ease, box-shadow .25s ease, border-color .2s ease' }}
-                  onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-5px)'; d.style.boxShadow = '0 12px 30px rgba(0,0,0,0.08)'; }}
-                  onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; d.style.boxShadow = ''; }}
+                  className="_glass-card _bento-hover relative rounded-3xl p-8 border text-center transition-all"
+                  style={{ transition: 'transform .25s ease, box-shadow .25s ease' }}
+                  onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-6px)'; }}
+                  onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; }}
                 >
-                  <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-white dark:border-slate-900 shadow-md relative z-10">{s.icon}</div>
-                  <div className="absolute top-6 right-6 text-6xl font-black text-slate-100 dark:text-slate-800 select-none">{s.step}</div>
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 relative z-10" style={{background:`radial-gradient(circle, ${s.glow} 0%, transparent 70%)`, boxShadow:`0 0 0 1px ${s.glow}`}}>{s.icon}</div>
+                  <div className="absolute top-5 right-6 text-6xl font-black text-slate-100 dark:text-white/[0.04] select-none">{s.step}</div>
                   <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mb-3">{s.title}</h3>
                   <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">{s.desc}</p>
                 </div>
@@ -1336,50 +1327,55 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
       </div>
 
       {/* DEMO HARGA */}
-      <div id="demo" className="py-24 bg-slate-900 dark:bg-[#090f1e] text-white relative border-t border-slate-800/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+      <div id="demo" className="py-24 text-white relative border-t border-white/[0.06] overflow-hidden" style={{background:'linear-gradient(135deg,#0d1117 0%,#0f0c1e 50%,#0d1117 100%)'}}>
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/10 blur-[100px] rounded-full" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-violet-600/10 blur-[100px] rounded-full" />
+          <div className="_dot-grid absolute inset-0 opacity-20" />
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center relative">
           <div className="order-2 lg:order-1">
-            <div className="bg-slate-800 dark:bg-slate-800/50 rounded-[2rem] p-2 border border-slate-700 shadow-2xl">
-              <div className="bg-white dark:bg-slate-900 rounded-3xl overflow-hidden text-slate-800 dark:text-slate-200 flex flex-col h-[500px]">
-                <div className="bg-indigo-50/50 dark:bg-slate-800/50 p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                  <div><h3 className="font-bold text-lg dark:text-white">Check Real-time Service Prices</h3><p className="text-xs text-slate-500 dark:text-slate-400">Find the app you need</p></div>
+            <div className="rounded-[2rem] p-2 border border-white/10 shadow-2xl" style={{background:'rgba(255,255,255,0.04)',backdropFilter:'blur(20px)'}}>
+              <div className="bg-[#0d1117] rounded-3xl overflow-hidden text-slate-200 flex flex-col h-[500px] border border-white/[0.06]">
+                <div className="p-6 border-b border-white/[0.06] flex justify-between items-center" style={{background:'rgba(99,102,241,0.08)'}}>
+                  <div><h3 className="font-bold text-lg text-white">Check Real-time Service Prices</h3><p className="text-xs text-slate-400">Find the app you need</p></div>
                 </div>
-                <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+                <div className="p-4 border-b border-white/[0.06]" style={{background:'#0d1117'}}>
                   <div className="relative">
-                    <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                    <input type="text" placeholder="e.g. Shopee, Telegram..." className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-12 pr-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 text-base font-medium transition-shadow dark:text-white" id="search-service" name="search" aria-label="Search service" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                    <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-500"/>
+                    <input type="text" placeholder="e.g. Shopee, Telegram..." className="w-full rounded-xl pl-12 pr-4 py-3 outline-none focus:ring-1 focus:ring-indigo-500 text-base font-medium text-white" style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.08)'}} id="search-service" name="search" aria-label="Search service" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                   </div>
                 </div>
-                <div className="overflow-y-auto flex-1 bg-slate-50/50 dark:bg-slate-900/50 p-3">
+                <div className="overflow-y-auto flex-1 bg-slate-50/50 dark:bg-[#0a0d16]/50 p-3">
                   {loadingServices ? (
                     // Loading skeleton
                     [...Array(4)].map((_, i) => (
-                      <div key={i} className="bg-white dark:bg-slate-800 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-700 flex justify-between items-center mb-3 animate-pulse">
+                      <div key={i} className="bg-white dark:bg-[#0f1320] p-3.5 rounded-2xl border border-slate-100 dark:border-white/[0.09] flex justify-between items-center mb-3 animate-pulse">
                         <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-xl shrink-0"></div>
+                          <div className="w-12 h-12 bg-slate-200 dark:bg-[#161b28] rounded-xl shrink-0"></div>
                           <div className="space-y-2">
-                            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24"></div>
-                            <div className="h-3 bg-slate-100 dark:bg-slate-700 rounded w-16"></div>
+                            <div className="h-4 bg-slate-200 dark:bg-[#161b28] rounded w-24"></div>
+                            <div className="h-3 bg-slate-100 dark:bg-[#161b28] rounded w-16"></div>
                           </div>
                         </div>
                         <div className="space-y-2 items-end flex flex-col">
-                          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-20"></div>
-                          <div className="h-6 bg-slate-100 dark:bg-slate-700 rounded w-16"></div>
+                          <div className="h-4 bg-slate-200 dark:bg-[#161b28] rounded w-20"></div>
+                          <div className="h-6 bg-slate-100 dark:bg-[#161b28] rounded w-16"></div>
                         </div>
                       </div>
                     ))
                   ) : filteredServices.length > 0 ? filteredServices.map((s) => (
-                    <div key={s.id} className="bg-white dark:bg-slate-800 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex justify-between items-center mb-3 hover:border-indigo-200 dark:hover:border-indigo-500 transition-colors">
+                    <div key={s.id} className="p-3.5 rounded-2xl flex justify-between items-center mb-2 transition-colors hover:bg-white/5" style={{border:'1px solid rgba(255,255,255,0.06)'}}>
                       <div className="flex items-center space-x-4">
-                        <div className="bg-slate-50 dark:bg-slate-700 p-2.5 rounded-xl border border-slate-100 dark:border-slate-600">{s.icon}</div>
-                        <div><div className="font-bold text-sm text-slate-900 dark:text-white">{s.name}</div><div className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase mt-0.5">Stock: <span className="text-green-600 dark:text-green-400">{s.stock}</span></div></div>
+                        <div className="p-2.5 rounded-xl" style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.08)'}}>{s.icon}</div>
+                        <div><div className="font-bold text-sm text-white">{s.name}</div><div className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Stock: <span className="text-emerald-400">{s.stock}</span></div></div>
                       </div>
                       <div className="text-right">
-                        <div className="font-black text-indigo-600 dark:text-indigo-400 text-sm">Rp {s.price.toLocaleString('id-ID')}</div>
-                        <button onClick={() => { showToast('Please login to start buying!'); onNavigate('login'); }} className="text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-3.5 py-1.5 rounded-lg mt-1.5 hover:bg-indigo-600 hover:text-white transition-colors">BUY NUMBER</button>
+                        <div className="font-black text-indigo-400 text-sm">Rp {s.price.toLocaleString('id-ID')}</div>
+                        <button onClick={() => { showToast('Please login to start buying!'); onNavigate('login'); }} className="text-[10px] font-bold px-3.5 py-1.5 rounded-lg mt-1.5 transition-colors hover:bg-indigo-500 hover:text-white text-indigo-400" style={{background:'rgba(99,102,241,0.15)'}}>BUY NUMBER</button>
                       </div>
                     </div>
-                  )) : <div className="text-center py-16 text-slate-400 text-sm font-medium"><Search className="w-10 h-10 mx-auto text-slate-300 mb-3"/>No services found.</div>}
+                  )) : <div className="text-center py-16 text-slate-500 text-sm font-medium"><Search className="w-10 h-10 mx-auto text-slate-600 mb-3"/>No services found.</div>}
                 </div>
               </div>
             </div>
@@ -1391,17 +1387,27 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
               Try searching for services in the demo panel without signing up. We guarantee <i>fresh</i> number stock updated in real-time from dozens of countries.
             </p>
             <ul className="space-y-4 text-left inline-block lg:block">
-              <li className="flex items-center text-slate-300 font-medium"><CheckCircle2 className="w-6 h-6 text-indigo-400 mr-3 shrink-0"/> Service prices starting from Rp 1,000 / OTP.</li>
-              <li className="flex items-center text-slate-300 font-medium"><CheckCircle2 className="w-6 h-6 text-indigo-400 mr-3 shrink-0"/> Fully encrypted transactions (End-to-End).</li>
-              <li className="flex items-center text-slate-300 font-medium"><CheckCircle2 className="w-6 h-6 text-indigo-400 mr-3 shrink-0"/> Premium number quality, 99% success rate.</li>
+              {[
+                'Service prices starting from Rp 1,000 / OTP.',
+                'Fully encrypted transactions (End-to-End).',
+                'Premium number quality, 99% success rate.',
+              ].map(item => (
+                <li key={item} className="flex items-center text-slate-300 font-medium">
+                  <div className="w-6 h-6 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center mr-3 shrink-0">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400"/>
+                  </div>
+                  {item}
+                </li>
+              ))}
             </ul>
           </div>
         </div>
       </div>
 
       {/* BENTO GRID (FITUR KEAMANAN) */}
-      <div id="fitur" className="py-24 bg-[#fafafa] dark:bg-[#020617]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div id="fitur" className="py-24 bg-[#f8f9fc] dark:bg-[#050810] relative overflow-hidden">
+        <div className="absolute inset-0 _dot-grid opacity-30 pointer-events-none dark:opacity-20" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <FadeInSection>
             <div className="text-center max-w-2xl mx-auto mb-16">
               <h2 className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider mb-2 text-sm">Security & Trust</h2>
@@ -1410,60 +1416,57 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
           </FadeInSection>
           <FadeInSection delay={100}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto auto-rows-[minmax(250px,auto)]">
-              {/* Box 1: Auto Refund (Besar) */}
-              <div
-                className="md:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-indigo-300 dark:hover:border-indigo-500 transition-colors"
-                style={{ transition: 'transform .25s ease, box-shadow .25s ease, border-color .2s ease' }}
-                onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-5px)'; d.style.boxShadow = '0 14px 32px rgba(0,0,0,0.07)'; }}
-                onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; d.style.boxShadow = ''; }}
+              {/* Box 1: Auto Refund */}
+              <div className="_glass-card _bento-hover md:col-span-2 rounded-3xl p-8 border relative overflow-hidden group transition-all"
+                style={{ transition: 'transform .25s ease, box-shadow .25s ease' }}
+                onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-5px)'; }}
+                onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; }}
               >
                 <div className="relative z-10">
-                  <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mb-5"><ShieldAlert className="w-7 h-7 text-indigo-600 dark:text-indigo-400"/></div>
+                  <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-2xl flex items-center justify-center mb-5"><ShieldAlert className="w-7 h-7 text-indigo-600 dark:text-indigo-400"/></div>
                   <h4 className="text-xl font-bold mb-2 text-slate-900 dark:text-white">Auto Refund 100%</h4>
                   <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md leading-relaxed">Our smart system tracks every OTP in real-time. If the code doesn't arrive within the waiting period, your balance is automatically returned in full with no deductions.</p>
                 </div>
-                <RefreshCw className="absolute -right-4 -bottom-12 w-64 h-64 text-indigo-600 opacity-5 group-hover:opacity-10 transition-transform duration-700 group-hover:rotate-180" />
+                <RefreshCw className="absolute -right-4 -bottom-12 w-64 h-64 text-indigo-500 opacity-5 group-hover:opacity-10 transition-all duration-700 group-hover:rotate-180" />
               </div>
-              {/* Box 2: Transaksi (Kecil Warna) */}
-              <div
-                className="bg-indigo-600 text-white rounded-3xl p-8 shadow-xl flex flex-col justify-center relative overflow-hidden group"
-                style={{ transition: 'transform .25s ease, box-shadow .25s ease' }}
-                onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-5px)'; d.style.boxShadow = '0 14px 32px rgba(79,70,229,0.35)'; }}
-                onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; d.style.boxShadow = ''; }}
+              {/* Box 2: Transaksi */}
+              <div className="_bento-hover rounded-3xl p-8 flex flex-col justify-center relative overflow-hidden group transition-all"
+                style={{ background:'linear-gradient(135deg,#4f46e5,#7c3aed)', transition: 'transform .25s ease, box-shadow .25s ease' }}
+                onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-5px)'; }}
+                onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; }}
               >
                 <div className="relative z-10">
-                  <Wallet className="w-12 h-12 text-green-400 mb-5"/>
-                  <h4 className="text-xl font-bold mb-2">Instant Transactions</h4>
-                  <p className="text-indigo-100 text-sm leading-relaxed">Deposits processed automatically in seconds. History recorded transparently.</p>
+                  <Wallet className="w-12 h-12 text-indigo-200 mb-5"/>
+                  <h4 className="text-xl font-bold mb-2 text-white">Instant Transactions</h4>
+                  <p className="text-indigo-200 text-sm leading-relaxed">Deposits processed automatically in seconds. History recorded transparently.</p>
                 </div>
                 <Zap className="w-40 h-40 text-white opacity-10 absolute -right-8 -bottom-8 group-hover:scale-110 transition-transform duration-500" />
               </div>
-              {/* Box 3: Privasi (Kecil) */}
-              <div
-                className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-center relative overflow-hidden group hover:border-indigo-300 dark:hover:border-indigo-500 transition-colors"
-                style={{ transition: 'transform .25s ease, box-shadow .25s ease, border-color .2s ease' }}
-                onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-5px)'; d.style.boxShadow = '0 14px 32px rgba(0,0,0,0.07)'; }}
-                onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; d.style.boxShadow = ''; }}
+              {/* Box 3: Privasi */}
+              <div className="_glass-card _bento-hover rounded-3xl p-8 border flex flex-col justify-center relative overflow-hidden group transition-all"
+                style={{ transition: 'transform .25s ease, box-shadow .25s ease' }}
+                onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-5px)'; }}
+                onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; }}
               >
                 <div className="relative z-10">
-                  <div className="w-14 h-14 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl flex items-center justify-center mb-5"><EyeOff className="w-7 h-7 text-slate-700 dark:text-slate-300"/></div>
+                  <div className="w-14 h-14 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl flex items-center justify-center mb-5"><EyeOff className="w-7 h-7 text-slate-700 dark:text-slate-300"/></div>
                   <h4 className="text-xl font-bold mb-2 text-slate-900 dark:text-white">Privacy Protected</h4>
                   <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Keep your personal number safe from spam, telemarketing, or data breaches.</p>
                 </div>
               </div>
-              {/* Box 4: Server Stabil (Besar Gelap) */}
-              <div
-                className="md:col-span-2 bg-slate-900 dark:bg-slate-950 text-white rounded-3xl p-8 shadow-xl flex items-center justify-between relative overflow-hidden border border-slate-800 group"
-                style={{ transition: 'transform .25s ease, box-shadow .25s ease' }}
-                onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-5px)'; d.style.boxShadow = '0 14px 32px rgba(0,0,0,0.25)'; }}
-                onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; d.style.boxShadow = ''; }}
+              {/* Box 4: Server */}
+              <div className="_bento-hover md:col-span-2 text-white rounded-3xl p-8 flex items-center justify-between relative overflow-hidden border border-white/[0.06] group transition-all"
+                style={{ background:'linear-gradient(135deg,#0d1117 0%,#0f0c1e 100%)', transition: 'transform .25s ease, box-shadow .25s ease' }}
+                onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-5px)'; }}
+                onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; }}
               >
                 <div className="w-full sm:w-2/3 relative z-10">
-                  <Server className="w-12 h-12 text-blue-400 mb-5"/>
+                  <Server className="w-12 h-12 text-sky-400 mb-5"/>
                   <h4 className="text-xl font-bold mb-2">99.9% Stable Infrastructure</h4>
                   <p className="text-slate-400 text-sm leading-relaxed">We use cutting-edge server technology to ensure the platform stays responsive and accessible 24 hours a day without interruption.</p>
                 </div>
-                <Globe className="hidden sm:block w-48 h-48 text-white opacity-5 absolute -right-6 top-1/2 -translate-y-1/2 transition-transform duration-[20s] group-hover:rotate-180" />
+                <Globe className="hidden sm:block _spin-slow w-48 h-48 text-indigo-500 opacity-10 absolute -right-6 top-1/2 -translate-y-1/2" />
+                <div className="absolute inset-0 pointer-events-none" style={{background:'radial-gradient(circle at 80% 50%, rgba(99,102,241,0.08) 0%, transparent 60%)'}} />
               </div>
             </div>
           </FadeInSection>
@@ -1471,7 +1474,9 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
       </div>
 
       {/* TESTIMONIAL */}
-      <div className="py-20 bg-white dark:bg-[#020617] border-t border-slate-200 dark:border-slate-800/50">
+      <div className="py-20 relative border-t border-slate-200/70 dark:border-white/[0.04]" style={{background:'linear-gradient(180deg,#f1f3f9 0%,#f8f9fc 100%)'}}>
+        <style>{`.dark .testimonial-section{background:linear-gradient(180deg,#07090f 0%,#050810 100%)!important}`}</style>
+        <div className="testimonial-section py-0">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <FadeInSection>
             <div className="text-center mb-12">
@@ -1481,26 +1486,28 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
           </FadeInSection>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {[
-              { name: 'Andi R.', role: 'Online Reseller', text: 'Instantly created a new marketplace account. OTP came in super fast, less than 30 seconds. Highly recommended!', rating: 5 },
-              { name: 'Siti N.', role: 'Freelancer', text: 'Auto refund actually worked when my number failed to receive OTP. Balance returned in seconds. Honest and trustworthy!', rating: 5 },
-              { name: 'Budi S.', role: 'Developer', text: 'Huge and varied number stock. Can choose from many countries. Prices are competitive — the cheapest I\'ve ever tried.', rating: 5 },
+              { name: 'Andi R.', role: 'Online Reseller', text: 'Instantly created a new marketplace account. OTP came in super fast, less than 30 seconds. Highly recommended!', rating: 5, color:'from-indigo-500/10 to-violet-500/5' },
+              { name: 'Siti N.', role: 'Freelancer', text: 'Auto refund actually worked when my number failed to receive OTP. Balance returned in seconds. Honest and trustworthy!', rating: 5, color:'from-violet-500/10 to-purple-500/5' },
+              { name: 'Budi S.', role: 'Developer', text: "Huge and varied number stock. Can choose from many countries. Prices are competitive — the cheapest I've ever tried.", rating: 5, color:'from-sky-500/10 to-indigo-500/5' },
             ].map((t, i) => (
               <FadeInSection key={i} delay={i * 120}>
-                <div
-                  className="bg-white dark:bg-slate-900 rounded-3xl p-7 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors"
-                  style={{ transition: 'transform .25s ease, box-shadow .25s ease, border-color .2s ease' }}
-                  onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-4px)'; d.style.boxShadow = '0 12px 28px rgba(0,0,0,0.08)'; }}
-                  onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; d.style.boxShadow = ''; }}
+                <div className="_glass-card _bento-hover relative rounded-3xl p-7 border transition-all overflow-hidden"
+                  style={{ transition: 'transform .25s ease, box-shadow .25s ease' }}
+                  onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-4px)'; }}
+                  onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; }}
                 >
-                  <div className="flex gap-1 mb-4">
-                    {[...Array(t.rating)].map((_, j) => <Star key={j} className="w-4 h-4 fill-yellow-400 text-yellow-400"/>)}
-                  </div>
-                  <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-6">"{t.text}"</p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center font-black text-indigo-600 dark:text-indigo-400">{t.name[0]}</div>
-                    <div>
-                      <div className="font-bold text-slate-900 dark:text-white text-sm">{t.name}</div>
-                      <div className="text-xs text-slate-400 font-medium">{t.role}</div>
+                  <div className={`absolute inset-0 bg-gradient-to-br ${t.color} pointer-events-none rounded-3xl`} />
+                  <div className="relative z-10">
+                    <div className="flex gap-1 mb-4">
+                      {[...Array(t.rating)].map((_, j) => <Star key={j} className="w-4 h-4 fill-amber-400 text-amber-400"/>)}
+                    </div>
+                    <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-6">"{t.text}"</p>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center font-black text-indigo-600 dark:text-indigo-300" style={{background:'linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.15))',border:'1px solid rgba(99,102,241,0.2)'}}>{t.name[0]}</div>
+                      <div>
+                        <div className="font-bold text-slate-900 dark:text-white text-sm">{t.name}</div>
+                        <div className="text-xs text-slate-400 font-medium">{t.role}</div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1508,10 +1515,11 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
             ))}
           </div>
         </div>
+        </div>
       </div>
 
       {/* FAQ */}
-      <div id="faq" className="bg-[#fafafa] dark:bg-slate-950 py-24 border-t border-slate-200 dark:border-slate-800/50">
+      <div id="faq" className="bg-[#fafafa] dark:bg-[#060810] py-24 border-t border-slate-200 dark:border-white/[0.07]/50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           <FadeInSection>
             <div className="text-center mb-12"><h2 className="text-3xl font-extrabold text-slate-900 dark:text-white">Frequently Asked Questions</h2></div>
@@ -1519,10 +1527,10 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
           <div className="space-y-4">
             {faqs.map((faq, i) => (
               <FadeInSection key={i} delay={i * 80}>
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+                <div className="bg-white dark:bg-[#0a0d16] border border-slate-200 dark:border-white/[0.07] rounded-2xl overflow-hidden shadow-sm">
                   <button 
                     onClick={() => setActiveFaq(activeFaq === i ? null : i)} 
-                    className="w-full px-6 py-5 text-left flex justify-between font-bold text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500 transition-colors"
+                    className="w-full px-6 py-5 text-left flex justify-between font-bold text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/[0.07]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500 transition-colors"
                   >
                     {faq.q} <ChevronDown className={"w-5 h-5 text-slate-400 transition-transform " + (activeFaq === i ? 'rotate-180' : '')} />
                   </button>
@@ -1535,10 +1543,11 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
       </div>
 
       {/* CTA SECTION */}
-      <div className="py-24 bg-indigo-600 dark:bg-indigo-700 relative">
-        <div className="absolute inset-0 -z-0 pointer-events-none">
-          <div className="absolute -top-20 -left-20 w-96 h-96 bg-violet-600/30 blur-[80px] rounded-full"/>
-          <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-blue-600/30 blur-[80px] rounded-full"/>
+      <div className="py-24 relative overflow-hidden" style={{background:'linear-gradient(135deg,#3730a3 0%,#4f46e5 40%,#7c3aed 100%)'}}>
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="_dot-grid absolute inset-0 opacity-20" />
+          <div className="absolute -top-24 -left-24 w-96 h-96 bg-white/10 blur-[80px] rounded-full"/>
+          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-violet-400/20 blur-[80px] rounded-full"/>
         </div>
         <FadeInSection>
           <div className="max-w-3xl mx-auto px-4 text-center relative z-10">
@@ -1556,7 +1565,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
         </FadeInSection>
       </div>
 
-      <footer className="bg-white dark:bg-slate-900 pt-10 pb-5 border-t border-slate-200 dark:border-slate-800">
+      <footer className="bg-white dark:bg-[#030508] pt-10 pb-5 border-t border-slate-200 dark:border-white/[0.05]">
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
             <div className="col-span-2 md:col-span-1 md:pr-6">
@@ -1605,11 +1614,11 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
               </ul>
             </div>
           </div>
-          <div className="border-t border-slate-100 dark:border-slate-800 pt-4 flex flex-row justify-between items-center gap-2">
+          <div className="border-t border-slate-100 dark:border-white/[0.07] pt-4 flex flex-row justify-between items-center gap-2">
             <div className="text-slate-400 dark:text-slate-500 text-xs">&copy; {new Date().getFullYear()} Pusat Nokos. All rights reserved.</div>
             <div className="flex gap-2 shrink-0">
-              <span className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded text-[10px] font-bold text-slate-500 dark:text-slate-400">E2E</span>
-              <span className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded text-[10px] font-bold text-slate-500 dark:text-slate-400">E2E Encrypted</span>
+              <span className="bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] px-2 py-0.5 rounded text-[10px] font-bold text-slate-500 dark:text-slate-400">E2E</span>
+              <span className="bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] px-2 py-0.5 rounded text-[10px] font-bold text-slate-500 dark:text-slate-400">E2E Encrypted</span>
             </div>
           </div>
         </div>
@@ -1617,8 +1626,8 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
       {/* ── Modal Syarat & Ketentuan ─────────────────────────────── */}
       {showSyarat && (
         <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowSyarat(false)}>
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
+          <div className="bg-white dark:bg-[#0c0f1c] rounded-3xl shadow-2xl border border-slate-200/80 dark:border-white/[0.07] w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-white/[0.07] shrink-0">
               <div className="flex items-center gap-3">
                 <div className="bg-indigo-100 dark:bg-indigo-900/40 p-2.5 rounded-2xl"><ShieldCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /></div>
                 <div>
@@ -1626,7 +1635,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
                   <p className="text-xs text-slate-400">Terakhir diperbarui: April 2026</p>
                 </div>
               </div>
-              <button onClick={() => setShowSyarat(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
+              <button onClick={() => setShowSyarat(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/[0.07] text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
             </div>
             <div className="overflow-y-auto p-6 space-y-5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
               <section>
@@ -1670,7 +1679,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
                 <p>For questions, complaints, or clarifications regarding these terms, please contact our team via WhatsApp at 087862306726 or via our official email at cs@pusatnokos.com. Our team is ready to help at any time.</p>
               </section>
             </div>
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
+            <div className="p-4 border-t border-slate-100 dark:border-white/[0.07] shrink-0">
               <button onClick={() => setShowSyarat(false)} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-2xl transition-colors">Saya Mengerti</button>
             </div>
           </div>
@@ -1680,8 +1689,8 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
       {/* ── Modal Kebijakan Privasi ───────────────────────────────── */}
       {showPrivasi && (
         <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowPrivasi(false)}>
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
+          <div className="bg-white dark:bg-[#0c0f1c] rounded-3xl shadow-2xl border border-slate-200/80 dark:border-white/[0.07] w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-white/[0.07] shrink-0">
               <div className="flex items-center gap-3">
                 <div className="bg-green-100 dark:bg-green-900/40 p-2.5 rounded-2xl"><ShieldAlert className="w-5 h-5 text-green-600 dark:text-green-400" /></div>
                 <div>
@@ -1689,7 +1698,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
                   <p className="text-xs text-slate-400">Terakhir diperbarui: April 2026</p>
                 </div>
               </div>
-              <button onClick={() => setShowPrivasi(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
+              <button onClick={() => setShowPrivasi(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/[0.07] text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
             </div>
             <div className="overflow-y-auto p-6 space-y-5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
               <section>
@@ -1725,7 +1734,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
                 <p>This privacy policy may be updated at any time to reflect changes in our service practices or applicable regulations. Significant changes will be notified via platform notifications or registered email. Continued use of the service after changes are published constitutes your acceptance. For questions about this policy, please contact us at cs@pusatnokos.com.</p>
               </section>
             </div>
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
+            <div className="p-4 border-t border-slate-100 dark:border-white/[0.07] shrink-0">
               <button onClick={() => setShowPrivasi(false)} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-2xl transition-colors">Saya Mengerti</button>
             </div>
           </div>
@@ -1750,7 +1759,7 @@ function OtpInput({ value, onChange }: { value: string; onChange: (v: string) =>
       <input
         type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6} required
         value={value} onChange={e => onChange(e.target.value.replace(/\D/g, ''))}
-        className="w-full px-6 py-5 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-indigo-500 dark:text-white text-3xl font-black tracking-[0.5em] text-center transition-all"
+        className="w-full px-6 py-5 bg-slate-50 dark:bg-[#0f1320] border-2 border-slate-200 dark:border-white/[0.09] rounded-2xl outline-none focus:border-indigo-500 dark:text-white text-3xl font-black tracking-[0.5em] text-center transition-all"
         placeholder="000000"
       />
       <p className="text-xs text-slate-400 mt-2 text-center">Valid for 10 minutes</p>
@@ -2024,7 +2033,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
     finally { setIsLoading(false); }
   };
 
-  const inputCls = "w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/50 dark:text-white text-base font-medium transition-all";
+  const inputCls = "w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl outline-none focus:bg-white dark:focus:bg-[#0a0d16] focus:ring-2 focus:ring-indigo-500/50 dark:text-white text-base font-medium transition-all";
   const btnCls   = (loading: boolean) => "w-full flex justify-center items-center py-4 rounded-2xl text-sm font-bold text-white transition-all active:scale-95 disabled:opacity-70 " + (loading ? "bg-indigo-400" : "bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-700");
 
   const ErrorBox = () => error ? (
@@ -2047,7 +2056,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#020617] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden transition-colors duration-300" style={{minHeight:"100svh"}}>
+    <div className="min-h-screen bg-slate-50 dark:bg-[#060810] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden transition-colors duration-300" style={{minHeight:"100svh"}}>
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[min(800px,100vw)] h-[min(800px,100vh)] bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none"></div>
       <div className="mx-auto w-full max-w-md text-center mb-8 relative z-10">
         <div className="flex justify-center cursor-pointer mb-6 hover:scale-105 transition-transform" onClick={() => onNavigate("landing")}>
@@ -2057,7 +2066,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 font-medium">{subtitles[step]}</p>
       </div>
 
-      <div className="mx-auto w-full max-w-md bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl py-8 px-6 sm:px-10 shadow-2xl border border-slate-200/50 dark:border-slate-800/50 rounded-3xl relative z-10" style={{paddingBottom:"calc(1.5rem + env(safe-area-inset-bottom,0px))"}}>
+      <div className="mx-auto w-full max-w-md bg-white/90 dark:bg-[#0a0d16]/90 backdrop-blur-xl py-8 px-6 sm:px-10 shadow-2xl border border-slate-200/50 dark:border-white/[0.07]/50 rounded-3xl relative z-10" style={{paddingBottom:"calc(1.5rem + env(safe-area-inset-bottom,0px))"}}>
 
         {/* ── LOGIN FORM ── */}
         {step === "form" && isLogin && (
@@ -2540,28 +2549,73 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
   ];
 
   return (
-    <div suppressHydrationWarning className="min-h-screen bg-[#fafafa] dark:bg-[#020617] flex flex-col md:flex-row font-sans relative transition-colors duration-300 overflow-x-hidden" style={{minHeight:"100svh"}}>
+    <div suppressHydrationWarning className="min-h-screen bg-[#f4f5f9] dark:bg-[#060810] flex flex-col md:flex-row font-sans relative transition-colors duration-300 overflow-x-hidden" style={{minHeight:"100svh"}}>
+      <style>{`
+        /* ── Dashboard dark mode depth ── */
+        .dark .dash-card {
+          background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%) !important;
+          border-color: rgba(255,255,255,0.07) !important;
+          backdrop-filter: blur(8px);
+        }
+        .dark .dash-table {
+          background: linear-gradient(180deg, #0d1020 0%, #0a0d18 100%) !important;
+        }
+        .dark .dash-row:hover { background: rgba(255,255,255,0.04) !important; }
+        .dark .dash-thead { background: rgba(6,8,16,0.8) !important; }
+        .dark .dash-input {
+          background: rgba(255,255,255,0.05) !important;
+          border-color: rgba(255,255,255,0.08) !important;
+        }
+        .dark .dash-input:focus {
+          background: rgba(255,255,255,0.07) !important;
+          border-color: rgba(99,102,241,0.5) !important;
+        }
+        .dark .dash-badge {
+          background: rgba(255,255,255,0.06) !important;
+          border-color: rgba(255,255,255,0.08) !important;
+        }
+        .dark .dash-section {
+          background: linear-gradient(180deg,#060810 0%,#07090f 100%);
+        }
+        /* Subtle dot grid on main content */
+        .dark main::before {
+          content: '';
+          position: fixed;
+          inset: 0;
+          background-image: radial-gradient(circle, rgba(99,102,241,0.08) 1px, transparent 1px);
+          background-size: 32px 32px;
+          pointer-events: none;
+          z-index: 0;
+        }
+        main > * { position: relative; z-index: 1; }
+        /* Stat cards gradient glow */
+        .dark .stat-card-indigo { background: linear-gradient(135deg,rgba(79,70,229,0.12),rgba(79,70,229,0.04)) !important; border-color: rgba(79,70,229,0.2) !important; }
+        .dark .stat-card-green  { background: linear-gradient(135deg,rgba(16,185,129,0.12),rgba(16,185,129,0.04)) !important; border-color: rgba(16,185,129,0.2) !important; }
+        .dark .stat-card-amber  { background: linear-gradient(135deg,rgba(245,158,11,0.12),rgba(245,158,11,0.04)) !important; border-color: rgba(245,158,11,0.2) !important; }
+        .dark .stat-card-blue   { background: linear-gradient(135deg,rgba(59,130,246,0.12),rgba(59,130,246,0.04)) !important; border-color: rgba(59,130,246,0.2) !important; }
+      `}</style>
       
       {/* SIDEBAR DESKTOP */}
-      <div className="hidden md:flex flex-col w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 fixed h-full z-10 shadow-sm transition-colors duration-300">
-        <div className="h-[80px] flex items-center px-8 border-b border-slate-100 dark:border-slate-800">
+      <div className="hidden md:flex flex-col w-72 border-r border-slate-200/80 dark:border-white/[0.06] fixed h-full z-10 transition-colors duration-300 bg-white dark:bg-[#0b0e1a] shadow-sm dark:shadow-[4px_0_24px_rgba(0,0,0,0.3)]">
+        <div className="h-[80px] flex items-center px-8 border-b border-slate-100 dark:border-white/[0.06]">
           <img src="/logo.png" className="h-10 w-10 rounded-xl object-cover mr-3" alt="Pusat Nokos" />
           <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">PusatNokos.</span>
         </div>
-        <div className="p-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 font-bold mb-2 tracking-widest uppercase">{t.totalBalance.toUpperCase()}</div>
+        <div className="p-8 border-b border-slate-100 dark:border-white/[0.06]" style={{background:'rgba(99,102,241,0.03)'}}>
+          <div className="text-[11px] text-slate-500 dark:text-slate-500 font-bold mb-2 tracking-widest uppercase">{t.totalBalance.toUpperCase()}</div>
           <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400">Rp {balance.toLocaleString('id-ID')}</div>
         </div>
-        <div className="flex-1 py-6 px-5 space-y-2 overflow-y-auto">
+        <div className="flex-1 py-6 px-5 space-y-1.5 overflow-y-auto">
           {navItems.map(i => (
-            <button key={i.id} onClick={() => setActiveTab(i.id)} className={"w-full flex items-center px-4 py-4 text-[15px] font-bold rounded-2xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500 " + (activeTab === i.id ? 'bg-slate-900 dark:bg-indigo-600 text-white shadow-lg shadow-slate-900/20 dark:shadow-none' : 'text-slate-600 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400')}>
-              <div className={"mr-4 " + (activeTab === i.id ? 'text-indigo-400 dark:text-indigo-200' : 'text-slate-400 dark:text-slate-500')}>{i.icon}</div>{i.name}
+            <button key={i.id} onClick={() => setActiveTab(i.id)} className={"w-full flex items-center px-4 py-3.5 text-[14px] font-bold rounded-2xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500 " + (activeTab === i.id ? 'text-white shadow-lg' : 'text-slate-600 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-white/[0.06] hover:text-indigo-600 dark:hover:text-indigo-300')}
+              style={activeTab === i.id ? {background:'linear-gradient(135deg,#4f46e5,#7c3aed)',boxShadow:'0 4px 16px rgba(79,70,229,0.35)'} : {}}>
+              <div className={"mr-4 " + (activeTab === i.id ? 'text-indigo-200' : 'text-slate-400 dark:text-slate-500')}>{i.icon}</div>{i.name}
             </button>
           ))}
         </div>
         {/* Bottom sidebar: Dokumen Legal */}
-        <div className="p-5 border-t border-slate-100 dark:border-slate-800 relative">
-          <button onClick={() => setShowLegalMenu(v => !v)} className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
+        <div className="p-5 border-t border-slate-100 dark:border-white/[0.07] relative">
+          <button onClick={() => setShowLegalMenu(v => !v)} className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 dark:bg-[#0f1320] hover:bg-slate-100 dark:hover:bg-white/[0.1] text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
             <div className="flex items-center gap-3">
               <ShieldCheck className="w-5 h-5 text-indigo-400 shrink-0" />
               {t.legalDocs}
@@ -2569,7 +2623,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
             <ChevronDown className={"w-4 h-4 transition-transform " + (showLegalMenu ? 'rotate-180' : '')} />
           </button>
           {showLegalMenu && (
-            <div className="mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-lg overflow-hidden">
+            <div className="mt-2 bg-white dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl shadow-lg overflow-hidden">
               {[
                 { label: t.legalTerms,    icon: <ShieldCheck className="w-4 h-4 text-indigo-400" />,  action: () => { setShowSyaratDash(true);     setShowLegalMenu(false); } },
                 { label: t.legalPrivacy,     icon: <ShieldAlert className="w-4 h-4 text-green-400" />,  action: () => { setShowPrivasiDash(true);    setShowLegalMenu(false); } },
@@ -2578,7 +2632,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                 { label: t.legalAntiAbuse,   icon: <ShieldAlert className="w-4 h-4 text-red-400" />,    action: () => { setShowAntiAbuseDash(true);  setShowLegalMenu(false); } },
                 { label: t.legalDisclaimer,            icon: <AlertCircle className="w-4 h-4 text-orange-400" />, action: () => { setShowDisclaimerDash(true); setShowLegalMenu(false); } },
               ].map(item => (
-                <button key={item.label} onClick={item.action} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs transition-colors border-b border-slate-100 dark:border-slate-700 last:border-0">
+                <button key={item.label} onClick={item.action} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-white/[0.1] text-slate-600 dark:text-slate-300 font-bold text-xs transition-colors border-b border-slate-100 dark:border-white/[0.09] last:border-0">
                   {item.icon}{item.label}
                 </button>
               ))}
@@ -2589,7 +2643,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
 
       {/* MAIN WRAPPER */}
       <div className="flex-1 md:ml-72 flex flex-col" style={{minHeight:"100svh"}}>
-        <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl h-[64px] sm:h-[80px] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-40 shadow-sm transition-colors duration-300">
+        <header className="backdrop-blur-xl h-[64px] sm:h-[80px] border-b flex items-center justify-between px-4 sm:px-8 sticky top-0 z-40 transition-colors duration-300 bg-white/80 dark:bg-[#060810]/90 border-slate-200/80 dark:border-white/[0.05]" style={{boxShadow:'0 1px 20px rgba(0,0,0,0.04)'}}>
           <div className="md:hidden flex items-center font-black text-xl tracking-tight dark:text-white">
             <img src="/logo.png" className="h-8 w-8 rounded-xl object-cover mr-2" alt="Pusat Nokos" /> PusatNokos.
           </div>
@@ -2600,21 +2654,21 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
 
           <div className="flex items-center space-x-2 sm:space-x-5">
             {/* Language Switcher */}
-            <div className="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1">
+            <div className="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-[#0f1320] rounded-xl p-1">
               {(['id','en','zh'] as Lang[]).map(l => (
                 <button key={l} onClick={() => { setLang(l); safeLocalSet('lang', l); }}
-                  className={"px-2.5 py-1 rounded-lg text-xs font-black transition-colors " + (lang === l ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300')}>
+                  className={"px-2.5 py-1 rounded-lg text-xs font-black transition-colors " + (lang === l ? 'bg-white dark:bg-[#161b28] text-slate-900 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300')}>
                   {l === 'id' ? '🇮🇩' : l === 'en' ? '🇺🇸' : '🇨🇳'}
                 </button>
               ))}
             </div>
-            <button suppressHydrationWarning onClick={() => setIsDarkMode(!isDarkMode)} aria-label="Toggle dark mode" className="hidden md:flex p-2.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+            <button suppressHydrationWarning onClick={() => setIsDarkMode(!isDarkMode)} aria-label="Toggle dark mode" className="hidden md:flex p-2.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.07] rounded-full transition-colors">
               {isDarkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}
             </button>
 
             {/* Notifikasi Bell */}
             <div className="relative">
-              <button onClick={() => { setShowNotif(v => !v); setNotifCount(0); }} aria-label="Buka notifikasi" className="relative p-2.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+              <button onClick={() => { setShowNotif(v => !v); setNotifCount(0); }} aria-label="Buka notifikasi" className="relative p-2.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.07] rounded-full transition-colors">
                 <Bell className="w-5 h-5" />
                 {notifCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
@@ -2623,19 +2677,19 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                 )}
               </button>
               {showNotif && (
-                <div className="fixed right-4 top-20 w-[calc(100vw-2rem)] max-w-xs sm:w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-[200] overflow-hidden">
-                  <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div className="fixed right-4 top-20 w-[calc(100vw-2rem)] max-w-xs sm:w-80 bg-white dark:bg-[#0a0d16] border border-slate-200 dark:border-white/[0.09] rounded-2xl shadow-2xl z-[200] overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100 dark:border-white/[0.07] flex items-center justify-between">
                     <span className="font-black text-slate-900 dark:text-white text-sm">{t.notifications}</span>
                     <button onClick={() => { setNotifItems([]); setShowNotif(false); }} aria-label="Hapus semua notifikasi" className="text-xs text-slate-400 hover:text-red-500 font-bold">{t.clearAll}</button>
                   </div>
-                  <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                  <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-white/[0.06]">
                     {notifItems.length === 0 ? (
                       <div className="py-8 text-center text-slate-400 text-sm font-medium">
                         <Bell className="w-6 h-6 mx-auto mb-2 opacity-30" />
                         {t.noNotif}
                       </div>
                     ) : notifItems.map(n => (
-                      <div key={n.id} className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                      <div key={n.id} className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/[0.07]/50 transition-colors">
                         <div className="text-sm font-medium text-slate-800 dark:text-slate-200">{n.msg}</div>
                         <div className="text-[10px] text-slate-400 mt-0.5">{n.time}</div>
                       </div>
@@ -2647,15 +2701,15 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
             
             <button onClick={() => setActiveTab('topup')} className="font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-xs md:text-sm hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 transition-colors shadow-sm">+ Topup</button>
             <button onClick={onLogout} className="hidden md:flex font-bold text-slate-500 dark:text-slate-400 text-sm hover:text-red-600 dark:hover:text-red-400 px-3 py-2 rounded-xl transition-colors"><LogOut className="w-5 h-5 mr-2"/> {t.logout}</button>
-            <button onClick={() => setIsSidebarOpen(true)} aria-label="Buka menu" className="md:hidden p-2.5 text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center"><Menu className="h-6 w-6" /></button>
+            <button onClick={() => setIsSidebarOpen(true)} aria-label="Buka menu" className="md:hidden p-2.5 text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-[#0f1320] rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center"><Menu className="h-6 w-6" /></button>
           </div>
         </header>
 
         {/* MOBILE SIDEBAR OVERLAY */}
         {isSidebarOpen && (
           <div className="md:hidden fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsSidebarOpen(false)}>
-            <div className="bg-white dark:bg-slate-900 w-[280px] h-full flex flex-col shadow-2xl animate-in slide-in-from-left-full duration-300" onClick={e => e.stopPropagation()}>
-              <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-start">
+            <div className="bg-white dark:bg-[#0a0d16] w-[280px] h-full flex flex-col shadow-2xl animate-in slide-in-from-left-full duration-300" onClick={e => e.stopPropagation()}>
+              <div className="p-6 border-b border-slate-100 dark:border-white/[0.07] bg-slate-50 dark:bg-white/[0.04] flex justify-between items-start">
                 <div>
                   <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">{t.yourBalance}</div>
                   <div className="text-2xl font-black text-indigo-700 dark:text-indigo-400">Rp {balance.toLocaleString('id-ID')}</div>
@@ -2663,50 +2717,55 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                 <div className="flex items-center gap-1">
                   {(['id','en','zh'] as Lang[]).map(l => (
                     <button key={l} onClick={() => { setLang(l); safeLocalSet('lang', l); }}
-                      className={"px-2 py-1 rounded-lg text-xs font-black transition-colors " + (lang === l ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-700 text-slate-400')}>
+                      className={"px-2 py-1 rounded-lg text-xs font-black transition-colors " + (lang === l ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-[#161b28] text-slate-400')}>
                       {l === 'id' ? '🇮🇩' : l === 'en' ? '🇺🇸' : '🇨🇳'}
                     </button>
                   ))}
                 </div>
-                <button onClick={() => setIsSidebarOpen(false)} aria-label="Tutup menu" className="bg-white dark:bg-slate-800 p-2 rounded-full shadow-sm border border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400"><X className="w-5 h-5"/></button>
+                <button onClick={() => setIsSidebarOpen(false)} aria-label="Tutup menu" className="bg-white dark:bg-[#0f1320] p-2 rounded-full shadow-sm border border-slate-100 dark:border-white/[0.09] text-slate-500 dark:text-slate-400"><X className="w-5 h-5"/></button>
               </div>
               <div className="flex-1 py-6 px-5 space-y-2 overflow-y-auto">
                 {navItems.map(i => (
-                  <button key={i.id} onClick={() => {setActiveTab(i.id); setIsSidebarOpen(false);}} className={"w-full flex items-center px-5 py-4 text-sm font-bold rounded-2xl transition-colors " + (activeTab === i.id ? 'bg-slate-900 dark:bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400')}>
+                  <button key={i.id} onClick={() => {setActiveTab(i.id); setIsSidebarOpen(false);}} className={"w-full flex items-center px-5 py-4 text-sm font-bold rounded-2xl transition-colors " + (activeTab === i.id ? 'bg-slate-900 dark:bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-white/[0.07] hover:text-indigo-600 dark:hover:text-indigo-400')}>
                     <div className={"mr-4 " + (activeTab === i.id ? 'text-indigo-400 dark:text-indigo-200' : 'text-slate-400 dark:text-slate-500')}>{i.icon}</div> {i.name}
                   </button>
                 ))}
               </div>
-              <div className="p-5 border-t border-slate-100 dark:border-slate-800 space-y-2">
-                <button suppressHydrationWarning onClick={() => { setIsDarkMode(!isDarkMode); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
+              <div className="p-5 border-t border-slate-100 dark:border-white/[0.07] space-y-2">
+                <button suppressHydrationWarning onClick={() => { setIsDarkMode(!isDarkMode); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-[#0f1320] text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
                   {isDarkMode ? <Sun className="w-5 h-5 text-amber-400 shrink-0" /> : <Moon className="w-5 h-5 text-slate-400 shrink-0" />}
                   {isDarkMode ? 'Mode Terang' : 'Mode Gelap'}
                 </button>
-                <button onClick={() => { setShowSyaratDash(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
-                  <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0" />{t.legalTerms}
-                </button>
-                <button onClick={() => { setShowPrivasiDash(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
-                  <ShieldAlert className="w-4 h-4 text-green-400 shrink-0" />{t.legalPrivacy}
-                </button>
-                <button onClick={() => { setShowRefundDash(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
-                  <RotateCcw className="w-4 h-4 text-blue-400 shrink-0" />{t.legalRefund}
-                </button>
-                <button onClick={() => { setShowDepositDash(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
-                  <CreditCard className="w-4 h-4 text-amber-400 shrink-0" />{t.legalDeposit}
-                </button>
-                <button onClick={() => { setShowAntiAbuseDash(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
-                  <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />{t.legalAntiAbuse}
-                </button>
-                <button onClick={() => { setShowDisclaimerDash(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-2xl transition-all text-sm">
-                  <AlertCircle className="w-4 h-4 text-orange-400 shrink-0" />{t.legalDisclaimer}
-                </button>
+                {/* ── Dokumen Legal (accordion) ── */}
+                <div className="rounded-2xl overflow-hidden">
+                  <button onClick={() => setShowLegalMenu(v => !v)} className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 dark:bg-[#0f1320] text-slate-600 dark:text-slate-400 font-bold transition-all text-sm">
+                    <span className="flex items-center gap-3"><Globe className="w-4 h-4 text-slate-400 shrink-0" />{t.legalDocs}</span>
+                    <ChevronDown className={"w-4 h-4 transition-transform shrink-0 " + (showLegalMenu ? 'rotate-180' : '')} />
+                  </button>
+                  {showLegalMenu && (
+                    <div className="bg-slate-50 dark:bg-[#0f1320] border-t border-slate-100 dark:border-white/[0.09] grid grid-cols-2 gap-px">
+                      {[
+                        { label: t.legalTerms,      icon: <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />, action: () => { setShowSyaratDash(true);     setIsSidebarOpen(false); setShowLegalMenu(false); } },
+                        { label: t.legalPrivacy,    icon: <ShieldAlert className="w-3.5 h-3.5 text-green-400" />,  action: () => { setShowPrivasiDash(true);    setIsSidebarOpen(false); setShowLegalMenu(false); } },
+                        { label: t.legalRefund,     icon: <RotateCcw   className="w-3.5 h-3.5 text-blue-400" />,  action: () => { setShowRefundDash(true);     setIsSidebarOpen(false); setShowLegalMenu(false); } },
+                        { label: t.legalDeposit,    icon: <CreditCard  className="w-3.5 h-3.5 text-amber-400" />, action: () => { setShowDepositDash(true);    setIsSidebarOpen(false); setShowLegalMenu(false); } },
+                        { label: t.legalAntiAbuse,  icon: <ShieldAlert className="w-3.5 h-3.5 text-red-400" />,   action: () => { setShowAntiAbuseDash(true);  setIsSidebarOpen(false); setShowLegalMenu(false); } },
+                        { label: t.legalDisclaimer, icon: <AlertCircle className="w-3.5 h-3.5 text-orange-400" />,action: () => { setShowDisclaimerDash(true); setIsSidebarOpen(false); setShowLegalMenu(false); } },
+                      ].map(item => (
+                        <button key={item.label} onClick={item.action} className="flex items-center gap-2 px-3 py-2.5 bg-white dark:bg-[#0a0d16] hover:bg-indigo-50 dark:hover:bg-white/[0.07] text-slate-500 dark:text-slate-400 text-xs font-bold transition-colors">
+                          {item.icon}<span className="truncate">{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button onClick={onLogout} className="w-full font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 py-4 rounded-2xl flex justify-center items-center transition-colors"><LogOut className="w-5 h-5 mr-2"/> {t.logoutBtn}</button>
               </div>
             </div>
           </div>
         )}
 
-        <main className="flex-1 p-4 sm:p-8 md:!pb-8" style={{paddingBottom:"calc(6.5rem + env(safe-area-inset-bottom,0px))"}}>
+        <main className="flex-1 p-4 sm:p-8 md:!pb-8 dark:bg-[#060810]" style={{paddingBottom:"calc(6.5rem + env(safe-area-inset-bottom,0px))"}}>
           {activeTab === 'dashboard' && <UserDashboardView user={user} balance={balance} orders={orders} mutasi={mutasi} setActiveTab={setActiveTab} notices={notices} lang={lang} />}
           {activeTab === 'buy' && <BuyView balance={balance} setBalance={setBalance} orders={orders} setOrders={setOrders} showToast={showToast} onCancelOrder={handleCancelOrder} favorites={favorites} setFavorites={setFavorites} setMutasi={setMutasi} activeServices={activeServices} serviceError={serviceError} countries={countries} selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry} user={user} updateBalance={updateBalance} autoRetryQueue={autoRetryQueue} setAutoRetryQueue={setAutoRetryQueue} failedNumbers={failedNumbers} lang={lang} />}
           {activeTab === 'topup' && <TopupView balance={balance} setBalance={setBalance} showToast={showToast} setActiveTab={setActiveTab} setMutasi={setMutasi} updateBalance={updateBalance} user={user} lang={lang} />}
@@ -2717,7 +2776,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       </div>
 
       {/* ── Bottom Navigation Bar (mobile only) ──────────────────────── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]" style={{paddingBottom:"env(safe-area-inset-bottom, 12px)"}}>
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/[0.05] bg-white/95 dark:bg-[#060810]/95" style={{paddingBottom:"env(safe-area-inset-bottom, 12px)", boxShadow:'0 -4px 30px rgba(0,0,0,0.06)'}}>
         <div className="flex items-stretch h-16 sm:h-[60px]">
           {[
             { id: 'buy',      label: t.buy,        icon: <ShoppingCart className="w-5 h-5" /> },
@@ -2752,9 +2811,9 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       {/* ── Pop-up Panduan Setiap Login ──────────────────────────────── */}
       {showGuide && (
         <div className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg max-h-[90vh] flex flex-col">
+          <div className="bg-white dark:bg-[#0c0f1c] rounded-3xl shadow-2xl border border-slate-200/80 dark:border-white/[0.07] w-full max-w-lg max-h-[90vh] flex flex-col">
             {/* Header */}
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
+            <div className="p-6 border-b border-slate-100 dark:border-white/[0.07] shrink-0">
               <div className="flex items-center gap-4">
                 <div className="bg-indigo-600 p-3 rounded-2xl shadow-lg shadow-indigo-200 dark:shadow-none shrink-0">
                   <img src="/logo.png" className="h-7 w-7 rounded-lg object-cover" alt="Pusat Nokos" />
@@ -2812,7 +2871,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                   desc: `Our Customer Service team is available 24/7. Reach us via WhatsApp at 087862306726 or Telegram ${CS_TELEGRAM}. Include your username, amount, and screenshot for any deposit issues. We'll respond as fast as possible.`,
                 },
               ].map(item => (
-                <div key={item.step} className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                <div key={item.step} className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.07]">
                   <div className={`${item.bg} p-2.5 rounded-xl shrink-0`}>
                     {item.icon}
                   </div>
@@ -2828,7 +2887,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
             </div>
 
             {/* Footer */}
-            <div className="p-5 border-t border-slate-100 dark:border-slate-800 shrink-0 flex gap-3">
+            <div className="p-5 border-t border-slate-100 dark:border-white/[0.07] shrink-0 flex gap-3">
               <a href={`https://wa.me/${CS_WA}?text=Halo%20CS%20Pusat%20Nokos%2C%20saya%20butuh%20bantuan.`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebd5a] text-white font-bold px-5 py-3 rounded-2xl transition-colors text-sm shrink-0">
                 <svg viewBox="0 0 24 24" fill="white" className="w-4 h-4 shrink-0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                 Chat CS
@@ -2844,8 +2903,8 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       {/* ── Modal Syarat & Ketentuan Dashboard ───────────────────────── */}
       {showSyaratDash && (
         <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowSyaratDash(false)}>
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
+          <div className="bg-white dark:bg-[#0c0f1c] rounded-3xl shadow-2xl border border-slate-200/80 dark:border-white/[0.07] w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-white/[0.07] shrink-0">
               <div className="flex items-center gap-3">
                 <div className="bg-indigo-100 dark:bg-indigo-900/40 p-2.5 rounded-2xl"><ShieldCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /></div>
                 <div>
@@ -2853,7 +2912,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                   <p className="text-xs text-slate-400">Terakhir diperbarui: April 2026</p>
                 </div>
               </div>
-              <button onClick={() => setShowSyaratDash(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
+              <button onClick={() => setShowSyaratDash(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/[0.07] text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
             </div>
             <div className="overflow-y-auto p-6 space-y-5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
               {[
@@ -2872,7 +2931,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                 </section>
               ))}
             </div>
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
+            <div className="p-4 border-t border-slate-100 dark:border-white/[0.07] shrink-0">
               <button onClick={() => setShowSyaratDash(false)} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-2xl transition-colors">Saya Mengerti</button>
             </div>
           </div>
@@ -2882,8 +2941,8 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       {/* ── Modal Kebijakan Privasi Dashboard ────────────────────────── */}
       {showPrivasiDash && (
         <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowPrivasiDash(false)}>
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
+          <div className="bg-white dark:bg-[#0c0f1c] rounded-3xl shadow-2xl border border-slate-200/80 dark:border-white/[0.07] w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-white/[0.07] shrink-0">
               <div className="flex items-center gap-3">
                 <div className="bg-green-100 dark:bg-green-900/40 p-2.5 rounded-2xl"><ShieldAlert className="w-5 h-5 text-green-600 dark:text-green-400" /></div>
                 <div>
@@ -2891,7 +2950,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                   <p className="text-xs text-slate-400">Terakhir diperbarui: April 2026</p>
                 </div>
               </div>
-              <button onClick={() => setShowPrivasiDash(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
+              <button onClick={() => setShowPrivasiDash(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/[0.07] text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
             </div>
             <div className="overflow-y-auto p-6 space-y-5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
               {[
@@ -2910,7 +2969,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                 </section>
               ))}
             </div>
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
+            <div className="p-4 border-t border-slate-100 dark:border-white/[0.07] shrink-0">
               <button onClick={() => setShowPrivasiDash(false)} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-2xl transition-colors">Saya Mengerti</button>
             </div>
           </div>
@@ -2920,13 +2979,13 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       {/* ── Modal Kebijakan Refund ─────────────────────────────────── */}
       {showRefundDash && (
         <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowRefundDash(false)}>
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
+          <div className="bg-white dark:bg-[#0c0f1c] rounded-3xl shadow-2xl border border-slate-200/80 dark:border-white/[0.07] w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-white/[0.07] shrink-0">
               <div className="flex items-center gap-3">
                 <div className="bg-blue-100 dark:bg-blue-900/40 p-2.5 rounded-2xl"><RotateCcw className="w-5 h-5 text-blue-600 dark:text-blue-400" /></div>
                 <div><h2 className="text-lg font-black text-slate-900 dark:text-white">Kebijakan Refund & Pembatalan</h2><p className="text-xs text-slate-400">Terakhir diperbarui: April 2026</p></div>
               </div>
-              <button onClick={() => setShowRefundDash(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
+              <button onClick={() => setShowRefundDash(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/[0.07] text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
             </div>
             <div className="overflow-y-auto p-6 space-y-5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
               {[
@@ -2938,7 +2997,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                 { title: '6. Refund Disputes', content: 'If a refund does not process as expected, contact CS via WhatsApp 087862306726 or cs@pusatnokos.com including your order ID and screenshot as proof.' },
               ].map(s => (<section key={s.title}><h3 className="font-bold text-slate-900 dark:text-white mb-2">{s.title}</h3><p>{s.content}</p></section>))}
             </div>
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
+            <div className="p-4 border-t border-slate-100 dark:border-white/[0.07] shrink-0">
               <button onClick={() => setShowRefundDash(false)} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-2xl transition-colors">Saya Mengerti</button>
             </div>
           </div>
@@ -2948,13 +3007,13 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       {/* ── Modal Kebijakan Deposit ───────────────────────────────────── */}
       {showDepositDash && (
         <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowDepositDash(false)}>
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
+          <div className="bg-white dark:bg-[#0c0f1c] rounded-3xl shadow-2xl border border-slate-200/80 dark:border-white/[0.07] w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-white/[0.07] shrink-0">
               <div className="flex items-center gap-3">
                 <div className="bg-amber-100 dark:bg-amber-900/40 p-2.5 rounded-2xl"><CreditCard className="w-5 h-5 text-amber-600 dark:text-amber-400" /></div>
                 <div><h2 className="text-lg font-black text-slate-900 dark:text-white">Kebijakan Deposit</h2><p className="text-xs text-slate-400">Terakhir diperbarui: April 2026</p></div>
               </div>
-              <button onClick={() => setShowDepositDash(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
+              <button onClick={() => setShowDepositDash(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/[0.07] text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
             </div>
             <div className="overflow-y-auto p-6 space-y-5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
               {[
@@ -2967,7 +3026,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                 { title: '7. Transaction Security', content: 'All transactions are encrypted through certified payment gateways. Pusat Nokos does not store credit card data or user banking information.' },
               ].map(s => (<section key={s.title}><h3 className="font-bold text-slate-900 dark:text-white mb-2">{s.title}</h3><p>{s.content}</p></section>))}
             </div>
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
+            <div className="p-4 border-t border-slate-100 dark:border-white/[0.07] shrink-0">
               <button onClick={() => setShowDepositDash(false)} className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-2xl transition-colors">Saya Mengerti</button>
             </div>
           </div>
@@ -2977,13 +3036,13 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       {/* ── Modal Anti Penyalahgunaan ─────────────────────────────────── */}
       {showAntiAbuseDash && (
         <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowAntiAbuseDash(false)}>
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
+          <div className="bg-white dark:bg-[#0c0f1c] rounded-3xl shadow-2xl border border-slate-200/80 dark:border-white/[0.07] w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-white/[0.07] shrink-0">
               <div className="flex items-center gap-3">
                 <div className="bg-red-100 dark:bg-red-900/40 p-2.5 rounded-2xl"><ShieldAlert className="w-5 h-5 text-red-600 dark:text-red-400" /></div>
                 <div><h2 className="text-lg font-black text-slate-900 dark:text-white">Kebijakan Anti Penyalahgunaan</h2><p className="text-xs text-slate-400">Terakhir diperbarui: April 2026</p></div>
               </div>
-              <button onClick={() => setShowAntiAbuseDash(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
+              <button onClick={() => setShowAntiAbuseDash(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/[0.07] text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
             </div>
             <div className="overflow-y-auto p-6 space-y-5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
               {[
@@ -2995,7 +3054,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                 { title: '6. Right to Investigate', content: 'Pusat Nokos reserves the right to investigate suspected accounts at any time. During investigation, accounts may be temporarily suspended without obligation to provide specific reasons.' },
               ].map(s => (<section key={s.title}><h3 className="font-bold text-slate-900 dark:text-white mb-2">{s.title}</h3><p>{s.content}</p></section>))}
             </div>
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
+            <div className="p-4 border-t border-slate-100 dark:border-white/[0.07] shrink-0">
               <button onClick={() => setShowAntiAbuseDash(false)} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-2xl transition-colors">Saya Mengerti</button>
             </div>
           </div>
@@ -3005,13 +3064,13 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       {/* ── Modal Disclaimer ──────────────────────────────────────────── */}
       {showDisclaimerDash && (
         <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowDisclaimerDash(false)}>
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
+          <div className="bg-white dark:bg-[#0c0f1c] rounded-3xl shadow-2xl border border-slate-200/80 dark:border-white/[0.07] w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-white/[0.07] shrink-0">
               <div className="flex items-center gap-3">
                 <div className="bg-orange-100 dark:bg-orange-900/40 p-2.5 rounded-2xl"><AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" /></div>
                 <div><h2 className="text-lg font-black text-slate-900 dark:text-white">Disclaimer / Penyangkalan</h2><p className="text-xs text-slate-400">Terakhir diperbarui: April 2026</p></div>
               </div>
-              <button onClick={() => setShowDisclaimerDash(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
+              <button onClick={() => setShowDisclaimerDash(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/[0.07] text-slate-400 transition-colors"><X className="w-5 h-5" /></button>
             </div>
             <div className="overflow-y-auto p-6 space-y-5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
               {[
@@ -3023,7 +3082,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                 { title: '6. Legal Jurisdiction', content: 'The service operates in accordance with applicable law. Users from various regions are responsible for ensuring their use of the service complies with the laws and regulations of their respective jurisdictions.' },
               ].map(s => (<section key={s.title}><h3 className="font-bold text-slate-900 dark:text-white mb-2">{s.title}</h3><p>{s.content}</p></section>))}
             </div>
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
+            <div className="p-4 border-t border-slate-100 dark:border-white/[0.07] shrink-0">
               <button onClick={() => setShowDisclaimerDash(false)} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-2xl transition-colors">Saya Mengerti</button>
             </div>
           </div>
@@ -3147,20 +3206,20 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4">
         {isLoadingStats ? (
           [...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-slate-900 rounded-xl md:rounded-2xl border border-slate-200 dark:border-slate-800 p-3 md:p-4 animate-pulse">
-              <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-lg mb-3" />
-              <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-12 mb-1.5" />
-              <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-16" />
+            <div key={i} className="bg-white dark:bg-[#0a0d16] rounded-xl md:rounded-2xl border border-slate-200 dark:border-white/[0.07] p-3 md:p-4 animate-pulse">
+              <div className="w-8 h-8 bg-slate-200 dark:bg-[#161b28] rounded-lg mb-3" />
+              <div className="h-6 bg-slate-200 dark:bg-[#161b28] rounded w-12 mb-1.5" />
+              <div className="h-3 bg-slate-100 dark:bg-[#0f1320] rounded w-16" />
             </div>
           ))
         ) : (
           [
-            { label: t.totalOrder,   value: totalOrder,        icon: <Package className="w-4 h-4 md:w-5 md:h-5 text-indigo-600" />,   bg: 'bg-indigo-50 dark:bg-indigo-900/30' },
-            { label: t.successOrder, value: successOrder,      icon: <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-green-600" />, bg: 'bg-green-50 dark:bg-green-900/30' },
-            { label: t.activeOrder,  value: activeOrder,       icon: <Activity className="w-4 h-4 md:w-5 md:h-5 text-amber-600" />,    bg: 'bg-amber-50 dark:bg-amber-900/30' },
-            { label: t.successRate,  value: successRate + '%', icon: <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />,   bg: 'bg-blue-50 dark:bg-blue-900/30' },
+            { label: t.totalOrder,   value: totalOrder,        icon: <Package className="w-4 h-4 md:w-5 md:h-5 text-indigo-600" />,   bg: 'bg-indigo-50 dark:bg-indigo-900/30', cls: 'stat-card-indigo' },
+            { label: t.successOrder, value: successOrder,      icon: <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-green-600" />, bg: 'bg-green-50 dark:bg-green-900/30',  cls: 'stat-card-green'  },
+            { label: t.activeOrder,  value: activeOrder,       icon: <Activity className="w-4 h-4 md:w-5 md:h-5 text-amber-600" />,    bg: 'bg-amber-50 dark:bg-amber-900/30',  cls: 'stat-card-amber'  },
+            { label: t.successRate,  value: successRate + '%', icon: <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />,   bg: 'bg-blue-50 dark:bg-blue-900/30',    cls: 'stat-card-blue'   },
           ].map(s => (
-            <div key={s.label} className="bg-white dark:bg-slate-900 rounded-xl md:rounded-2xl border border-slate-200 dark:border-slate-800 p-3 md:p-4">
+            <div key={s.label} className={`dash-card ${s.cls} bg-white rounded-xl md:rounded-2xl border border-slate-200 p-3 md:p-4`}>
               <div className={`${s.bg} p-2 md:p-2.5 rounded-lg md:rounded-xl w-fit mb-2 md:mb-3`}>{s.icon}</div>
               <div className="text-lg md:text-xl font-black text-slate-900 dark:text-white">{s.value}</div>
               <div className="text-[10px] md:text-xs font-bold text-slate-400 mt-0.5">{s.label}</div>
@@ -3171,11 +3230,11 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Total spend vs topup */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+        <div className="dash-card bg-white rounded-2xl border border-slate-200 p-5">
           <h3 className="text-sm font-black text-slate-900 dark:text-white mb-4">{t.financeSummary}</h3>
           {isLoadingStats ? (
             <div className="space-y-3 animate-pulse">
-              {[1,2,3].map(i => <div key={i} className="flex justify-between"><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24"/><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-20"/></div>)}
+              {[1,2,3].map(i => <div key={i} className="flex justify-between"><div className="h-4 bg-slate-200 dark:bg-[#161b28] rounded w-24"/><div className="h-4 bg-slate-200 dark:bg-[#161b28] rounded w-20"/></div>)}
             </div>
           ) : (
             <div className="space-y-3">
@@ -3187,7 +3246,7 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
                 <span className="text-sm text-slate-500 dark:text-slate-400">{t.totalSpend}</span>
                 <span className="font-black text-red-500 dark:text-red-400">{fmtIDR(totalSpend)}</span>
               </div>
-              <div className="border-t border-slate-100 dark:border-slate-800 pt-3 flex items-center justify-between">
+              <div className="border-t border-slate-100 dark:border-white/[0.07] pt-3 flex items-center justify-between">
                 <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{t.remainBalance}</span>
                 <span className="font-black text-indigo-600 dark:text-indigo-400">{fmtIDR(balance)}</span>
               </div>
@@ -3196,7 +3255,7 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
         </div>
 
         {/* Recent mutasi */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+        <div className="dash-card bg-white rounded-2xl border border-slate-200 p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-black text-slate-900 dark:text-white">{t.recentTx}</h3>
             <button onClick={() => setActiveTab('mutasi')} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:opacity-70">Lihat semua →</button>
@@ -3221,7 +3280,7 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
         {[
           { label: t.buyTitle,       tab: 'buy',     icon: <ShoppingCart className="w-5 h-5" />, color: 'bg-indigo-600 text-white' },
           { label: t.topup,  tab: 'topup',   icon: <Wallet className="w-5 h-5" />,       color: 'bg-green-600 text-white' },
-          { label: t.history,            tab: 'history', icon: <History className="w-5 h-5" />,       color: 'bg-slate-800 dark:bg-slate-700 text-white' },
+          { label: t.history,            tab: 'history', icon: <History className="w-5 h-5" />,       color: 'bg-slate-800 dark:bg-[#161b28] text-white' },
         ].map(a => (
           <button key={a.tab} onClick={() => setActiveTab(a.tab)} className={`${a.color} rounded-2xl p-4 flex items-center gap-3 font-bold text-sm hover:opacity-90 transition-opacity active:scale-95`}>
             {a.icon} {a.label}
@@ -3348,7 +3407,7 @@ function CountryDropdown({ countries, value, onChange, t }: {
       <button
         type="button"
         onClick={() => { setOpen(v => !v); setSearch(''); }}
-        className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm"
+        className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm"
       >
         <FlagImg countryId={value} size={20} />
         <span className="flex-1 text-left truncate">{selected?.name.replace(/^\p{Emoji_Presentation}+\s*/u, '') ?? t.selectCountry}</span>
@@ -3356,9 +3415,9 @@ function CountryDropdown({ countries, value, onChange, t }: {
       </button>
 
       {open && (
-        <div className="absolute top-full mt-2 left-0 w-full z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+        <div className="absolute top-full mt-2 left-0 w-full z-50 bg-white dark:bg-[#0a0d16] border border-slate-200 dark:border-white/[0.09] rounded-2xl shadow-2xl overflow-hidden">
           {/* Search */}
-          <div className="p-2 border-b border-slate-100 dark:border-slate-800">
+          <div className="p-2 border-b border-slate-100 dark:border-white/[0.07]">
             <div className="relative">
               <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
               <input
@@ -3366,7 +3425,7 @@ function CountryDropdown({ countries, value, onChange, t }: {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder={t.searchCountry}
-                className="w-full pl-8 pr-3 py-2 text-base bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white font-medium"
+                className="w-full pl-8 pr-3 py-2 text-base bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white font-medium"
               />
             </div>
           </div>
@@ -3382,7 +3441,7 @@ function CountryDropdown({ countries, value, onChange, t }: {
                   key={c.id}
                   type="button"
                   onClick={() => { onChange(c.id); setOpen(false); setSearch(''); }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-left transition-colors ${isActive ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'}`}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-left transition-colors ${isActive ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-50 dark:hover:bg-white/[0.07] text-slate-700 dark:text-slate-200'}`}
                 >
                   <FlagImg countryId={c.id} size={20} />
                   <span className="flex-1 truncate">{c.name.replace(/^\p{Emoji_Presentation}+\s*/u, '')}</span>
@@ -3425,20 +3484,20 @@ function SortDropdown({ value, onChange, t }: { value: string; onChange: (v: str
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm min-w-40"
+        className="w-full flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all shadow-sm min-w-40"
       >
         <span>{selected.icon}</span>
         <span className="flex-1 text-left">{selected.label}</span>
         <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute top-full mt-2 right-0 w-52 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden max-h-[60vh] overflow-y-auto">
+        <div className="absolute top-full mt-2 right-0 w-52 z-50 bg-white dark:bg-[#0a0d16] border border-slate-200 dark:border-white/[0.09] rounded-2xl shadow-2xl overflow-hidden max-h-[60vh] overflow-y-auto">
           {SORT_OPTIONS.map(opt => (
             <button
               key={opt.value}
               type="button"
               onClick={() => { onChange(opt.value); setOpen(false); }}
-              className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-left transition-colors ${opt.value === value ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'}`}
+              className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-left transition-colors ${opt.value === value ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-50 dark:hover:bg-white/[0.07] text-slate-700 dark:text-slate-200'}`}
             >
               <span className="w-5 text-center">{opt.icon}</span>
               <span className="flex-1">{opt.label}</span>
@@ -3471,22 +3530,22 @@ function MobileCountryChip({ countries, value, onChange }: { countries: Country[
   return (
     <div ref={ref} className="relative flex-1">
       <button type="button" onClick={() => { setOpen(v => !v); setSearch(''); }}
-        className="w-full flex items-center gap-1.5 px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:border-indigo-400 outline-none transition-all">
+        className="w-full flex items-center gap-1.5 px-3 py-2.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:border-indigo-400 outline-none transition-all">
         <FlagImg countryId={value} size={18} />
         <span className="flex-1 text-left truncate text-xs">{selected?.name.replace(/^\p{Emoji_Presentation}+\s*/u, '') ?? 'Negara'}</span>
         <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute top-full mt-1 left-0 w-64 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
-          <div className="p-2 border-b border-slate-100 dark:border-slate-800">
-            <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Search country..." className="w-full px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none dark:text-white" />
+        <div className="absolute top-full mt-1 left-0 w-64 z-50 bg-white dark:bg-[#0a0d16] border border-slate-200 dark:border-white/[0.09] rounded-2xl shadow-2xl overflow-hidden">
+          <div className="p-2 border-b border-slate-100 dark:border-white/[0.07]">
+            <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Search country..." className="w-full px-3 py-1.5 text-sm bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-lg outline-none dark:text-white" />
           </div>
           <div className="overflow-y-auto max-h-52">
             {filtered.map(c => {
               const m = COUNTRY_META[c.id] ?? { flag: '🌐', dial: '' };
               return (
                 <button key={c.id} type="button" onClick={() => { onChange(c.id); setOpen(false); setSearch(''); }}
-                  className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm font-bold text-left transition-colors ${c.id === value ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'}`}>
+                  className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm font-bold text-left transition-colors ${c.id === value ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-50 dark:hover:bg-white/[0.07] text-slate-700 dark:text-slate-200'}`}>
                   <FlagImg countryId={c.id} size={18} />
                   <span className="flex-1 truncate">{c.name.replace(/^\p{Emoji_Presentation}+\s*/u, '')}</span>
                   {m.dial && <span className="text-xs text-slate-400 shrink-0">{m.dial}</span>}
@@ -3518,16 +3577,16 @@ function MobileSortChip({ value, onChange, t }: { value: string; onChange: (v: s
   return (
     <div ref={ref} className="relative flex-1">
       <button type="button" onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-1.5 px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:border-indigo-400 outline-none transition-all">
+        className="w-full flex items-center gap-1.5 px-3 py-2.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:border-indigo-400 outline-none transition-all">
         <span className="text-sm shrink-0">{selected.icon}</span>
         <span className="flex-1 text-left truncate text-xs">{selected.label}</span>
         <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute top-full mt-1 right-0 w-52 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+        <div className="absolute top-full mt-1 right-0 w-52 z-50 bg-white dark:bg-[#0a0d16] border border-slate-200 dark:border-white/[0.09] rounded-2xl shadow-2xl overflow-hidden">
           {SORT_OPTIONS.map(opt => (
             <button key={opt.value} type="button" onClick={() => { onChange(opt.value); setOpen(false); }}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-left transition-colors ${opt.value === value ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'}`}>
+              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-left transition-colors ${opt.value === value ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-50 dark:hover:bg-white/[0.07] text-slate-700 dark:text-slate-200'}`}>
               <span className="w-4 text-center">{opt.icon}</span>
               <span className="flex-1">{opt.label}</span>
               {opt.value === value && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
@@ -3832,7 +3891,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
             onClick={handleRefreshStok}
             disabled={isRefreshingStok}
             aria-label="Refresh daftar layanan"
-            className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors shadow-sm disabled:opacity-50"
+            className="p-2 rounded-xl bg-white dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors shadow-sm disabled:opacity-50"
             title="Refresh stok"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshingStok ? 'animate-spin' : ''}`} />
@@ -3841,7 +3900,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         </div>
         <button
           onClick={() => { setIsBundleMode(v => !v); setBundleSelected(new Set()); }}
-          className={"px-5 py-2.5 rounded-xl text-sm font-bold border-2 transition-all shrink-0 " + (isBundleMode ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500')}
+          className={"px-5 py-2.5 rounded-xl text-sm font-bold border-2 transition-all shrink-0 " + (isBundleMode ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white dark:bg-[#0a0d16] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.09] hover:border-indigo-400 dark:hover:border-indigo-500')}
         >
           {isBundleMode ? t.cancelBundle : t.modeBundle}
         </button>
@@ -3860,7 +3919,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
       )}
 
       {/* ── DESKTOP Filter ────────────────────────────────────────── */}
-      <div className="hidden md:flex bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 rounded-3xl p-5 md:p-6 xl:flex-row gap-5 justify-between items-end z-10 transition-colors">
+      <div className="hidden md:flex bg-white dark:bg-[#0a0d16] shadow-sm border border-slate-200 dark:border-white/[0.07] rounded-3xl p-5 md:p-6 xl:flex-row gap-5 justify-between items-end z-10 transition-colors">
         {/* Country Dropdown */}
         <div className="w-full xl:w-auto flex items-end space-x-3">
           <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-2xl border border-indigo-100 dark:border-indigo-800 shrink-0 mb-0.5">
@@ -3868,13 +3927,13 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
           </div>
           <CountryDropdown countries={countries} value={selectedCountry} onChange={setSelectedCountry} t={t} />
         </div>
-        <div className="hidden xl:block w-px h-12 bg-slate-200 dark:bg-slate-800 mx-2 mb-0.5"></div>
+        <div className="hidden xl:block w-px h-12 bg-slate-200 dark:bg-[#0f1320] mx-2 mb-0.5"></div>
         {/* Search */}
         <div className="flex-1 w-full relative">
           <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Pencarian</label>
           <div className="relative">
             <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 dark:text-slate-500" />
-            <input type="text" placeholder={t.searchPlaceholder} className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/50 outline-none text-base font-bold transition-all shadow-sm dark:text-white" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            <input type="text" placeholder={t.searchPlaceholder} className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-xl focus:bg-white dark:focus:bg-[#0a0d16] focus:ring-2 focus:ring-indigo-500/50 outline-none text-base font-bold transition-all shadow-sm dark:text-white" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
         </div>
         {/* Sort */}
@@ -3898,16 +3957,16 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
       )}
 
       {/* ── MOBILE: Filter + Kategori STICKY ────────────────────────── */}
-      <div className="md:hidden sticky top-[80px] z-20 -mx-4 px-4 pt-2 pb-1 bg-[#fafafa] dark:bg-[#020617]">
+      <div className="md:hidden sticky top-[80px] z-20 -mx-4 px-4 pt-2 pb-1 bg-[#fafafa] dark:bg-[#060810]">
         {/* Filter bar */}
-        <div className="bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2.5 mb-2">
+        <div className="bg-white dark:bg-[#0a0d16] shadow-sm border border-slate-200 dark:border-white/[0.07] rounded-2xl p-3 space-y-2.5 mb-2">
           <div className="flex gap-2">
             <MobileCountryChip countries={countries} value={selectedCountry} onChange={setSelectedCountry} />
             <MobileSortChip value={sortOrder} onChange={setSortOrder} t={t} />
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 dark:text-slate-500" />
-            <input type="text" placeholder="Cari layanan..." className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/50 outline-none text-sm font-medium transition-all dark:text-white" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            <input type="text" placeholder="Cari layanan..." className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-xl focus:ring-2 focus:ring-indigo-500/50 outline-none text-sm font-medium transition-all dark:text-white" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
         </div>
         {/* Kategori tabs */}
@@ -3916,7 +3975,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
           <div className="flex overflow-x-auto gap-2 pb-2" style={{scrollbarWidth:'none', msOverflowStyle:'none', WebkitOverflowScrolling:'touch'}}>
             {[{key:'ALL', label: t.categoryAll}, ...CATEGORIES_BASE.map(c => ({key:c, label:c})), {key:'Lainnya', label: t.categoryOthers}].map(cat => (
               <button key={cat.key} onClick={() => setActiveCategory(cat.key)}
-                className={"flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border-2 transition-all " + (activeCategory === cat.key ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700')}>
+                className={"flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border-2 transition-all " + (activeCategory === cat.key ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-[#0a0d16] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.09]')}>
                 {cat.label}
               </button>
             ))}
@@ -3930,7 +3989,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         <div className="flex overflow-x-auto gap-3 pb-2 px-1" style={{scrollbarWidth:'none', msOverflowStyle:'none', WebkitOverflowScrolling:'touch'}}>
           {[{key:'ALL', label: t.categoryAll}, ...CATEGORIES_BASE.map(c => ({key:c, label:c})), {key:'Lainnya', label: t.categoryOthers}].map(cat => (
             <button key={cat.key} onClick={() => setActiveCategory(cat.key)}
-              className={"flex-shrink-0 px-6 py-3 rounded-xl text-sm font-bold whitespace-nowrap border-2 transition-all " + (activeCategory === cat.key ? 'bg-indigo-600 dark:bg-indigo-600 text-white border-indigo-600 dark:border-indigo-600 shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500')}>
+              className={"flex-shrink-0 px-6 py-3 rounded-xl text-sm font-bold whitespace-nowrap border-2 transition-all " + (activeCategory === cat.key ? 'bg-indigo-600 dark:bg-indigo-600 text-white border-indigo-600 dark:border-indigo-600 shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-[#0a0d16] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.09] hover:border-indigo-300 dark:hover:border-indigo-500')}>
               {cat.label}
             </button>
           ))}
@@ -3939,12 +3998,12 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
 
       <div className={`flex flex-col-reverse xl:grid xl:items-start ${activeOrders.length > 0 ? 'xl:grid-cols-3' : ''} gap-8`}>
         
-        <div className={"bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-700 rounded-[2rem] overflow-hidden flex flex-col transition-colors " + (activeOrders.length > 0 ? 'xl:col-span-2' : '')}>
+        <div className={`dash-table bg-white dark:bg-[#0d1020] shadow-sm border border-slate-200 dark:border-white/[0.06] rounded-[2rem] overflow-hidden flex flex-col transition-colors ${activeOrders.length > 0 ? 'xl:col-span-2' : ''}`}>
 
           {/* ===== DESKTOP: Tabel ===== */}
-          <div className="hidden md:block overflow-x-auto flex-1 min-h-[400px] max-h-[600px] overflow-y-auto">
+          <div className="dash-table hidden md:block overflow-x-auto flex-1 min-h-[400px] max-h-[600px] overflow-y-auto">
             <table className="w-full text-left min-w-[650px]">
-              <thead className="bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 text-[11px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-bold sticky top-0 z-10 shadow-sm">
+              <thead className="bg-slate-50/95 dark:bg-[#080b14]/95 backdrop-blur-sm border-b border-slate-200 dark:border-white/[0.09] text-[11px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-bold sticky top-0 z-10 shadow-sm">
                 <tr>
                   <th className="p-5 sm:px-6 w-2/5">{t.serviceCol}</th>
                   <th className="p-5 sm:px-6 w-1/5">{t.stockCol}</th>
@@ -3952,31 +4011,31 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                   <th className="p-5 sm:px-6 text-right w-1/5">{isBundleMode ? t.pickCol : t.actionCol}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
                 {isLoadingData ? (
                   [...Array(8)].map((_, i) => (
                     <tr key={i} className="animate-pulse">
                       <td className="p-5 sm:px-6">
                         <div className="flex items-center gap-4">
-                          <div className="w-5 h-5 bg-slate-200 dark:bg-slate-700 rounded-full shrink-0"></div>
-                          <div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-2xl shrink-0"></div>
+                          <div className="w-5 h-5 bg-slate-200 dark:bg-[#161b28] rounded-full shrink-0"></div>
+                          <div className="w-12 h-12 bg-slate-200 dark:bg-[#161b28] rounded-2xl shrink-0"></div>
                           <div className="space-y-2">
-                            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded-lg w-28"></div>
-                            <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-16"></div>
+                            <div className="h-4 bg-slate-200 dark:bg-[#161b28] rounded-lg w-28"></div>
+                            <div className="h-3 bg-slate-100 dark:bg-[#0f1320] rounded w-16"></div>
                           </div>
                         </div>
                       </td>
-                      <td className="p-5 sm:px-6"><div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-lg w-20"></div></td>
-                      <td className="p-5 sm:px-6"><div className="h-5 bg-slate-200 dark:bg-slate-700 rounded-lg w-24"></div></td>
-                      <td className="p-5 sm:px-6 text-right"><div className="h-10 bg-slate-200 dark:bg-slate-700 rounded-xl w-32 ml-auto"></div></td>
+                      <td className="p-5 sm:px-6"><div className="h-4 bg-slate-100 dark:bg-[#0f1320] rounded-lg w-20"></div></td>
+                      <td className="p-5 sm:px-6"><div className="h-5 bg-slate-200 dark:bg-[#161b28] rounded-lg w-24"></div></td>
+                      <td className="p-5 sm:px-6 text-right"><div className="h-10 bg-slate-200 dark:bg-[#161b28] rounded-xl w-32 ml-auto"></div></td>
                     </tr>
                   ))
                 ) : finalServices.length > 0 ? (
                   finalServices.map(s => (
-                    <tr key={s.id} className={"hover:bg-indigo-50/40 dark:hover:bg-slate-800/50 transition-colors group " + (s.outOfStock ? 'opacity-60' : '')}>
+                    <tr key={s.id} className={"hover:bg-indigo-50/40 dark:hover:bg-white/[0.07]/50 transition-colors group " + (s.outOfStock ? 'opacity-60' : '')}>
                       <td className="p-5 sm:px-6">
                         <div className="flex items-center">
-                          <button onClick={() => toggleFavorite(s.id)} className="mr-3 p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shrink-0">
+                          <button onClick={() => toggleFavorite(s.id)} className="mr-3 p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-white/[0.1] transition-colors shrink-0">
                             <Star className={`w-4 h-4 transition-colors ${favorites.includes(s.id) ? 'fill-yellow-400 text-yellow-400' : 'text-slate-300 dark:text-slate-600'}`} />
                           </button>
                           <div className="flex items-center gap-3">
@@ -3995,7 +4054,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                         </div>
                       </td>
                       <td className="p-5 sm:px-6">
-                        <span className={"inline-flex items-center text-sm font-bold px-3 py-1.5 rounded-lg border " + (s.outOfStock ? 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50' : 'text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700')}>
+                        <span className={"inline-flex items-center text-sm font-bold px-3 py-1.5 rounded-lg border " + (s.outOfStock ? 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50' : 'text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-white/[0.04] border-slate-100 dark:border-white/[0.09]')}>
                           <span className={"w-2 h-2 rounded-full mr-2 shrink-0 " + (s.outOfStock ? 'bg-red-500' : 'bg-green-500')}></span>
                           {s.outOfStock ? 'Empty' : s.stock.toLocaleString()}
                         </span>
@@ -4006,11 +4065,11 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                       </td>
                       <td className="p-5 sm:px-6 text-right">
                         {isBundleMode ? (
-                          <button onClick={() => !s.outOfStock && toggleBundle(s.id)} disabled={s.outOfStock} className={"w-7 h-7 rounded-lg border-2 flex items-center justify-center ml-auto transition-all " + (s.outOfStock ? 'border-slate-200 dark:border-slate-700 opacity-40 cursor-not-allowed' : bundleSelected.has(s.id) ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 dark:border-slate-600 hover:border-indigo-400')}>
+                          <button onClick={() => !s.outOfStock && toggleBundle(s.id)} disabled={s.outOfStock} className={"w-7 h-7 rounded-lg border-2 flex items-center justify-center ml-auto transition-all " + (s.outOfStock ? 'border-slate-200 dark:border-white/[0.09] opacity-40 cursor-not-allowed' : bundleSelected.has(s.id) ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 dark:border-white/[0.12] hover:border-indigo-400')}>
                             {bundleSelected.has(s.id) && <Check className="w-4 h-4 text-white" />}
                           </button>
                         ) : (
-                          <button onClick={() => !s.outOfStock && handleBuy(s)} disabled={isProcessing || s.outOfStock} className={"text-white px-6 py-3.5 rounded-xl text-sm font-bold shadow-md w-full max-w-36 ml-auto transition-all flex justify-center items-center " + (s.outOfStock ? 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed' : isProcessing ? 'bg-indigo-400 cursor-wait' : 'bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:shadow-lg active:scale-95')}>
+                          <button onClick={() => !s.outOfStock && handleBuy(s)} disabled={isProcessing || s.outOfStock} className={"text-white px-6 py-3.5 rounded-xl text-sm font-bold shadow-md w-full max-w-36 ml-auto transition-all flex justify-center items-center " + (s.outOfStock ? 'bg-slate-300 dark:bg-[#161b28] cursor-not-allowed' : isProcessing ? 'bg-indigo-400 cursor-wait' : 'bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:shadow-lg active:scale-95')}>
                             {s.outOfStock ? t.outOfStock : isProcessing ? <RefreshCw className="w-4 h-4 animate-spin"/>  : t.buyBtn}
                           </button>
                         )}
@@ -4026,7 +4085,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                   </td></tr>
                 ) : (
                   <tr><td colSpan={4} className="py-24 text-center">
-                    <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-full flex items-center justify-center mx-auto mb-4"><Filter className="w-10 h-10 text-slate-300 dark:text-slate-500" /></div>
+                    <div className="w-20 h-20 bg-slate-50 dark:bg-[#0f1320] border border-slate-100 dark:border-white/[0.09] rounded-full flex items-center justify-center mx-auto mb-4"><Filter className="w-10 h-10 text-slate-300 dark:text-slate-500" /></div>
                     <p className="font-extrabold text-slate-800 dark:text-slate-200 text-lg">Layanan tidak ditemukan</p>
                     <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">Coba sesuaikan kata kunci pencarian Anda.</p>
                   </td></tr>
@@ -4036,21 +4095,21 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
           </div>
 
           {/* ===== MOBILE: Card layout ===== */}
-          <div className="md:hidden flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="md:hidden flex flex-col divide-y divide-slate-100 dark:divide-white/[0.06]">
             {isLoadingData ? (
               [...Array(6)].map((_, i) => (
                 <div key={i} className="flex items-center gap-3 p-4 animate-pulse">
-                  <div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-2xl shrink-0"></div>
+                  <div className="w-12 h-12 bg-slate-200 dark:bg-[#161b28] rounded-2xl shrink-0"></div>
                   <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-32"></div>
-                    <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-20"></div>
+                    <div className="h-4 bg-slate-200 dark:bg-[#161b28] rounded w-32"></div>
+                    <div className="h-3 bg-slate-100 dark:bg-[#0f1320] rounded w-20"></div>
                   </div>
-                  <div className="h-9 w-20 bg-slate-200 dark:bg-slate-700 rounded-xl shrink-0"></div>
+                  <div className="h-9 w-20 bg-slate-200 dark:bg-[#161b28] rounded-xl shrink-0"></div>
                 </div>
               ))
             ) : finalServices.length > 0 ? (
               finalServices.map(s => (
-                <div key={s.id} className={"flex items-center gap-3 p-4 transition-colors " + (s.outOfStock ? 'opacity-60' : 'hover:bg-indigo-50/40 dark:hover:bg-slate-800/50')}>
+                <div key={s.id} className={"flex items-center gap-3 p-4 transition-colors " + (s.outOfStock ? 'opacity-60' : 'hover:bg-indigo-50/40 dark:hover:bg-white/[0.07]/50')}>
                   {/* Icon */}
                   <div className="shrink-0">{s.icon}</div>
 
@@ -4076,11 +4135,11 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                       <div className="text-[10px] text-slate-400 dark:text-slate-500">{t.perOTP}</div>
                     </div>
                     {isBundleMode ? (
-                      <button onClick={() => !s.outOfStock && toggleBundle(s.id)} disabled={s.outOfStock} className={"w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all " + (s.outOfStock ? 'border-slate-200 dark:border-slate-700 opacity-40 cursor-not-allowed' : bundleSelected.has(s.id) ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 dark:border-slate-600')}>
+                      <button onClick={() => !s.outOfStock && toggleBundle(s.id)} disabled={s.outOfStock} className={"w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all " + (s.outOfStock ? 'border-slate-200 dark:border-white/[0.09] opacity-40 cursor-not-allowed' : bundleSelected.has(s.id) ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 dark:border-white/[0.12]')}>
                         {bundleSelected.has(s.id) && <Check className="w-4 h-4 text-white" />}
                       </button>
                     ) : (
-                      <button onClick={() => !s.outOfStock && handleBuy(s)} disabled={isProcessing || s.outOfStock} className={"text-white text-xs font-bold px-3 py-2 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1 " + (s.outOfStock ? 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed' : isProcessing ? 'bg-indigo-400 cursor-wait' : 'bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500')}>
+                      <button onClick={() => !s.outOfStock && handleBuy(s)} disabled={isProcessing || s.outOfStock} className={"text-white text-xs font-bold px-3 py-2 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1 " + (s.outOfStock ? 'bg-slate-300 dark:bg-[#161b28] cursor-not-allowed' : isProcessing ? 'bg-indigo-400 cursor-wait' : 'bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500')}>
                         {s.outOfStock ? t.outOfStock : isProcessing ? <RefreshCw className="w-3 h-3 animate-spin"/> : t.buyBtn}
                       </button>
                     )}
@@ -4096,7 +4155,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
-                <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4"><Filter className="w-8 h-8 text-slate-300 dark:text-slate-500" /></div>
+                <div className="w-16 h-16 bg-slate-50 dark:bg-[#0f1320] rounded-full flex items-center justify-center mb-4"><Filter className="w-8 h-8 text-slate-300 dark:text-slate-500" /></div>
                 <p className="font-extrabold text-slate-800 dark:text-slate-200">Layanan tidak ditemukan</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Coba sesuaikan kata kunci pencarian.</p>
               </div>
@@ -4107,10 +4166,10 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
 
         {activeOrders.length > 0 && (
           <div id="active-orders-mobile" className="xl:col-span-1 xl:sticky xl:top-[104px] order-first xl:order-last">
-            <div className="bg-indigo-600 text-white rounded-[2rem] shadow-xl overflow-hidden border border-indigo-400/60 animate-in fade-in slide-in-from-right-8 duration-300">
+            <div className="text-white rounded-[2rem] shadow-2xl overflow-hidden border border-indigo-500/30 animate-in fade-in slide-in-from-right-8 duration-300" style={{background:'linear-gradient(145deg,#3730a3 0%,#4f46e5 45%,#6d28d9 100%)',boxShadow:'0 20px 60px rgba(79,70,229,0.4),0 0 0 1px rgba(139,92,246,0.2)'}}>
 
               {/* Header */}
-              <div className="px-4 py-3 border-b border-indigo-500/50 flex items-center justify-between bg-indigo-700/60 font-bold">
+              <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between font-bold" style={{background:'rgba(0,0,0,0.15)'}}>
                 <div className="flex items-center">
                   <Zap className="w-5 h-5 mr-2 text-yellow-300" />
                   <span>{t.activeOrders}</span>
@@ -4348,13 +4407,13 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
       {/* SMS Modal */}
       {smsModal && (
         <div className="fixed inset-0 z-[200] bg-slate-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setSmsModal(null)}>
-          <div className="bg-white dark:bg-slate-900 rounded-none sm:rounded-3xl shadow-2xl border-0 sm:border border-slate-200 dark:border-slate-800 w-full sm:max-w-md p-5 sm:p-6 max-h-screen overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-white dark:bg-[#0a0d16] rounded-none sm:rounded-3xl shadow-2xl border-0 sm:border border-slate-200 dark:border-white/[0.07] w-full sm:max-w-md p-5 sm:p-6 max-h-screen overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <div>
                 <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{t.allSMS}</div>
                 <div className="text-lg font-black text-slate-900 dark:text-white">{smsModal.name}</div>
               </div>
-              <button onClick={() => setSmsModal(null)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors">
+              <button onClick={() => setSmsModal(null)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/[0.07] text-slate-400 transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -4371,7 +4430,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
             ) : (
               <div className="space-y-3 max-h-72 overflow-y-auto">
                 {allSms.map((sms, i) => (
-                  <div key={i} className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700">
+                  <div key={i} className="bg-slate-50 dark:bg-[#0f1320] rounded-2xl p-4 border border-slate-100 dark:border-white/[0.09]">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">SMS #{i + 1}</span>
                       <button onClick={() => copyToClipboard(sms.code, showToast)} className="text-indigo-600 dark:text-indigo-400 hover:opacity-70">
@@ -4438,7 +4497,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
   // Handle crypto invoice creation
   const handleCryptoDeposit = async () => {
     const amt = parseInt(cryptoAmount);
-    if (!amt || amt < 10000) { showToast('Minimum deposit is Rp 10,000'); return; }
+    if (!amt || amt < 50000) { showToast('Minimum deposit is Rp 50,000'); return; }
     if (!user?.email) return;
 
     setCryptoLoading(true);
@@ -4521,8 +4580,9 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
   const fetchMyRequests = async () => {
     if (!user?.email) return;
     try {
-      const r = await fetch(`/api/deposit/manual?email=${encodeURIComponent(user.email)}`, { headers: authHeaders({ 'X-User-Email': user.email }) });
-      setMyRequests(await r.json());
+      const r = await fetch(`/api/user/deposit-history?email=${encodeURIComponent(user.email)}`, { headers: authHeaders({ 'X-User-Email': user.email }) });
+      const data = await r.json();
+      setMyRequests(Array.isArray(data) ? data : []);
     } catch {}
   };
 
@@ -4582,7 +4642,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
         <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">{t.depositTitle}</h1>
         <div className="flex gap-2">
           {['select', 'history'].map(m => (
-            <button key={m} onClick={() => setDepositMode(m as any)} className={"px-4 py-2 rounded-xl text-sm font-bold transition-colors " + (depositMode === m || (depositMode === 'manual' && m === 'select') || (depositMode === 'auto' && m === 'select') ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-indigo-300')}>
+            <button key={m} onClick={() => setDepositMode(m as any)} className={"px-4 py-2 rounded-xl text-sm font-bold transition-colors " + (depositMode === m || (depositMode === 'manual' && m === 'select') || (depositMode === 'auto' && m === 'select') ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/[0.09] hover:border-indigo-300')}>
               {m === 'select' ? t.depositNew : t.depositHistory}
             </button>
           ))}
@@ -4592,7 +4652,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
       {/* ── PILIH MODE ── */}
       {depositMode === 'select' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div onClick={() => { setDepositMode('auto'); }} className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-indigo-200 dark:border-indigo-700 hover:border-indigo-500 dark:hover:border-indigo-400 p-6 cursor-pointer transition-all group relative overflow-hidden">
+          <div onClick={() => { setDepositMode('auto'); }} className="bg-white dark:bg-[#0a0d16] rounded-2xl border-2 border-indigo-200 dark:border-indigo-700 hover:border-indigo-500 dark:hover:border-indigo-400 p-6 cursor-pointer transition-all group relative overflow-hidden">
             <div className="absolute top-3 right-3 bg-green-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">{t.otomatis}</div>
             <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-2xl w-fit mb-4 group-hover:bg-indigo-600 transition-colors">
               <Zap className="w-6 h-6 text-indigo-600 dark:text-indigo-400 group-hover:text-white transition-colors" />
@@ -4602,7 +4662,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
             <div className="mt-4 text-xs font-bold text-indigo-600 dark:text-indigo-400">Instant · Secure · Auto →</div>
           </div>
 
-          <div onClick={() => { setDepositMode('crypto'); setCryptoAmount(''); setCryptoStatus('idle'); setCryptoPayLink(null); }} className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-orange-400 dark:hover:border-orange-500 p-6 cursor-pointer transition-all group">
+          <div onClick={() => { setDepositMode('crypto'); setCryptoAmount(''); setCryptoStatus('idle'); setCryptoPayLink(null); }} className="bg-white dark:bg-[#0a0d16] rounded-2xl border-2 border-slate-200 dark:border-white/[0.09] hover:border-orange-400 dark:hover:border-orange-500 p-6 cursor-pointer transition-all group">
             <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-2xl w-fit mb-4 group-hover:bg-orange-500 transition-colors">
               <svg className="w-6 h-6 text-orange-500 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/></svg>
             </div>
@@ -4621,12 +4681,12 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
           </button>
 
           {/* Pilih nominal */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+          <div className="dash-card bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
             <h3 className="font-black text-slate-900 dark:text-white">{t.nominalDeposit}</h3>
             <div className="grid grid-cols-3 gap-2">
               {QUICK_AUTO.map(n => (
                 <button key={n} onClick={() => setAutoAmount(String(n))}
-                  className={"py-2.5 rounded-xl text-sm font-bold transition-colors " + (autoAmount === String(n) ? 'bg-indigo-600 text-white' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 border border-slate-200 dark:border-slate-700')}>
+                  className={"py-2.5 rounded-xl text-sm font-bold transition-colors " + (autoAmount === String(n) ? 'bg-indigo-600 text-white' : 'bg-slate-50 dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 border border-slate-200 dark:border-white/[0.09]')}>
                   Rp {(n/1000)}rb
                 </button>
               ))}
@@ -4634,7 +4694,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
             <div className="relative">
               <span className="absolute left-4 top-3.5 text-sm font-bold text-slate-400">Rp</span>
               <input id="deposit-amount" name="amount" type="number" min="5000" aria-label="Nominal deposit" value={autoAmount} onChange={e => setAutoAmount(e.target.value)}
-                placeholder="Atau ketik nominal lain..." className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm font-bold dark:text-white" />
+                placeholder="Atau ketik nominal lain..." className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm font-bold dark:text-white" />
             </div>
             {autoAmount && parseInt(autoAmount) >= 5000 && (
               <p className="text-xs text-indigo-600 dark:text-indigo-400 font-bold">= Rp {parseInt(autoAmount).toLocaleString('id-ID')}</p>
@@ -4642,7 +4702,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
           </div>
 
           {/* Pilih metode */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-3">
+          <div className="dash-card bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
             <h3 className="font-black text-slate-900 dark:text-white">{t.paymentMethod}</h3>
             <div className="space-y-2">
               {PAYMENKU_CHANNELS.map(ch => {
@@ -4651,7 +4711,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                 const totalBayar = nominal + totalFee;
                 return (
                   <button key={ch.code} onClick={() => setAutoChannel(ch.code)}
-                    className={"w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all text-left " + (autoChannel === ch.code ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300')}>
+                    className={"w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all text-left " + (autoChannel === ch.code ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-white/[0.09] hover:border-indigo-300')}>
                     <div>
                       <div className="font-bold text-sm text-slate-900 dark:text-white">{ch.name}</div>
                       {nominal >= 5000 ? (
@@ -4663,7 +4723,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                         <div className="text-xs text-slate-400 mt-0.5">{ch.fee}</div>
                       )}
                     </div>
-                    <div className={"w-4 h-4 rounded-full border-2 shrink-0 " + (autoChannel === ch.code ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300 dark:border-slate-600')}></div>
+                    <div className={"w-4 h-4 rounded-full border-2 shrink-0 " + (autoChannel === ch.code ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300 dark:border-white/[0.12]')}></div>
                   </button>
                 );
               })}
@@ -4708,7 +4768,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                 <Zap className="w-5 h-5" /> Lanjut ke Pembayaran
               </a>
               <button onClick={() => { setPayUrl(null); setAutoAmount(''); setDepositMode('history'); }}
-                className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 transition-colors text-sm">
+                className="w-full py-3 bg-slate-100 dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 transition-colors text-sm">
                 View Deposit History
               </button>
             </div>
@@ -4732,10 +4792,10 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
           <div className="flex items-center gap-2">
             {[1, 2, 3].map(s => (
               <React.Fragment key={s}>
-                <div className={"w-8 h-8 rounded-full flex items-center justify-center text-sm font-black transition-colors " + (step >= s ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400')}>
+                <div className={"w-8 h-8 rounded-full flex items-center justify-center text-sm font-black transition-colors " + (step >= s ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-[#161b28] text-slate-400')}>
                   {step > s ? <CheckCircle2 className="w-4 h-4" /> : s}
                 </div>
-                {s < 3 && <div className={"flex-1 h-1 rounded-full transition-colors " + (step > s ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700')} />}
+                {s < 3 && <div className={"flex-1 h-1 rounded-full transition-colors " + (step > s ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-[#161b28]')} />}
               </React.Fragment>
             ))}
           </div>
@@ -4745,16 +4805,16 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
 
           {/* Step 1: Nominal */}
           {step === 1 && (
-            <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6 md:p-8 space-y-6">
+            <div className="dash-card rounded-[2rem] bg-white border border-slate-200 p-6 md:p-8 space-y-6">
               <div>
                 <label className="block text-sm font-bold mb-3 text-slate-800 dark:text-slate-200">Nominal Deposit</label>
                 <div className="relative">
                   <span className="absolute left-5 top-4 text-slate-400 font-black text-xl">Rp</span>
-                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={amount} onChange={e => setAmount(e.target.value.replace(/\D/g,""))} min="10000" placeholder="10000" className="w-full px-14 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white" />
+                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={amount} onChange={e => setAmount(e.target.value.replace(/\D/g,""))} min="10000" placeholder="10000" className="w-full px-14 py-4 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white" />
                 </div>
                 <div className="flex flex-wrap gap-2 mt-3">
                   {QUICK_AMOUNTS.map(q => (
-                    <button key={q} onClick={() => setAmount(String(q))} className={"px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors " + (amount === String(q) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300')}>
+                    <button key={q} onClick={() => setAmount(String(q))} className={"px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors " + (amount === String(q) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.09] hover:border-indigo-300')}>
                       {(q / 1000).toFixed(0)}rb
                     </button>
                   ))}
@@ -4764,7 +4824,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                 <label className="block text-sm font-bold mb-3 text-slate-800 dark:text-slate-200">Tujuan Transfer</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {BANK_ACCOUNTS.map(b => (
-                    <div key={b.id} onClick={() => setSelectedBank(b)} className={"border-2 p-3 rounded-2xl cursor-pointer transition-all text-center " + (selectedBank.id === b.id ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300')}>
+                    <div key={b.id} onClick={() => setSelectedBank(b)} className={"border-2 p-3 rounded-2xl cursor-pointer transition-all text-center " + (selectedBank.id === b.id ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30' : 'border-slate-200 dark:border-white/[0.09] hover:border-indigo-300')}>
                       <div className="font-black text-sm text-slate-900 dark:text-white">{b.name}</div>
                     </div>
                   ))}
@@ -4777,7 +4837,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
           )}
 
           {step === 2 && (
-            <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6 md:p-8 space-y-5">
+            <div className="dash-card rounded-[2rem] bg-white border border-slate-200 p-6 md:p-8 space-y-5">
               <div className="text-center">
                 <div className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Transfer ke {selectedBank.name}</div>
 
@@ -4787,16 +4847,16 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                     {selectedBank.qrisUrl && selectedBank.qrisUrl !== 'GANTI_DENGAN_URL_QRIS' ? (
                       <div className="flex justify-center">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={selectedBank.qrisUrl} alt="QRIS Pusat Nokos" width={256} height={256} className="w-64 h-64 object-contain rounded-2xl border-2 border-slate-200 dark:border-slate-700 p-2" />
+                        <img src={selectedBank.qrisUrl} alt="QRIS Pusat Nokos" width={256} height={256} className="w-64 h-64 object-contain rounded-2xl border-2 border-slate-200 dark:border-white/[0.09] p-2" />
                       </div>
                     ) : (
                       <div className="flex justify-center">
-                        <div className="w-64 h-64 bg-slate-100 dark:bg-slate-800 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center">
+                        <div className="w-64 h-64 bg-slate-100 dark:bg-[#0f1320] rounded-2xl border-2 border-dashed border-slate-300 dark:border-white/[0.12] flex items-center justify-center">
                           <QrCode className="w-16 h-16 text-slate-300 dark:text-slate-600" />
                         </div>
                       </div>
                     )}
-                    <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 text-center space-y-1">
+                    <div className="bg-slate-50 dark:bg-[#0f1320] rounded-2xl p-4 text-center space-y-1">
                       <div className="font-black text-slate-900 dark:text-white">{selectedBank.holder}</div>
                       <div className="text-xs text-slate-400 font-medium">{selectedBank.number}</div>
                       <div className="font-black text-indigo-600 dark:text-indigo-400 text-xl mt-2">Rp {parseInt(amount).toLocaleString('id-ID')}</div>
@@ -4805,23 +4865,23 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                   </div>
                 ) : (
                   /* Transfer biasa */
-                  <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5 space-y-3 text-left">
+                  <div className="bg-slate-50 dark:bg-[#0f1320] rounded-2xl p-5 space-y-3 text-left">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nomor Rekening</span>
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-black text-slate-900 dark:text-white text-lg">{selectedBank.number}</span>
-                        <button onClick={() => copyToClipboard(selectedBank.number, showToast)} className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"><Copy className="w-4 h-4 text-slate-400" /></button>
+                        <button onClick={() => copyToClipboard(selectedBank.number, showToast)} className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-white/[0.1] transition-colors"><Copy className="w-4 h-4 text-slate-400" /></button>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Atas Nama</span>
                       <span className="font-bold text-slate-900 dark:text-white">{selectedBank.holder}</span>
                     </div>
-                    <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-700 pt-3 mt-3">
+                    <div className="flex items-center justify-between border-t border-slate-200 dark:border-white/[0.09] pt-3 mt-3">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nominal Transfer</span>
                       <div className="flex items-center gap-2">
                         <span className="font-black text-indigo-600 dark:text-indigo-400 text-xl">Rp {parseInt(amount).toLocaleString('id-ID')}</span>
-                        <button onClick={() => copyToClipboard(amount, showToast)} className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"><Copy className="w-4 h-4 text-slate-400" /></button>
+                        <button onClick={() => copyToClipboard(amount, showToast)} className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-white/[0.1] transition-colors"><Copy className="w-4 h-4 text-slate-400" /></button>
                       </div>
                     </div>
                   </div>
@@ -4829,7 +4889,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                 <p className="text-xs text-slate-400 mt-3">Transfer sesuai nominal agar lebih mudah diverifikasi admin.</p>
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setStep(1)} className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">← Back</button>
+                <button onClick={() => setStep(1)} className="flex-1 py-3.5 bg-slate-100 dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 dark:hover:bg-white/[0.1] transition-colors">← Back</button>
                 <button onClick={() => setStep(3)} className="flex-1 py-3.5 bg-slate-900 dark:bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-600 dark:hover:bg-indigo-700 transition-colors">Sudah Transfer →</button>
               </div>
             </div>
@@ -4837,10 +4897,10 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
 
           {/* Step 3: Upload bukti */}
           {step === 3 && (
-            <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6 md:p-8 space-y-5">
+            <div className="dash-card rounded-[2rem] bg-white border border-slate-200 p-6 md:p-8 space-y-5">
               <div>
                 <label className="block text-sm font-bold mb-3 text-slate-800 dark:text-slate-200">Upload Bukti Transfer</label>
-                <label className={"flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-2xl cursor-pointer transition-colors " + (proof ? 'border-green-400 bg-green-50 dark:bg-green-900/20' : 'border-slate-300 dark:border-slate-600 hover:border-indigo-400 bg-slate-50 dark:bg-slate-800')}>
+                <label className={"flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-2xl cursor-pointer transition-colors " + (proof ? 'border-green-400 bg-green-50 dark:bg-green-900/20' : 'border-slate-300 dark:border-white/[0.12] hover:border-indigo-400 bg-slate-50 dark:bg-[#0f1320]')}>
                   <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                   {proof ? (
                     <div className="text-center">
@@ -4859,10 +4919,10 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
               </div>
               <div>
                 <label className="block text-sm font-bold mb-2 text-slate-800 dark:text-slate-200">Catatan (opsional)</label>
-                <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Misal: transfer dari BCA atas nama Budi" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-base font-medium outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white resize-none h-20" />
+                <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Misal: transfer dari BCA atas nama Budi" className="w-full px-4 py-3 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl text-base font-medium outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white resize-none h-20" />
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setStep(2)} className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">← Back</button>
+                <button onClick={() => setStep(2)} className="flex-1 py-3.5 bg-slate-100 dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 dark:hover:bg-white/[0.1] transition-colors">← Back</button>
                 <button onClick={handleSubmitManual} disabled={isLoading} className="flex-1 py-3.5 bg-green-600 text-white font-bold rounded-2xl hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                   {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                   {isLoading ? 'Sending...' : 'Kirim Request'}
@@ -4891,7 +4951,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                 Konfirmasi via WhatsApp
               </a>
               <button onClick={() => { setStep(1); setAmount(''); setProof(null); setProofName(''); setNote(''); setWaUrl(null); setDepositMode('history'); }}
-                className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 transition-colors text-sm">
+                className="w-full py-3 bg-slate-100 dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 transition-colors text-sm">
                 View Deposit History
               </button>
             </div>
@@ -4908,7 +4968,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
 
           {/* Idle — input nominal */}
           {cryptoStatus === 'idle' && (
-            <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6 md:p-8 space-y-6">
+            <div className="dash-card rounded-[2rem] bg-white border border-slate-200 p-6 md:p-8 space-y-6">
               <div className="flex items-center gap-3 mb-2">
                 <div className="bg-orange-50 dark:bg-orange-900/20 p-2.5 rounded-2xl">
                   <svg className="w-6 h-6 text-orange-500" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/></svg>
@@ -4920,20 +4980,36 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
               </div>
 
               <div>
-                <label className="block text-sm font-bold mb-3 text-slate-800 dark:text-slate-200">Deposit Amount (IDR)</label>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-bold text-slate-800 dark:text-slate-200">Deposit Amount (IDR)</label>
+                  <span className="text-xs font-bold text-orange-500 bg-orange-50 dark:bg-orange-900/20 px-2.5 py-1 rounded-lg border border-orange-200 dark:border-orange-800/30">
+                    Min. Rp 50,000
+                  </span>
+                </div>
                 <div className="relative">
                   <span className="absolute left-5 top-4 text-slate-400 font-black text-xl">Rp</span>
                   <input
                     type="text" inputMode="numeric" value={cryptoAmount}
                     onChange={e => setCryptoAmount(e.target.value.replace(/\D/g, ''))}
                     placeholder="50000"
-                    className="w-full px-14 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-orange-500/50 dark:text-white"
+                    className="w-full px-14 py-4 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-orange-500/50 dark:text-white"
                   />
                 </div>
+                {/* Live USD preview */}
+                {cryptoAmount && parseInt(cryptoAmount) >= 50000 && (
+                  <div className="mt-2 text-xs font-bold text-slate-400 text-right">
+                    ≈ ${(parseInt(cryptoAmount) / 16000).toFixed(2)} USD
+                  </div>
+                )}
+                {cryptoAmount && parseInt(cryptoAmount) > 0 && parseInt(cryptoAmount) < 50000 && (
+                  <div className="mt-2 text-xs font-bold text-red-500">
+                    ⚠ Minimum deposit is Rp 50,000
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2 mt-3">
                   {[50000, 100000, 200000, 500000, 1000000].map(q => (
                     <button key={q} onClick={() => setCryptoAmount(String(q))}
-                      className={"px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors " + (cryptoAmount === String(q) ? 'bg-orange-500 text-white border-orange-500' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-orange-300')}>
+                      className={"px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors " + (cryptoAmount === String(q) ? 'bg-orange-500 text-white border-orange-500' : 'bg-white dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.09] hover:border-orange-300')}>
                       {(q/1000).toFixed(0)}rb
                     </button>
                   ))}
@@ -4945,14 +5021,21 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                 <div className="text-xs font-bold text-orange-700 dark:text-orange-400 mb-2">Supported Cryptocurrencies</div>
                 <div className="flex flex-wrap gap-2 text-xs font-bold text-slate-600 dark:text-slate-300">
                   {['USDT', 'BTC', 'ETH', 'BNB', 'SOL', 'LTC', 'DOGE', 'TRX', '+100 more'].map(c => (
-                    <span key={c} className="bg-white dark:bg-slate-800 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700">{c}</span>
+                    <span key={c} className="bg-white dark:bg-[#0f1320] px-2 py-1 rounded-lg border border-slate-200 dark:border-white/[0.09]">{c}</span>
                   ))}
                 </div>
               </div>
 
+              {/* Info box */}
+              <div className="bg-slate-50 dark:bg-white/[0.04] rounded-2xl p-4 space-y-2 text-xs text-slate-500 dark:text-slate-400">
+                <div className="flex items-center gap-2"><span>⏱</span> Invoice expires in <strong>30 minutes</strong></div>
+                <div className="flex items-center gap-2"><span>⚡</span> Balance credited <strong>automatically</strong> after confirmation</div>
+                <div className="flex items-center gap-2"><span>🔒</span> Secured by <strong>Oxapay</strong></div>
+              </div>
+
               <button
                 onClick={handleCryptoDeposit}
-                disabled={cryptoLoading || !cryptoAmount || parseInt(cryptoAmount) < 10000}
+                disabled={cryptoLoading || !cryptoAmount || parseInt(cryptoAmount) < 50000}
                 className="w-full py-4 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold rounded-2xl transition-colors active:scale-95 flex items-center justify-center gap-2"
               >
                 {cryptoLoading ? <RefreshCw className="w-5 h-5 animate-spin" /> : null}
@@ -4963,7 +5046,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
 
           {/* Waiting — show pay link */}
           {(cryptoStatus === 'waiting' || cryptoStatus === 'paid') && cryptoPayLink && (
-            <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6 md:p-8 space-y-5">
+            <div className="dash-card rounded-[2rem] bg-white border border-slate-200 p-6 md:p-8 space-y-5">
               {cryptoStatus === 'paid' ? (
                 <div className="text-center py-4">
                   <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -5001,7 +5084,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                   </div>
 
                   <button onClick={() => { setCryptoStatus('idle'); setCryptoPayLink(null); if (cryptoPollRef.current) clearInterval(cryptoPollRef.current); }}
-                    className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 transition-colors text-sm">
+                    className="w-full py-3 bg-slate-100 dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 transition-colors text-sm">
                     Cancel Payment
                   </button>
                 </>
@@ -5011,7 +5094,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
 
           {/* Expired */}
           {cryptoStatus === 'expired' && (
-            <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-8 text-center space-y-4">
+            <div className="dash-card rounded-[2rem] bg-white border border-slate-200 p-8 text-center space-y-4">
               <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto">
                 <AlertCircle className="w-8 h-8 text-red-500" />
               </div>
@@ -5030,14 +5113,14 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
       {depositMode === 'history' && (
         <div className="space-y-4">
           {myRequests.length === 0 ? (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center text-slate-400">
+            <div className="bg-white dark:bg-[#0a0d16] rounded-2xl border border-slate-200 dark:border-white/[0.07] p-12 text-center text-slate-400">
               <CreditCard className="w-10 h-10 mx-auto mb-3 opacity-30" />
               <div className="font-bold">Belum ada request deposit</div>
             </div>
           ) : myRequests.map((r: any) => {
             const cfg = STATUS_CFG[r.status] ?? STATUS_CFG['pending'];
             return (
-              <div key={r.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 flex items-center justify-between">
+              <div key={r.id} className="bg-white dark:bg-[#0a0d16] rounded-2xl border border-slate-200 dark:border-white/[0.07] p-5 flex items-center justify-between">
                 <div>
                   <div className="font-black text-slate-900 dark:text-white text-lg">Rp {r.amount.toLocaleString('id-ID')}</div>
                   <div className="text-xs text-slate-400 mt-1">{r.bank_name} · {new Date(r.created_at).toLocaleString('id-ID')}</div>
@@ -5049,7 +5132,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
               </div>
             );
           })}
-          <button onClick={fetchMyRequests} className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2">
+          <button onClick={fetchMyRequests} className="w-full py-3 bg-slate-100 dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-200 dark:hover:bg-white/[0.1] transition-colors flex items-center justify-center gap-2">
             <RefreshCw className="w-4 h-4" /> Refresh Status
           </button>
         </div>
@@ -5060,6 +5143,69 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
 
 // ==========================================
 // TAB: HISTORY
+// ==========================================
+// ==========================================
+// HISTORY FILTER DROPDOWN (custom — matches MutasiFilterDropdown style)
+// ==========================================
+function HistoryFilterDropdown({
+  value, onChange, labels,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  labels: { all: string; success: string; waiting: string; cancelled: string; expired: string };
+}) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const OPTS = [
+    { value: '',          label: labels.all,       dot: 'bg-slate-400',   badge: '' },
+    { value: 'success',   label: labels.success,   dot: 'bg-green-500',   badge: 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50' },
+    { value: 'waiting',   label: labels.waiting,   dot: 'bg-amber-400',   badge: 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50' },
+    { value: 'cancelled', label: labels.cancelled, dot: 'bg-red-400',     badge: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50' },
+    { value: 'expired',   label: labels.expired,   dot: 'bg-violet-500',  badge: 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800/50' },
+  ];
+  const selected = OPTS.find(o => o.value === value) ?? OPTS[0];
+
+  return (
+    <div className="relative w-full sm:w-48" ref={ref}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center gap-2.5 px-4 py-2.5 bg-white dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl text-sm font-bold outline-none dark:text-white hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors shadow-sm"
+      >
+        <span className={`w-2 h-2 rounded-full shrink-0 ${selected.dot}`} />
+        <span className="flex-1 text-left text-slate-700 dark:text-slate-200">{(s => s.replace(/^[^a-zA-Z\u00C0-\u024F]+/, ''))(selected.label)}</span>
+        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1.5 w-full bg-white dark:bg-[#0d1020] border border-slate-200 dark:border-white/[0.09] rounded-2xl shadow-xl z-30 overflow-hidden py-2">
+          {OPTS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => { onChange(opt.value); setOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold transition-colors text-left ${value === opt.value ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/[0.05]'}`}
+            >
+              <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${opt.dot}`} />
+              <span className="flex-1">{(s => s.replace(/^[^a-zA-Z\u00C0-\u024F]+/, ''))(opt.label)}</span>
+              {opt.value !== '' && value === opt.value && opt.badge && (
+                <span className={`px-2 py-0.5 rounded-md text-[10px] font-black border uppercase tracking-wide ${opt.badge}`}>
+                  {opt.value === 'success' ? 'OK' : opt.value === 'waiting' ? '…' : opt.value === 'cancelled' ? '✕' : '⏱'}
+                </span>
+              )}
+              {value === opt.value && <Check className="w-3.5 h-3.5 ml-1 text-indigo-500 shrink-0" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ==========================================
 interface HistoryViewProps {
   orders: Order[];
@@ -5203,7 +5349,7 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
     success   : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50',
     waiting   : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800/50',
     cancelled : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/50',
-    expired   : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700',
+    expired   : 'bg-slate-100 dark:bg-[#0f1320] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/[0.09]',
   };
 
   return (
@@ -5224,35 +5370,25 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
       {/* Header + Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">{t.historyTitle}</h1>
-        <div className="flex gap-2 overflow-x-auto pb-1" style={{scrollbarWidth:'none', msOverflowStyle:'none'}}>
-          {[
-            { value: '',          label: t.filterAll,       color: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700' },
-            { value: 'success',   label: t.filterSuccess,  color: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50' },
-            { value: 'waiting',   label: t.filterWaiting,  color: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800/50' },
-            { value: 'cancelled', label: t.filterCancelled, color: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/50' },
-            { value: 'expired',   label: t.filterExpired,   color: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-600' },
-          ].map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => setFilterStatus(opt.value)}
-              className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-black border-2 transition-all whitespace-nowrap ${
-                filterStatus === opt.value
-                  ? opt.color + ' ring-2 ring-offset-1 ring-indigo-400'
-                  : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+        <HistoryFilterDropdown
+          value={filterStatus}
+          onChange={v => setFilterStatus(v)}
+          labels={{
+            all: t.filterAll,
+            success: t.filterSuccess,
+            waiting: t.filterWaiting,
+            cancelled: t.filterCancelled,
+            expired: t.filterExpired,
+          }}
+        />
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
+      <div className="rounded-[2rem] bg-white dark:bg-[#0d1020] shadow-sm border border-slate-200 dark:border-white/[0.07] overflow-hidden transition-colors">
 
         {/* ===== DESKTOP: Tabel ===== */}
-        <div className="hidden md:block overflow-x-auto min-h-[300px]">
+        <div className="dash-table hidden md:block overflow-x-auto min-h-[300px]">
           <table className="w-full text-left">
-            <thead className="bg-slate-50/80 dark:bg-slate-950/80 border-b border-slate-100 dark:border-slate-800">
+            <thead className="bg-slate-50/80 dark:bg-[#060810]/80 border-b border-slate-100 dark:border-white/[0.07]">
               <tr>
                 <th className="p-5 sm:px-6 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{t.appDetailCol}</th>
                 <th className="p-5 sm:px-6 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{t.phoneOtpCol}</th>
@@ -5260,36 +5396,36 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
                 <th className="p-5 sm:px-6 text-right text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{t.actionCol}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
               {isLoading && apiHistory.length === 0 ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td className="p-5 sm:px-6"><div className="h-5 bg-slate-200 dark:bg-slate-700 rounded-lg w-32 mb-2"></div><div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-24"></div></td>
-                    <td className="p-5 sm:px-6"><div className="h-8 bg-slate-100 dark:bg-slate-800 rounded-lg w-44"></div></td>
-                    <td className="p-5 sm:px-6 text-right"><div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-lg w-20 ml-auto"></div></td>
-                    <td className="p-5 sm:px-6 text-right"><div className="h-8 bg-slate-100 dark:bg-slate-800 rounded-lg w-24 ml-auto"></div></td>
+                    <td className="p-5 sm:px-6"><div className="h-5 bg-slate-200 dark:bg-[#161b28] rounded-lg w-32 mb-2"></div><div className="h-3 bg-slate-100 dark:bg-[#0f1320] rounded w-24"></div></td>
+                    <td className="p-5 sm:px-6"><div className="h-8 bg-slate-100 dark:bg-[#0f1320] rounded-lg w-44"></div></td>
+                    <td className="p-5 sm:px-6 text-right"><div className="h-6 bg-slate-200 dark:bg-[#161b28] rounded-lg w-20 ml-auto"></div></td>
+                    <td className="p-5 sm:px-6 text-right"><div className="h-8 bg-slate-100 dark:bg-[#0f1320] rounded-lg w-24 ml-auto"></div></td>
                   </tr>
                 ))
               ) : localOnly.length === 0 && apiHistory.length === 0 ? (
                 <tr><td colSpan={4} className="py-24 text-center">
-                  <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-full flex items-center justify-center mx-auto mb-4"><History className="w-10 h-10 text-slate-300 dark:text-slate-500"/></div>
+                  <div className="w-20 h-20 bg-slate-50 dark:bg-[#0f1320] border border-slate-100 dark:border-white/[0.09] rounded-full flex items-center justify-center mx-auto mb-4"><History className="w-10 h-10 text-slate-300 dark:text-slate-500"/></div>
                   <p className="font-extrabold text-slate-800 dark:text-slate-200 text-lg">Belum ada riwayat.</p>
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">Transaksi yang Anda lakukan akan muncul di sini.</p>
                 </td></tr>
               ) : (
                 <>
                   {sortedLocal.filter(o => !filterStatus || o.status === filterStatus).map(o => (
-                    <tr key={'local-' + o.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                    <tr key={'local-' + o.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.07]/50 transition-colors">
                       <td className="p-5 sm:px-6"><div className="font-bold text-base text-slate-900 dark:text-white">{o.serviceName}</div><div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{o.date}</div></td>
-                      <td className="p-5 sm:px-6"><span className="font-mono font-bold text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg dark:text-slate-300">{o.number}</span>{o.otpCode && <span className="text-sm font-black text-green-700 dark:text-green-400 ml-3 inline-flex items-start gap-1.5"><span className="shrink-0">OTP:</span><span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 tracking-widest break-all leading-snug">{o.otpCode}</span></span>}</td>
+                      <td className="p-5 sm:px-6"><span className="font-mono font-bold text-sm bg-slate-100 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] px-3 py-1.5 rounded-lg dark:text-slate-300">{o.number}</span>{o.otpCode && <span className="text-sm font-black text-green-700 dark:text-green-400 ml-3 inline-flex items-start gap-1.5"><span className="shrink-0">OTP:</span><span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 tracking-widest break-all leading-snug">{o.otpCode}</span></span>}</td>
                       <td className="p-5 sm:px-6 text-right"><span className={"px-3.5 py-1.5 text-[11px] font-black rounded-lg border uppercase tracking-wider " + (STATUS_COLOR[o.status] ?? STATUS_COLOR['cancelled'])}>{o.status === 'cancelled' ? t.cancelBtn : o.status === 'waiting' ? t.waitingBtn : o.status === 'success' ? t.successBtn : t.expiredBtn}</span></td>
                       <td className="p-5 sm:px-6 text-right">—</td>
                     </tr>
                   ))}
                   {sortedApi.map(a => (
-                    <tr key={'api-' + a.activationId} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                    <tr key={'api-' + a.activationId} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.07]/50 transition-colors">
                       <td className="p-5 sm:px-6"><div className="font-bold text-base text-slate-900 dark:text-white uppercase">{a.service}</div><div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{a.createdAt ?? '—'}</div></td>
-                      <td className="p-5 sm:px-6"><span className="font-mono font-bold text-sm bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg dark:text-slate-300">{a.phone}</span>{a.otpCode && <span className="text-sm font-black text-green-700 dark:text-green-400 ml-3 inline-flex items-start gap-1.5"><span className="shrink-0">OTP:</span><span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 tracking-widest break-all leading-snug">{a.otpCode}</span></span>}</td>
+                      <td className="p-5 sm:px-6"><span className="font-mono font-bold text-sm bg-slate-100 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] px-3 py-1.5 rounded-lg dark:text-slate-300">{a.phone}</span>{a.otpCode && <span className="text-sm font-black text-green-700 dark:text-green-400 ml-3 inline-flex items-start gap-1.5"><span className="shrink-0">OTP:</span><span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 tracking-widest break-all leading-snug">{a.otpCode}</span></span>}</td>
                       <td className="p-5 sm:px-6 text-right"><span className={"px-3.5 py-1.5 text-[11px] font-black rounded-lg border uppercase tracking-wider " + (STATUS_COLOR[a.status] ?? STATUS_COLOR['cancelled'])}>{a.statusLabel}</span></td>
                       <td className="p-5 sm:px-6 text-right">
                         {a.status === 'success' && a.activationId && (
@@ -5309,18 +5445,18 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
         </div>
 
         {/* ===== MOBILE: Card layout ===== */}
-        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800 min-h-[200px]">
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-white/[0.06] min-h-[200px]">
           {isLoading && apiHistory.length === 0 ? (
             [...Array(4)].map((_, i) => (
               <div key={i} className="p-4 animate-pulse space-y-2">
-                <div className="flex justify-between"><div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-28"></div><div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-20"></div></div>
-                <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-20"></div>
-                <div className="h-7 bg-slate-100 dark:bg-slate-800 rounded-lg w-36"></div>
+                <div className="flex justify-between"><div className="h-4 bg-slate-200 dark:bg-[#161b28] rounded w-28"></div><div className="h-5 bg-slate-200 dark:bg-[#161b28] rounded w-20"></div></div>
+                <div className="h-3 bg-slate-100 dark:bg-[#0f1320] rounded w-20"></div>
+                <div className="h-7 bg-slate-100 dark:bg-[#0f1320] rounded-lg w-36"></div>
               </div>
             ))
           ) : localOnly.length === 0 && apiHistory.length === 0 ? (
             <div className="py-20 text-center px-4">
-              <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-full flex items-center justify-center mx-auto mb-3"><History className="w-8 h-8 text-slate-300 dark:text-slate-500"/></div>
+              <div className="w-16 h-16 bg-slate-50 dark:bg-[#0f1320] border border-slate-100 dark:border-white/[0.09] rounded-full flex items-center justify-center mx-auto mb-3"><History className="w-8 h-8 text-slate-300 dark:text-slate-500"/></div>
               <p className="font-extrabold text-slate-800 dark:text-slate-200">Belum ada riwayat.</p>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Transaksi yang Anda lakukan akan muncul di sini.</p>
             </div>
@@ -5332,7 +5468,7 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
                     <div><div className="font-bold text-sm text-slate-900 dark:text-white">{o.serviceName}</div><div className="text-xs text-slate-400 mt-0.5">{o.date}</div></div>
                     <span className={"px-2.5 py-1 text-[10px] font-black rounded-lg border uppercase shrink-0 " + (STATUS_COLOR[o.status] ?? STATUS_COLOR['cancelled'])}>{o.status === 'cancelled' ? t.cancelBtn : o.status === 'waiting' ? t.waitingBtn : o.status === 'success' ? t.successBtn : t.expiredBtn}</span>
                   </div>
-                  <div className="font-mono text-xs bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 inline-block">{o.number}</div>
+                  <div className="font-mono text-xs bg-slate-100 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] px-3 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 inline-block">{o.number}</div>
                   {o.otpCode && <div className="flex items-start gap-1.5 text-xs font-black text-green-700 dark:text-green-400"><span className="shrink-0">OTP:</span><span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 tracking-widest break-all leading-snug">{o.otpCode}</span></div>}
                 </div>
               ))}
@@ -5342,7 +5478,7 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
                     <div><div className="font-bold text-sm text-slate-900 dark:text-white uppercase">{a.service}</div><div className="text-xs text-slate-400 mt-0.5">{a.createdAt ?? '—'}</div></div>
                     <span className={"px-2.5 py-1 text-[10px] font-black rounded-lg border uppercase shrink-0 " + (STATUS_COLOR[a.status] ?? STATUS_COLOR['cancelled'])}>{a.statusLabel}</span>
                   </div>
-                  <div className="font-mono text-xs bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 inline-block">{a.phone}</div>
+                  <div className="font-mono text-xs bg-slate-100 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] px-3 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 inline-block">{a.phone}</div>
                   {a.otpCode && <div className="flex items-start gap-1.5 text-xs font-black text-green-700 dark:text-green-400"><span className="shrink-0">OTP:</span><span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 tracking-widest break-all leading-snug">{a.otpCode}</span></div>}
                   {a.status === 'success' && a.activationId && (
                     <button disabled={reactivating === a.activationId}
@@ -5359,9 +5495,9 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
 
         {/* Load more */}
         {hasMore && !isLoading && (
-          <div className="p-5 border-t border-slate-100 dark:border-slate-800 text-center">
+          <div className="p-5 border-t border-slate-100 dark:border-white/[0.07] text-center">
             <button onClick={() => { const next = page + 1; setPage(next); fetchHistory(next, filterStatus); }}
-              className="px-8 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl text-sm font-bold transition-colors border border-slate-200 dark:border-slate-700">
+              className="px-8 py-3 bg-slate-100 dark:bg-[#0f1320] hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl text-sm font-bold transition-colors border border-slate-200 dark:border-white/[0.09]">
               Muat Lebih Banyak
             </button>
           </div>
@@ -5372,6 +5508,66 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ==========================================
+// MUTASI FILTER DROPDOWN (custom — no native select)
+// ==========================================
+function MutasiFilterDropdown({
+  value, onChange, labels,
+}: {
+  value: '' | 'in' | 'out';
+  onChange: (v: '' | 'in' | 'out') => void;
+  labels: { all: string; income: string; expense: string };
+}) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const OPTS: { value: '' | 'in' | 'out'; label: string; dot: string; badge: string }[] = [
+    { value: '',    label: labels.all,     dot: 'bg-slate-400',  badge: '' },
+    { value: 'in',  label: labels.income,  dot: 'bg-green-500',  badge: 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50' },
+    { value: 'out', label: labels.expense, dot: 'bg-red-400',    badge: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50' },
+  ];
+  const selected = OPTS.find(o => o.value === value) ?? OPTS[0];
+
+  return (
+    <div className="relative w-full sm:w-44" ref={ref}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center gap-2.5 px-4 py-2.5 bg-white dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl text-sm font-bold outline-none dark:text-white hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors shadow-sm"
+      >
+        <span className={`w-2 h-2 rounded-full shrink-0 ${selected.dot}`} />
+        <span className="flex-1 text-left text-slate-700 dark:text-slate-200">{selected.label}</span>
+        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1.5 w-full bg-white dark:bg-[#0d1020] border border-slate-200 dark:border-white/[0.09] rounded-2xl shadow-xl z-30 overflow-hidden py-1.5">
+          {OPTS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => { onChange(opt.value); setOpen(false); }}
+              className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-bold transition-colors text-left ${value === opt.value ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/[0.05]'}`}
+            >
+              <span className={`w-2 h-2 rounded-full shrink-0 ${opt.dot}`} />
+              <span className="flex-1">{opt.label}</span>
+              {opt.value !== '' && value === opt.value && (
+                <span className={`px-2 py-0.5 rounded-md text-[10px] font-black border ${opt.badge}`}>
+                  {opt.value === 'in' ? '+' : '−'}
+                </span>
+              )}
+              {value === opt.value && <Check className="w-3.5 h-3.5 ml-auto text-indigo-500" />}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -5440,44 +5636,40 @@ function MutasiView({ mutasi, user, lang }: MutasiViewProps) {
           <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">{t.mutasiTitle}</h1>
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2 hidden md:block">Catatan rinci pemasukan dan pengeluaran saldo Anda.</p>
         </div>
-        <select
+        <MutasiFilterDropdown
           value={filterType}
-          onChange={e => setFilterType(e.target.value as '' | 'in' | 'out')}
-          className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-base font-bold text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500/50 shadow-sm w-full sm:w-40"
-        >
-          <option value="">{t.mutasiAll}</option>
-          <option value="in">{t.mutasiIn}</option>
-          <option value="out">{t.mutasiOut}</option>
-        </select>
+          onChange={v => setFilterType(v)}
+          labels={{ all: t.mutasiAll, income: t.mutasiIn, expense: t.mutasiOut }}
+        />
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
+      <div className="rounded-[2rem] bg-white dark:bg-[#0d1020] shadow-sm border border-slate-200 dark:border-white/[0.07] overflow-hidden transition-colors">
         <div className="overflow-x-auto min-h-[300px]">
           <table className="w-full text-left">
-            <thead className="bg-slate-50/80 dark:bg-slate-950/80 border-b border-slate-100 dark:border-slate-800">
+            <thead className="bg-slate-50/80 dark:bg-[#060810]/80 border-b border-slate-100 dark:border-white/[0.07]">
               <tr>
                 <th className="p-3 sm:p-5 sm:px-6 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{t.timeDesc}</th>
                 <th className="p-3 sm:p-5 sm:px-6 text-right text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{t.nominal}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
               {isLoading && dbMutasi.length === 0 ? (
                 [...Array(4)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td className="p-3 sm:p-5 sm:px-6"><div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-48 mb-2"></div><div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-24"></div></td>
-                    <td className="p-3 sm:p-5 sm:px-6 text-right"><div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-full w-24 ml-auto"></div></td>
+                    <td className="p-3 sm:p-5 sm:px-6"><div className="h-5 bg-slate-200 dark:bg-[#161b28] rounded w-48 mb-2"></div><div className="h-3 bg-slate-100 dark:bg-[#0f1320] rounded w-24"></div></td>
+                    <td className="p-3 sm:p-5 sm:px-6 text-right"><div className="h-6 bg-slate-200 dark:bg-[#161b28] rounded-full w-24 ml-auto"></div></td>
                   </tr>
                 ))
               ) : allMutasi.length === 0 ? (
                 <tr>
                   <td colSpan={2} className="py-20 text-center">
-                    <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-full flex items-center justify-center mx-auto mb-3"><Receipt className="w-8 h-8 text-slate-300 dark:text-slate-500"/></div>
+                    <div className="w-16 h-16 bg-slate-50 dark:bg-[#0f1320] border border-slate-100 dark:border-white/[0.09] rounded-full flex items-center justify-center mx-auto mb-3"><Receipt className="w-8 h-8 text-slate-300 dark:text-slate-500"/></div>
                     <p className="font-extrabold text-slate-800 dark:text-slate-200">Belum ada mutasi.</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Buku kas akan terisi saat Anda deposit atau membeli nomor.</p>
                   </td>
                 </tr>
               ) : allMutasi.map((m, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.07]/50 transition-colors">
                   <td className="p-3 sm:p-5 sm:px-6">
                     <div className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">{m.desc}</div>
                     <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">{m.date}</div>
@@ -5500,10 +5692,10 @@ function MutasiView({ mutasi, user, lang }: MutasiViewProps) {
           </table>
         </div>
         {hasMore && !isLoading && (
-          <div className="p-5 border-t border-slate-100 dark:border-slate-800 text-center">
+          <div className="p-5 border-t border-slate-100 dark:border-white/[0.07] text-center">
             <button
               onClick={() => { const next = page + 1; setPage(next); fetchMutasi(next, filterType); }}
-              className="px-8 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl text-sm font-bold transition-colors border border-slate-200 dark:border-slate-700"
+              className="px-8 py-3 bg-slate-100 dark:bg-[#0f1320] hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl text-sm font-bold transition-colors border border-slate-200 dark:border-white/[0.09]"
             >
               Muat Lebih Banyak
             </button>
@@ -5591,12 +5783,12 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
     }
   };
 
-  const inputCls = "w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500/50 text-base transition-colors";
+  const inputCls = "w-full px-5 py-3.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl outline-none font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500/50 text-base transition-colors";
 
   return (
     <div className="max-w-3xl space-y-6 mx-auto pb-10">
       <div className="flex items-center gap-3 md:hidden mb-2">
-        <button onClick={() => history.back()} className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 shadow-sm">
+        <button onClick={() => history.back()} className="p-2 rounded-xl bg-white dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] text-slate-500 dark:text-slate-400 shadow-sm">
           <ChevronRight className="w-5 h-5 rotate-180" />
         </button>
         <h1 className="text-xl font-extrabold text-slate-900 dark:text-white">Pengaturan Akun</h1>
@@ -5604,7 +5796,7 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
       <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 dark:text-white hidden md:block">Pengaturan Akun</h1>
 
       {/* ── Info Profil ── */}
-      <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800 p-6 md:p-10 transition-colors">
+      <div className="rounded-[2rem] bg-white dark:bg-[#0d1020] shadow-sm border border-slate-200 dark:border-white/[0.07] p-6 md:p-10 transition-colors">
         <div className="flex flex-col sm:flex-row items-center sm:space-x-8 mb-10 text-center sm:text-left">
           <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-3xl flex items-center justify-center text-3xl font-black border-2 border-indigo-100 dark:border-indigo-800 shadow-sm mb-4 sm:mb-0">
             {user?.name?.charAt(0).toUpperCase() || 'U'}
@@ -5621,10 +5813,10 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
             </div>
           </div>
         </div>
-        <form className="space-y-6 pt-8 border-t border-slate-100 dark:border-slate-800" onSubmit={handleSave}>
+        <form className="space-y-6 pt-8 border-t border-slate-100 dark:border-white/[0.07]" onSubmit={handleSave}>
           <div>
             <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">Full Name</label>
-            <input type="text" className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none font-bold text-slate-500 dark:text-slate-400 cursor-not-allowed text-base" defaultValue={user?.name} disabled />
+            <input type="text" className="w-full px-5 py-3.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl outline-none font-bold text-slate-500 dark:text-slate-400 cursor-not-allowed text-base" defaultValue={user?.name} disabled />
           </div>
           <div className="pt-2">
             <button type="submit" disabled={isLoading} className="bg-slate-900 dark:bg-indigo-600 text-white font-bold text-sm px-8 py-4 rounded-2xl hover:bg-indigo-600 dark:hover:bg-indigo-700 transition-all active:scale-95 shadow-lg w-full sm:w-auto flex justify-center items-center">
@@ -5636,7 +5828,7 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
       </div>
 
       {/* ── Info Akun ── */}
-      <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800 p-6 md:p-10 transition-colors">
+      <div className="rounded-[2rem] bg-white dark:bg-[#0d1020] shadow-sm border border-slate-200 dark:border-white/[0.07] p-6 md:p-10 transition-colors">
         <div className="flex items-center gap-3 mb-6">
           <div className="bg-indigo-50 dark:bg-indigo-900/30 p-2.5 rounded-xl">
             <Activity className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -5646,15 +5838,15 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
         {loadingInfo ? (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5 animate-pulse">
-                <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-20 mb-3" />
-                <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-28" />
+              <div key={i} className="bg-slate-50 dark:bg-[#0f1320] rounded-2xl p-5 animate-pulse">
+                <div className="h-3 bg-slate-200 dark:bg-[#161b28] rounded w-20 mb-3" />
+                <div className="h-6 bg-slate-200 dark:bg-[#161b28] rounded w-28" />
               </div>
             ))}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5">
+            <div className="bg-slate-50 dark:bg-[#0f1320] rounded-2xl p-5">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t.joinedAt}</div>
               <div className="text-base font-black text-slate-900 dark:text-white">
                 {accountInfo?.joinedAt
@@ -5662,13 +5854,13 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
                   : '—'}
               </div>
             </div>
-            <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5">
+            <div className="bg-slate-50 dark:bg-[#0f1320] rounded-2xl p-5">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t.totalOrders}</div>
               <div className="text-base font-black text-slate-900 dark:text-white">
                 {accountInfo ? `${accountInfo.totalOrders ?? 0} order` : '—'}
               </div>
             </div>
-            <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5">
+            <div className="bg-slate-50 dark:bg-[#0f1320] rounded-2xl p-5">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t.totalPurchase}</div>
               <div className="text-base font-black text-indigo-600 dark:text-indigo-400">
                 {accountInfo ? `Rp ${(accountInfo.totalSpend ?? 0).toLocaleString('id-ID')}` : '—'}
@@ -5679,7 +5871,7 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
       </div>
 
       {/* ── Ganti Password ── */}
-      <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800 p-6 md:p-10 transition-colors">
+      <div className="rounded-[2rem] bg-white dark:bg-[#0d1020] shadow-sm border border-slate-200 dark:border-white/[0.07] p-6 md:p-10 transition-colors">
         <div className="flex items-center gap-3 mb-6">
           <div className="bg-amber-50 dark:bg-amber-900/30 p-2.5 rounded-xl">
             <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
@@ -5727,7 +5919,7 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
                   <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${
                     newPass.length >= i * 3
                       ? i <= 1 ? 'bg-red-400' : i <= 2 ? 'bg-amber-400' : i <= 3 ? 'bg-blue-400' : 'bg-green-500'
-                      : 'bg-slate-200 dark:bg-slate-700'
+                      : 'bg-slate-200 dark:bg-[#161b28]'
                   }`} />
                 ))}
                 <span className="text-[10px] font-bold text-slate-400 ml-1 self-center">
