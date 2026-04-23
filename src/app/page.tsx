@@ -1081,40 +1081,17 @@ export default function App() {
     const style = document.createElement('style');
     style.id = '_mobile_fix';
     style.textContent = `
-      /* Prevent iOS input zoom (font-size < 16px triggers auto-zoom) */
-      input, select, textarea { font-size: 16px !important; }
-      @media (min-width: 640px) {
-        input, select, textarea { font-size: inherit !important; }
+      /* Prevent iOS input zoom — font-size < 16px trigger auto-zoom */
+      @media (max-width: 639px) {
+        input, select, textarea { font-size: 16px !important; }
       }
-      /* Safe area padding untuk iPhone notch & home indicator */
+      /* Safe area variables untuk iPhone notch & home indicator */
       :root {
         --safe-top: env(safe-area-inset-top, 0px);
         --safe-bottom: env(safe-area-inset-bottom, 0px);
-        --safe-left: env(safe-area-inset-left, 0px);
-        --safe-right: env(safe-area-inset-right, 0px);
       }
-      /* Prevent iOS overscroll bounce pada seluruh halaman */
-      html, body {
-        overscroll-behavior: none;
-        -webkit-overflow-scrolling: touch;
-      }
-      /* Tap highlight transparan (sudah ada inline, ini override untuk semua) */
-      * { -webkit-tap-highlight-color: transparent; }
-      /* Cegah text selection tidak disengaja saat scroll mobile */
-      nav, button { user-select: none; -webkit-user-select: none; }
-      /* Smooth momentum scrolling di iOS untuk scrollable areas */
-      .overflow-y-auto, .overflow-x-auto, [style*="overflow"] {
-        -webkit-overflow-scrolling: touch;
-      }
-      /* Minimum touch target 44×44px sesuai Apple HIG & Android Material */
-      button, a[role="button"], [role="tab"] {
-        min-height: 44px;
-        min-width: 44px;
-      }
-      /* Bottom nav: tambah padding safe area untuk home indicator iPhone */
-      nav[class*="fixed"][class*="bottom"] {
-        padding-bottom: max(env(safe-area-inset-bottom, 0px), 4px);
-      }
+      /* Prevent overscroll bounce di iOS */
+      html { overscroll-behavior-y: none; }
     `;
     document.head.appendChild(style);
   }, []);
