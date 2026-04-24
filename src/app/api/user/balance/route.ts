@@ -110,17 +110,44 @@ export async function PATCH(request: NextRequest) {
           if (rpcErr) throw new Error('fallback');
 
           if (!rpcData?.success) {
-            const msg = rpcData?.error ?? 'Refund sudah diproses.';
-            if (msg.includes('already') || msg.includes('sudah') || msg.includes('not found')) {
-              return NextResponse.json({ error: msg, alreadyRefunded: true }, { status: 409 });
-            }
-            return NextResponse.json({ error: msg }, { status: 400 });
+            const msg = (rpcData?.error ?? 'Refund sudah diproses.').toLowerCase();
+
+            // Semua kondisi "sudah diproses" → 409 (bukan 400)
+            const alreadyDone = msg.includes('already')
+              || msg.includes('sudah')
+              || msg.includes('not found')
+              || msg.includes('tidak ditemukan')
+              || msg.includes('cancelled')
+              || msg.includes('dibatalkan')
+              || msg.includes('duplicate')
+              || msg.includes('processed')
+              || msg.includes('diproses');
+
+            return NextResponse.json(
+              { error: rpcData?.error ?? 'Refund sudah diproses.', alreadyRefunded: alreadyDone },
+              { status: alreadyDone ? 409 : 400 }
+            );
           }
 
           return NextResponse.json({ success: true, balance: rpcData.balance });
 
         } catch (e: any) {
           if (e?.message !== 'fallback') throw e;
+          // RPC tidak tersedia → fallback manual: cek dulu apakah sudah direfund
+          const { data: existCheck } = await supabaseAdmin
+            .from('mutations')
+            .select('id')
+            .eq('user_id', profile.id)
+            .eq('type', 'in')
+            .ilike('description', `%${activationId}%`)
+            .maybeSingle();
+
+          if (existCheck) {
+            return NextResponse.json(
+              { error: 'Refund sudah diproses sebelumnya.', alreadyRefunded: true },
+              { status: 409 }
+            );
+          }
         }
       }
 
