@@ -9,47 +9,10 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-function getVerifiedEmail(request: NextRequest): string | null {
-  // Coba semua header yang mungkin ada
-  return (
-    request.headers.get('X-Verified-User-Email')?.trim().toLowerCase() ??
-    request.headers.get('X-User-Email')?.trim().toLowerCase() ??
-    null
-  );
-}
-
-// Validasi token JWT Supabase
-async function validateToken(request: NextRequest): Promise<string | null> {
-  const authHeader = request.headers.get('Authorization') ?? '';
-  const token = authHeader.replace('Bearer ', '').trim();
-  if (!token) return null;
-
-  try {
-    const { createClient: createSupabaseClient } = await import('@supabase/supabase-js');
-    const supabase = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (error || !user) return null;
-    return user.email?.toLowerCase() ?? null;
-  } catch { return null; }
-}
-
-async function getAuthEmail(request: NextRequest): Promise<string | null> {
-  // 1. Coba dari header langsung
-  const headerEmail = getVerifiedEmail(request);
-  if (headerEmail) return headerEmail;
-
-  // 2. Coba validasi JWT
-  const tokenEmail = await validateToken(request);
-  if (tokenEmail) return tokenEmail;
-
-  return null;
-}
-
 export async function GET(request: NextRequest) {
-  const email = await getAuthEmail(request);
+  // ✅ FIX: Hanya pakai X-Verified-User-Email dari middleware
+  // Hapus fallback X-User-Email yang bisa dipalsukan user
+  const email = request.headers.get('X-Verified-User-Email')?.trim().toLowerCase();
   if (!email) return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
 
   const { data, error } = await supabaseAdmin
@@ -64,7 +27,8 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const email = await getAuthEmail(request);
+    // ✅ FIX: Hanya pakai X-Verified-User-Email dari middleware
+    const email = request.headers.get('X-Verified-User-Email')?.trim().toLowerCase();
     if (!email) return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
 
     const body = await request.json();
@@ -74,7 +38,20 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Parameter tidak lengkap.' }, { status: 400 });
     }
 
+    // ✅ FIX: BLOKIR user dari menambah saldo sendiri via API ini!
+    // type='add' hanya boleh dipanggil oleh sistem internal (order cancel/refund)
+    // User tidak boleh langsung POST ke sini untuk tambah saldo
+    // Deposit harus lewat /api/deposit/* yang punya verifikasi payment gateway
     if (type === 'add') {
+      // Hanya izinkan jika ada activationId — artinya ini refund dari order
+      if (!activationId) {
+        console.warn(`[user/balance PATCH] User ${email} coba add balance tanpa activationId!`);
+        return NextResponse.json(
+          { error: 'Operasi tidak diizinkan.' },
+          { status: 403 }
+        );
+      }
+
       const { data: profile } = await supabaseAdmin
         .from('profiles')
         .select('id, balance')
@@ -83,101 +60,108 @@ export async function PATCH(request: NextRequest) {
 
       if (!profile) return NextResponse.json({ error: 'User tidak ditemukan.' }, { status: 404 });
 
-      // Anti double-refund
-      if (activationId) {
-        const { data: existingMutation } = await supabaseAdmin
+      // Anti double-refund: cek mutation sudah ada
+      const { data: existingMutation } = await supabaseAdmin
+        .from('mutations')
+        .select('id')
+        .eq('user_id', profile.id)
+        .eq('type', 'in')
+        .ilike('description', `%#${activationId}%`)
+        .maybeSingle();
+
+      if (existingMutation) {
+        return NextResponse.json(
+          { error: 'Refund sudah diproses sebelumnya.', alreadyRefunded: true },
+          { status: 409 }
+        );
+      }
+
+      // ✅ Pakai RPC cancel_order_and_refund untuk atomic operation
+      try {
+        const { data: rpcData, error: rpcErr } = await supabaseAdmin
+          .rpc('cancel_order_and_refund', {
+            p_activation_id: activationId,
+            p_email        : email,
+          });
+
+        if (rpcErr) throw new Error('fallback');
+
+        if (!rpcData?.success) {
+          const msg = (rpcData?.error ?? 'Refund sudah diproses.').toLowerCase();
+          const alreadyDone = msg.includes('already') || msg.includes('sudah') ||
+            msg.includes('not found') || msg.includes('tidak ditemukan') ||
+            msg.includes('cancelled') || msg.includes('dibatalkan') ||
+            msg.includes('duplicate') || msg.includes('processed') || msg.includes('diproses');
+
+          return NextResponse.json(
+            { error: rpcData?.error ?? 'Refund sudah diproses.', alreadyRefunded: alreadyDone },
+            { status: alreadyDone ? 409 : 400 }
+          );
+        }
+
+        return NextResponse.json({ success: true, balance: rpcData.balance });
+
+      } catch (e: any) {
+        if (e?.message !== 'fallback') throw e;
+
+        // Fallback manual jika RPC tidak tersedia
+        const { data: existCheck } = await supabaseAdmin
           .from('mutations')
           .select('id')
           .eq('user_id', profile.id)
           .eq('type', 'in')
-          .ilike('description', `%#${activationId}%`)
+          .ilike('description', `%${activationId}%`)
           .maybeSingle();
 
-        if (existingMutation) {
+        if (existCheck) {
           return NextResponse.json(
             { error: 'Refund sudah diproses sebelumnya.', alreadyRefunded: true },
             { status: 409 }
           );
         }
 
-        try {
-          const { data: rpcData, error: rpcErr } = await supabaseAdmin
-            .rpc('cancel_order_and_refund', {
-              p_activation_id: activationId,
-              p_email        : email,
-            });
+        // ✅ FIX: Pakai RPC update_balance (atomic) bukan read-then-write
+        await supabaseAdmin.rpc('update_balance', {
+          p_email : email,
+          p_amount: amount,
+        });
 
-          if (rpcErr) throw new Error('fallback');
+        const { data: updated } = await supabaseAdmin
+          .from('profiles').select('balance').eq('email', email).single();
 
-          if (!rpcData?.success) {
-            const msg = (rpcData?.error ?? 'Refund sudah diproses.').toLowerCase();
-
-            // Semua kondisi "sudah diproses" → 409 (bukan 400)
-            const alreadyDone = msg.includes('already')
-              || msg.includes('sudah')
-              || msg.includes('not found')
-              || msg.includes('tidak ditemukan')
-              || msg.includes('cancelled')
-              || msg.includes('dibatalkan')
-              || msg.includes('duplicate')
-              || msg.includes('processed')
-              || msg.includes('diproses');
-
-            return NextResponse.json(
-              { error: rpcData?.error ?? 'Refund sudah diproses.', alreadyRefunded: alreadyDone },
-              { status: alreadyDone ? 409 : 400 }
-            );
-          }
-
-          return NextResponse.json({ success: true, balance: rpcData.balance });
-
-        } catch (e: any) {
-          if (e?.message !== 'fallback') throw e;
-          // RPC tidak tersedia → fallback manual: cek dulu apakah sudah direfund
-          const { data: existCheck } = await supabaseAdmin
-            .from('mutations')
-            .select('id')
-            .eq('user_id', profile.id)
-            .eq('type', 'in')
-            .ilike('description', `%${activationId}%`)
-            .maybeSingle();
-
-          if (existCheck) {
-            return NextResponse.json(
-              { error: 'Refund sudah diproses sebelumnya.', alreadyRefunded: true },
-              { status: 409 }
-            );
-          }
-        }
+        return NextResponse.json({ success: true, balance: updated?.balance ?? 0 });
       }
-
-      const newBal = (profile.balance ?? 0) + amount;
-      const { error: updateErr } = await supabaseAdmin
-        .from('profiles')
-        .update({ balance: newBal })
-        .eq('email', email);
-
-      if (updateErr) return NextResponse.json({ error: 'Gagal update saldo.' }, { status: 500 });
-      return NextResponse.json({ success: true, balance: newBal });
     }
 
-    // SUBTRACT
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('id, balance')
-      .eq('email', email)
-      .single();
+    // SUBTRACT — kurangi saldo (dipanggil saat beli order)
+    if (type === 'subtract') {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('id, balance')
+        .eq('email', email)
+        .single();
 
-    if (!profile) return NextResponse.json({ error: 'User tidak ditemukan.' }, { status: 404 });
+      if (!profile) return NextResponse.json({ error: 'User tidak ditemukan.' }, { status: 404 });
 
-    const newBal = Math.max(0, (profile.balance ?? 0) - amount);
-    const { error: updateError } = await supabaseAdmin
-      .from('profiles')
-      .update({ balance: newBal })
-      .eq('email', email);
+      // ✅ FIX: Pakai deduct_balance_for_order untuk atomic deduction
+      // Mencegah race condition saldo
+      const { data: deductResult } = await supabaseAdmin.rpc('deduct_balance_for_order', {
+        p_user_id: profile.id,
+        p_amount : amount,
+        p_desc   : body.description ?? 'Beli layanan',
+      });
 
-    if (updateError) return NextResponse.json({ error: 'Gagal update saldo.' }, { status: 500 });
-    return NextResponse.json({ success: true, balance: newBal });
+      if (!deductResult?.success) {
+        return NextResponse.json(
+          { error: deductResult?.error ?? 'Saldo tidak cukup.' },
+          { status: 402 }
+        );
+      }
+
+      return NextResponse.json({ success: true, balance: deductResult.new_balance });
+    }
+
+    return NextResponse.json({ error: 'Type tidak valid. Gunakan "subtract".' }, { status: 400 });
 
   } catch (err) {
     console.error('[PATCH /api/user/balance]', err);

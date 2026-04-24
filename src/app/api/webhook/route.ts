@@ -79,6 +79,33 @@ export async function POST(request: Request) {
       return new Response('OK', { status: 200 });
     }
 
+    // ✅ FIX: Validasi activationId — harus berupa angka saja (format HeroSMS)
+    // Mencegah injeksi activation_id palsu
+    if (!/^\d+$/.test(activationId)) {
+      console.warn(`[webhook] Invalid activationId format: ${activationId}`);
+      return new Response('OK', { status: 200 });
+    }
+
+    // ✅ FIX: Verifikasi order benar-benar ada di DB dan masih 'waiting'
+    // Mencegah webhook palsu mark order orang lain jadi success
+    const { data: existingOrder } = await db
+      .from('orders')
+      .select('id, status, refunded')
+      .eq('activation_id', activationId)
+      .maybeSingle();
+
+    if (!existingOrder) {
+      console.warn(`[webhook] Order tidak ditemukan untuk activation_id: ${activationId}`);
+      return new Response('OK', { status: 200 });
+    }
+
+    // ✅ FIX: Jangan update order yang sudah bukan 'waiting'
+    // Mencegah webhook palsu override order yang sudah cancelled/expired
+    if (existingOrder.status !== 'waiting') {
+      console.warn(`[webhook] Skip — order #${existingOrder.id} status sudah: ${existingOrder.status}`);
+      return new Response('OK', { status: 200 });
+    }
+
     // Cari OTP dari body dulu
     let smsCode = findOtpFromBody(body);
 
@@ -93,6 +120,8 @@ export async function POST(request: Request) {
 
     console.log('[webhook] OTP final:', finalCode, '→ activation_id:', activationId);
 
+    // ✅ FIX: Tambah .eq('status', 'waiting') untuk atomic update
+    // Mencegah race condition — hanya update kalau masih waiting
     const { error } = await db
       .from('orders')
       .update({
@@ -101,7 +130,7 @@ export async function POST(request: Request) {
         updated_at: new Date().toISOString(),
       })
       .eq('activation_id', activationId)
-      .eq('status', 'waiting');
+      .eq('status', 'waiting'); // ✅ atomic guard
 
     if (error) console.error('[webhook] gagal update orders:', error);
 
@@ -119,6 +148,11 @@ export async function GET(request: Request) {
 
   if (!id) {
     return NextResponse.json({ error: 'Parameter "id" wajib diisi.' }, { status: 400 });
+  }
+
+  // ✅ FIX: Validasi format id
+  if (!/^\d+$/.test(id)) {
+    return NextResponse.json({ error: 'Format id tidak valid.' }, { status: 400 });
   }
 
   const { data: order } = await db

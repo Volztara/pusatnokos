@@ -13,25 +13,32 @@ const OXAPAY_BASE_URL = 'https://api.oxapay.com';
 /**
  * POST /api/deposit/crypto
  * Buat invoice crypto via Oxapay
- * Body: { email, amount }
- * amount = nominal dalam IDR
  */
 export async function POST(request: Request) {
   try {
-    const { email, amount } = await request.json();
+    // ✅ FIX: Ambil dari header terverifikasi middleware
+    // Sebelumnya pakai body.email yang bisa dipalsukan user
+    const verifiedEmail  = request.headers.get('X-Verified-User-Email')?.trim().toLowerCase() ?? '';
+    const verifiedUserId = request.headers.get('X-Verified-User-Id')?.trim() ?? '';
 
-    if (!email || !amount || amount < 10000) {
+    if (!verifiedEmail || !verifiedUserId) {
+      return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
+    }
+
+    const { amount } = await request.json();
+
+    if (!amount || amount < 10000) {
       return NextResponse.json(
         { error: 'Invalid request. Minimum deposit is Rp 10,000.' },
         { status: 400 }
       );
     }
 
-    // Ambil user_id dari email
+    // Ambil profil via user_id (bukan email dari body)
     const { data: profile } = await db
       .from('profiles')
       .select('id, is_blacklisted')
-      .eq('email', email.toLowerCase())
+      .eq('id', verifiedUserId)
       .single();
 
     if (!profile) {
@@ -45,7 +52,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Konversi IDR → USD (ambil dari admin_settings atau hardcode rate)
+    // Konversi IDR → USD
     const { data: rateData } = await db
       .from('admin_settings')
       .select('value')
@@ -67,15 +74,15 @@ export async function POST(request: Request) {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body   : JSON.stringify({
-        merchant    : OXAPAY_API_KEY,
-        amount      : amountUSD,
-        currency    : 'USD',
-        lifeTime    : 30,                           // 30 menit
-        feePaidByPayer: 0,                          // fee ditanggung merchant
-        callbackUrl : `${process.env.NEXT_PUBLIC_APP_URL}/api/deposit/crypto/webhook`,
-        returnUrl   : `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
-        description : `Deposit Pusat Nokos - ${email}`,
-        orderId     : `${profile.id}_${Date.now()}`,
+        merchant      : OXAPAY_API_KEY,
+        amount        : amountUSD,
+        currency      : 'USD',
+        lifeTime      : 30,
+        feePaidByPayer: 0,
+        callbackUrl   : `${process.env.NEXT_PUBLIC_APP_URL}/api/deposit/crypto/webhook`,
+        returnUrl     : `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
+        description   : `Deposit Pusat Nokos - ${verifiedEmail}`,
+        orderId       : `${verifiedUserId}_${Date.now()}`,
       }),
     });
 
@@ -89,11 +96,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Simpan invoice ke DB untuk tracking
+    // Simpan invoice ke DB
     await db.from('crypto_invoices').insert({
-      user_id    : profile.id,
+      user_id    : verifiedUserId,  // ✅ pakai verifiedUserId
       track_id   : invoiceData.trackId,
-      order_id   : `${profile.id}_${Date.now()}`,
+      order_id   : `${verifiedUserId}_${Date.now()}`,
       amount_idr : amount,
       amount_usd : amountUSD,
       status     : 'waiting',
@@ -101,12 +108,12 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({
-      success : true,
-      trackId : invoiceData.trackId,
-      payLink : invoiceData.payLink,  // URL halaman pembayaran Oxapay
+      success  : true,
+      trackId  : invoiceData.trackId,
+      payLink  : invoiceData.payLink,
       amountUSD,
       amountIDR: amount,
-      expiresIn: 30, // menit
+      expiresIn: 30,
     });
 
   } catch (err) {
@@ -120,7 +127,7 @@ export async function POST(request: Request) {
 
 /**
  * GET /api/deposit/crypto?trackId=xxx
- * Cek status invoice
+ * Cek status invoice — tidak butuh auth
  */
 export async function GET(request: Request) {
   try {
@@ -129,6 +136,11 @@ export async function GET(request: Request) {
 
     if (!trackId) {
       return NextResponse.json({ error: 'trackId required.' }, { status: 400 });
+    }
+
+    // ✅ Validasi format trackId
+    if (trackId.length > 100 || !/^[a-zA-Z0-9_-]+$/.test(trackId)) {
+      return NextResponse.json({ error: 'Format trackId tidak valid.' }, { status: 400 });
     }
 
     const res = await fetch(`${OXAPAY_BASE_URL}/merchants/inquiry`, {
@@ -142,11 +154,10 @@ export async function GET(request: Request) {
 
     const data = await res.json();
 
-    // Status Oxapay: Waiting, Confirming, Paid, Expired, Error
     return NextResponse.json({
-      status   : data.status ?? 'unknown',
+      status    : data.status ?? 'unknown',
       amountPaid: data.payAmount,
-      currency : data.payCurrency,
+      currency  : data.payCurrency,
     });
 
   } catch (err) {

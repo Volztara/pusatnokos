@@ -38,39 +38,44 @@ function applyMarkup(
   const profit = Math.max(modal * markupPct, minProfit);
   return Math.ceil((modal + profit) / roundTo) * roundTo;
 }
-// ──────────────────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    // ✅ Ambil email dari header terverifikasi middleware — tidak bisa dipalsukan
+    const verifiedEmail  = request.headers.get('X-Verified-User-Email')?.trim().toLowerCase() ?? '';
+    const verifiedUserId = request.headers.get('X-Verified-User-Id')?.trim() ?? '';
+
+    const body     = await request.json();
     const service  = (body.service  ?? '').trim();
     const country  = (body.country  ?? '6').trim();
     const operator = (body.operator ?? '0').trim();
-    const email    = (body.email    ?? '').trim();
 
     if (!service) {
       return NextResponse.json({ error: 'Parameter "service" is required.' }, { status: 400 });
     }
 
-    // Cek blacklist jika email diberikan
-    if (email) {
-      const { data: profile } = await db
-        .from('profiles')
-        .select('is_blacklisted')
-        .eq('email', email.toLowerCase())
-        .single();
+    if (!verifiedEmail || !verifiedUserId) {
+      return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
+    }
 
-      if (profile?.is_blacklisted) {
-        return NextResponse.json(
-          { error: 'Your account has been suspended. Please contact support.' },
-          { status: 403 }
-        );
-      }
+    // Cek blacklist
+    const { data: profile } = await db
+      .from('profiles')
+      .select('balance, is_blacklisted')
+      .eq('email', verifiedEmail)
+      .single();
+
+    if (profile?.is_blacklisted) {
+      return NextResponse.json(
+        { error: 'Your account has been suspended. Please contact support.' },
+        { status: 403 }
+      );
     }
 
     const config = await getMarkupConfig();
     const { idrRate, markupPct, minProfit, roundTo } = config;
 
+    // Ambil harga dari HeroSMS
     const priceRes = await fetch(
       `${BASE_URL}?api_key=${API_KEY}&action=getPrices&country=${country}&service=${service}`,
       { cache: 'no-store' }
@@ -88,16 +93,85 @@ export async function POST(request: Request) {
       if (opData?.cost) priceIDR = applyMarkup(opData.cost, idrRate, markupPct, minProfit, roundTo);
     } catch { /* harga tidak kritis */ }
 
+    // Cek saldo cukup (soft check sebelum atomic)
+    if (priceIDR > 0 && profile && profile.balance < priceIDR) {
+      return NextResponse.json(
+        { error: 'Saldo tidak cukup. Silakan deposit terlebih dahulu.' },
+        { status: 402 }
+      );
+    }
+
+    // ✅ FIX: Potong saldo ATOMIC sebelum order ke HeroSMS
+    // Ini mencegah race condition — 5 request bersamaan tidak bisa lolos semua
+    if (priceIDR > 0) {
+      const { data: deductResult } = await db.rpc('deduct_balance_for_order', {
+        p_user_id: verifiedUserId,
+        p_amount : priceIDR,
+        p_desc   : `Beli ${service} (pending)`,
+      });
+
+      if (!deductResult?.success) {
+        const reason = deductResult?.error ?? 'Gagal memproses pembayaran.';
+        console.warn(`[order POST] Deduct failed for user ${verifiedEmail}: ${reason}`);
+        return NextResponse.json({ error: reason }, { status: 402 });
+      }
+    }
+
+    // Order ke HeroSMS — kalau gagal, refund saldo kembali
     const orderUrl =
       `${BASE_URL}?api_key=${API_KEY}&action=getNumber` +
       `&service=${service}&country=${country}&operator=${operator}`;
 
-    const orderRes  = await fetch(orderUrl, { cache: 'no-store' });
-    const orderText = (await orderRes.text()).trim();
+    let orderText = '';
+    try {
+      const orderRes = await fetch(orderUrl, { cache: 'no-store' });
+      orderText = (await orderRes.text()).trim();
+    } catch (e) {
+      // Fetch error — refund saldo karena order tidak jadi
+      if (priceIDR > 0) {
+        await db.rpc('update_balance', { p_email: verifiedEmail, p_amount: priceIDR });
+        await db.from('mutations').insert({
+          user_id    : verifiedUserId,
+          type       : 'in',
+          amount     : priceIDR,
+          description: `Refund otomatis — gagal koneksi ke provider`,
+        });
+      }
+      return NextResponse.json({ error: 'Server error. Please try again.' }, { status: 500 });
+    }
 
     if (orderText.startsWith('ACCESS_NUMBER:')) {
       const [, activationId, phone] = orderText.split(':');
+
+      // Catat order ke DB
+      if (verifiedUserId && activationId) {
+        try {
+          await db.from('orders').insert({
+            user_id      : verifiedUserId,
+            activation_id: activationId,
+            phone,
+            price        : priceIDR,
+            service_name : service,
+            status       : 'waiting',
+            refunded     : false,
+          });
+        } catch (e) {
+          console.error('[order POST] Gagal insert order ke DB:', e);
+        }
+      }
+
       return NextResponse.json({ activationId, phone, price: priceIDR });
+    }
+
+    // HeroSMS error — refund saldo karena order tidak jadi
+    if (priceIDR > 0) {
+      await db.rpc('update_balance', { p_email: verifiedEmail, p_amount: priceIDR });
+      await db.from('mutations').insert({
+        user_id    : verifiedUserId,
+        type       : 'in',
+        amount     : priceIDR,
+        description: `Refund otomatis — ${orderText}`,
+      });
     }
 
     const ERROR_MAP: Record<string, string> = {
@@ -112,10 +186,8 @@ export async function POST(request: Request) {
       REPEATED_NUMBER : 'This number has already been used for this service.',
     };
 
-    // Jangan expose raw error code ke user — hanya log di server
-    const friendlyMsg = ERROR_MAP[orderText] ?? 'Failed to order number. Please try again.';
     console.error(`[POST /api/order] upstream error: ${orderText}`);
-    return NextResponse.json({ error: friendlyMsg }, { status: 422 });
+    return NextResponse.json({ error: ERROR_MAP[orderText] ?? 'Failed to order number. Please try again.' }, { status: 422 });
 
   } catch (err) {
     console.error('[POST /api/order]', err);
@@ -164,24 +236,13 @@ export async function PATCH(request: Request) {
     const action = (body.action ?? '').trim();
 
     if (!id || !action) {
-      return NextResponse.json(
-        { error: 'Parameters "id" and "action" are required.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Parameters "id" and "action" are required.' }, { status: 400 });
     }
 
-    const STATUS_CODE: Record<string, number> = {
-      resend: 3,
-      done  : 6,
-      cancel: 8,
-    };
-
+    const STATUS_CODE: Record<string, number> = { resend: 3, done: 6, cancel: 8 };
     const statusCode = STATUS_CODE[action];
     if (!statusCode) {
-      return NextResponse.json(
-        { error: 'Invalid "action" value. Use "cancel", "done", or "resend".' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid "action". Use "cancel", "done", or "resend".' }, { status: 400 });
     }
 
     const url  = `${BASE_URL}?api_key=${API_KEY}&action=setStatus&id=${id}&status=${statusCode}`;
@@ -197,58 +258,50 @@ export async function PATCH(request: Request) {
     const isSuccess = (SUCCESS_TOKENS[action] ?? []).some(t => text.startsWith(t));
 
     if (isSuccess) {
-
-      // ── Jika cancel → refund saldo user secara ATOMIC ─────────────
       if (action === 'cancel') {
         try {
-          // Ambil order berdasarkan activation_id
           const { data: order } = await db
             .from('orders')
-            .select('id, user_id, price, service_name, refunded')
+            .select('id, user_id, price, service_name, refunded, status')
             .eq('activation_id', id)
             .maybeSingle();
 
-          if (order && order.user_id && order.price > 0 && !order.refunded) {
-
-            // Atomic update — hanya lanjut jika refunded masih FALSE
+          if (
+            order && order.user_id && order.price > 0 &&
+            !order.refunded &&
+            order.status !== 'expired' &&
+            order.status !== 'cancelled' &&
+            order.status !== 'success'
+          ) {
             const { data: updated } = await db
               .from('orders')
               .update({ status: 'cancelled', refunded: true })
               .eq('id', order.id)
-              .eq('refunded', false)          // ← atomic guard anti double refund
+              .eq('refunded', false)
+              .eq('status', 'waiting')
               .select('id');
 
             if (updated && updated.length > 0) {
-              // Ambil email untuk RPC update_balance
               const { data: profile } = await db
-                .from('profiles')
-                .select('email')
-                .eq('id', order.user_id)
-                .single();
+                .from('profiles').select('email').eq('id', order.user_id).single();
 
               if (profile?.email) {
-                await db.rpc('update_balance', {
-                  p_email : profile.email,
-                  p_amount: order.price,
-                });
+                await db.rpc('update_balance', { p_email: profile.email, p_amount: order.price });
               }
 
-              // Catat mutasi refund
               await db.from('mutations').insert({
                 user_id    : order.user_id,
                 type       : 'in',
                 amount     : order.price,
-                description: `Refund: ${order.service_name} #${order.id}`,
+                description: `Refund pembatalan order #${order.id}`,
               });
 
               console.log(`[cancel] Refunded ${order.price} to user ${order.user_id} (order #${order.id})`);
             } else {
-              console.log(`[cancel] Skip — order #${order.id} already refunded`);
+              console.log(`[cancel] Skip — order #${order?.id} status: ${order?.status}, refunded: ${order?.refunded}`);
             }
-
           }
         } catch (e) {
-          // Cancel HeroSMS sudah berhasil, refund DB gagal — log saja
           console.error(`[cancel] Refund failed for activation ${id}:`, e);
         }
       }
@@ -261,12 +314,8 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: true, message: MESSAGE[action] });
     }
 
-    // Log raw error server-side only, don't expose to user
     console.error(`[PATCH /api/order] upstream error: ${text}`);
-    return NextResponse.json(
-      { success: false, error: 'Failed to update order status. Please try again.' },
-      { status: 422 }
-    );
+    return NextResponse.json({ success: false, error: 'Failed to update order status.' }, { status: 422 });
 
   } catch (err) {
     console.error('[PATCH /api/order]', err);

@@ -2,9 +2,15 @@
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
+import { createClient } from '@supabase/supabase-js';
 
-const API_KEY = process.env.HEROSMS_API_KEY ?? '';
+const API_KEY  = process.env.HEROSMS_API_KEY ?? '';
 const BASE_URL = 'https://hero-sms.com/stubs/handler_api.php';
+
+const db = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 const IDR_RATE   = 17135.75;
 const MARKUP_PCT = 0.25;
@@ -19,15 +25,7 @@ function applyMarkup(costUSD: number): number {
 
 /**
  * GET /api/reactivation?id={activationId}
- *
- * Cek harga reaktivasi untuk nomor yang sudah pernah dipakai.
- * Reaktivasi = pakai nomor yang sama untuk layanan lain tanpa beli baru.
- *
- * Response sukses:
- *   { priceIDR: number; priceUSD: number }
- *
- * Response error:
- *   { error: string }
+ * Cek harga reaktivasi. Tidak butuh auth — hanya cek harga.
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -35,6 +33,11 @@ export async function GET(request: Request) {
 
   if (!id) {
     return NextResponse.json({ error: 'Parameter "id" wajib diisi.' }, { status: 400 });
+  }
+
+  // ✅ FIX: Validasi format id — harus angka saja
+  if (!/^\d+$/.test(id)) {
+    return NextResponse.json({ error: 'Format id tidak valid.' }, { status: 400 });
   }
 
   try {
@@ -48,7 +51,6 @@ export async function GET(request: Request) {
     );
     if (!res.ok) throw new Error(`Upstream HTTP ${res.status}`);
 
-    // HeroSMS kadang return plain text, bukan JSON
     const text = (await res.text()).trim();
     let raw: any = null;
     try { raw = JSON.parse(text); } catch { raw = text; }
@@ -62,7 +64,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: ERROR_MAP[raw] ?? `Gagal cek harga: ${raw}`, code: raw }, { status: 422 });
     }
 
-    // Format: { cost: number } atau number langsung
     const costUSD = typeof raw?.cost === 'number'
       ? raw.cost
       : typeof raw === 'number'
@@ -82,21 +83,17 @@ export async function GET(request: Request) {
 
 /**
  * POST /api/reactivation
- *
- * Reaktivasi nomor yang sudah pernah dipakai untuk layanan lain.
- * User hemat saldo karena tidak perlu beli nomor baru.
- *
- * Body JSON:
- *   { id: string }   // activationId dari order sebelumnya
- *
- * Response sukses:
- *   { success: true; activationId: string; phone: string; priceIDR: number }
- *
- * Response error:
- *   { error: string }
+ * Reaktivasi nomor. Butuh auth — email diambil dari header terverifikasi middleware.
  */
 export async function POST(request: Request) {
   try {
+    // ✅ FIX: Ambil email dari header yang sudah diverifikasi middleware
+    // Tidak lagi percaya body/header yang bisa dimanipulasi user
+    const verifiedEmail = request.headers.get('X-Verified-User-Email')?.trim().toLowerCase();
+    if (!verifiedEmail) {
+      return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
+    }
+
     const body = await request.json();
     const id   = (body.id ?? '').toString().trim();
 
@@ -104,12 +101,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Parameter "id" wajib diisi.' }, { status: 400 });
     }
 
+    // ✅ FIX: Validasi format id
+    if (!/^\d+$/.test(id)) {
+      return NextResponse.json({ error: 'Format id tidak valid.' }, { status: 400 });
+    }
+
     if (!API_KEY) {
       return NextResponse.json({ error: 'API key belum dikonfigurasi.' }, { status: 500 });
     }
 
+    // ✅ FIX: Cek blacklist sebelum proses
+    const { data: profile } = await db
+      .from('profiles')
+      .select('balance, is_blacklisted')
+      .eq('email', verifiedEmail)
+      .single();
+
+    if (profile?.is_blacklisted) {
+      return NextResponse.json(
+        { error: 'Akun Anda telah dinonaktifkan. Hubungi support.' },
+        { status: 403 }
+      );
+    }
+
     // 1. Ambil harga reaktivasi dulu
     let priceIDR = 0;
+    let costUSD  = 0;
     try {
       const costRes = await fetch(
         `${BASE_URL}?api_key=${API_KEY}&action=getReactivationCost&id=${id}`,
@@ -118,19 +135,51 @@ export async function POST(request: Request) {
       const costText = (await costRes.text()).trim();
       let costRaw: any = null;
       try { costRaw = JSON.parse(costText); } catch { costRaw = costText; }
-      const costUSD = typeof costRaw?.cost === 'number' ? costRaw.cost
+      costUSD  = typeof costRaw?.cost === 'number' ? costRaw.cost
         : typeof costRaw === 'number' ? costRaw : 0;
       priceIDR = applyMarkup(costUSD);
     } catch { /* harga tidak kritis, lanjutkan */ }
 
-    // 2. Request reaktivasi
+    // ✅ FIX: Cek saldo SEBELUM order — cegah spam reactivation
+    if (priceIDR > 0 && profile && profile.balance < priceIDR) {
+      return NextResponse.json(
+        { error: 'Saldo tidak cukup. Silakan deposit terlebih dahulu.' },
+        { status: 402 }
+      );
+    }
+
+    // ✅ FIX: Verifikasi bahwa activation_id ini milik user yang sedang login
+    // Mencegah user reactivate order milik orang lain
+    const { data: originalOrder } = await db
+      .from('orders')
+      .select('id, user_id, status')
+      .eq('activation_id', id)
+      .maybeSingle();
+
+    if (originalOrder) {
+      // Cek user_id cocok dengan user yang login
+      const { data: ownerProfile } = await db
+        .from('profiles')
+        .select('id')
+        .eq('email', verifiedEmail)
+        .single();
+
+      if (ownerProfile && originalOrder.user_id !== ownerProfile.id) {
+        console.warn(`[reactivation] User ${verifiedEmail} coba reactivate order milik user lain (order #${originalOrder.id})`);
+        return NextResponse.json(
+          { error: 'Order tidak ditemukan.' },
+          { status: 404 }
+        );
+      }
+    }
+
+    // 2. Request reaktivasi ke HeroSMS
     const res  = await fetch(
       `${BASE_URL}?api_key=${API_KEY}&action=getAdditionalService&id=${id}`,
       { cache: 'no-store' }
     );
     const text = (await res.text()).trim();
 
-    // Response: "ACCESS_NUMBER:{newId}:{phone}" atau error
     if (text.startsWith('ACCESS_NUMBER:')) {
       const [, activationId, phone] = text.split(':');
       return NextResponse.json({ success: true, activationId, phone, priceIDR });

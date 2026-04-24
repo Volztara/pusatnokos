@@ -1,5 +1,5 @@
 // src/app/api/user/deposit-history/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
@@ -10,19 +10,19 @@ const db = createClient(
 );
 
 /**
- * GET /api/user/deposit-history?email=xxx
- * Ambil semua riwayat deposit user (manual + paymenku + crypto)
+ * GET /api/user/deposit-history
+ * Ambil riwayat deposit milik user yang sedang login
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const email = searchParams.get('email')?.trim().toLowerCase();
-
+    // ✅ FIX: Pakai header terverifikasi dari middleware
+    // Sebelumnya pakai ?email=xxx dari URL — siapapun bisa lihat deposit history orang lain!
+    const email = request.headers.get('X-Verified-User-Email')?.trim().toLowerCase();
     if (!email) {
-      return NextResponse.json({ error: 'Email required.' }, { status: 400 });
+      return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
     }
 
-    // Ambil user_id dari email
+    // Ambil user_id dari email terverifikasi
     const { data: profile } = await db
       .from('profiles')
       .select('id')
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
       return NextResponse.json([], { status: 200 });
     }
 
-    // Ambil semua deposit requests milik user
+    // ✅ FIX: Query pakai user_id dari profile, bukan dari parameter URL
     const { data, error } = await db
       .from('deposit_requests')
       .select('id, amount, status, bank_name, note, admin_note, proof_url, created_at')

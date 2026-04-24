@@ -21,35 +21,51 @@ const CHANNEL_FEE: Record<string, { flat: number; pct: number }> = {
 
 export async function POST(req: Request) {
   try {
-    const { email, amount, channelCode } = await req.json();
+    // ✅ FIX: Ambil email dari header terverifikasi middleware
+    // Sebelumnya pakai body.email yang bisa dipalsukan user
+    const verifiedEmail  = req.headers.get('X-Verified-User-Email')?.trim().toLowerCase() ?? '';
+    const verifiedUserId = req.headers.get('X-Verified-User-Id')?.trim() ?? '';
 
-    if (!email || !amount || amount < 5000) {
+    if (!verifiedEmail || !verifiedUserId) {
+      return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
+    }
+
+    const { amount, channelCode } = await req.json();
+
+    if (!amount || amount < 5000) {
       return NextResponse.json(
         { error: 'Nominal minimal Rp 5.000.' },
         { status: 400 }
       );
     }
 
-    // Hitung fee & total bayar
-    const fee       = CHANNEL_FEE[channelCode] ?? CHANNEL_FEE['qris'];
-    const totalFee  = Math.round(fee.flat + amount * fee.pct);
-    const totalBayar = amount + totalFee; // yang dikirim ke Paymenku
-    const saldoMasuk = amount;            // yang masuk ke akun user setelah bayar
-
-    // Ambil profil user
+    // ✅ Cek blacklist
     const { data: profile } = await db
       .from('profiles')
-      .select('id, name')
-      .eq('email', email.toLowerCase())
+      .select('id, name, is_blacklisted')
+      .eq('id', verifiedUserId)
       .single();
 
     if (!profile) {
       return NextResponse.json({ error: 'User tidak ditemukan.' }, { status: 404 });
     }
 
-    const referenceId = `NOKOS-${profile.id}-${Date.now()}`;
+    if (profile.is_blacklisted) {
+      return NextResponse.json(
+        { error: 'Akun Anda telah dinonaktifkan. Hubungi support.' },
+        { status: 403 }
+      );
+    }
 
-    // Kirim totalBayar ke Paymenku (termasuk fee)
+    // Hitung fee & total bayar
+    const fee        = CHANNEL_FEE[channelCode] ?? CHANNEL_FEE['qris'];
+    const totalFee   = Math.round(fee.flat + amount * fee.pct);
+    const totalBayar = amount + totalFee;
+    const saldoMasuk = amount;
+
+    const referenceId = `NOKOS-${verifiedUserId}-${Date.now()}`;
+
+    // Kirim ke Paymenku
     const payRes = await fetch(`${BASE_URL}/transaction/create`, {
       method : 'POST',
       headers: {
@@ -58,9 +74,9 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         reference_id   : referenceId,
-        amount         : totalBayar,   // ← total bayar user (saldo + fee)
-        customer_name  : profile.name ?? email,
-        customer_email : email,
+        amount         : totalBayar,
+        customer_name  : profile.name ?? verifiedEmail,
+        customer_email : verifiedEmail,
         channel_code   : channelCode ?? 'qris',
         return_url     : `${APP_URL}?deposit=success&ref=${referenceId}`,
       }),
@@ -76,11 +92,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // Simpan saldoMasuk (bukan totalBayar) ke deposit_requests
-    // Webhook akan tambah saldoMasuk ke akun user
+    // Simpan deposit request
     await db.from('deposit_requests').insert({
-      user_id  : profile.id,
-      amount   : saldoMasuk,  // ← saldo yang akan masuk ke user
+      user_id  : verifiedUserId,  // ✅ pakai verifiedUserId, bukan dari body
+      amount   : saldoMasuk,
       bank_name: `Paymenku - ${(channelCode ?? 'qris').toUpperCase()}`,
       proof_url: null,
       note     : `ref:${referenceId}|trx:${payData.data.trx_id}|fee:${totalFee}`,

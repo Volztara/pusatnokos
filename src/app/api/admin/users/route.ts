@@ -23,17 +23,37 @@ export async function GET(req: Request) {
 
   const { data: allOrders } = await db
     .from('orders')
-    .select('user_id, price, status')
+    .select('user_id, price, status, refunded') // ✅ FIX: tambah kolom refunded
     .in('user_id', userIds);
 
   // Hitung orderCount & totalSpend per user di memori (tanpa loop async)
   const enriched = (users ?? []).map((u: any) => {
     const userOrders = (allOrders ?? []).filter((o: any) => o.user_id === u.id);
-    const orderCount = userOrders.filter((o: any) => o.status !== 'cancelled').length;
+
+    // ✅ FIX: orderCount hanya hitung status 'success' (sebelumnya hitung semua kecuali 'cancelled')
+    const orderCount = userOrders
+      .filter((o: any) => o.status === 'success')
+      .length;
+
+    // totalSpend tetap hanya success (tidak berubah)
     const totalSpend = userOrders
       .filter((o: any) => o.status === 'success')
       .reduce((s: number, o: any) => s + (o.price ?? 0), 0);
-    return { ...u, orderCount, totalSpend };
+
+    // ✅ BARU: jumlah order yang sudah direfund
+    const refundCount = userOrders
+      .filter((o: any) => o.refunded === true)
+      .length;
+
+    // ✅ BARU: total nominal yang sudah direfund
+    const totalRefund = userOrders
+      .filter((o: any) => o.refunded === true)
+      .reduce((s: number, o: any) => s + (o.price ?? 0), 0);
+
+    // ✅ BARU: flag apakah user mencurigakan (refund > 1 order)
+    const isSuspicious = refundCount > 1;
+
+    return { ...u, orderCount, totalSpend, refundCount, totalRefund, isSuspicious };
   });
 
   return NextResponse.json({ users: enriched, total: count ?? 0 });

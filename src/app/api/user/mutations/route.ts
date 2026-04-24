@@ -9,16 +9,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-function getVerifiedEmail(request: NextRequest): string | null {
-  // Prioritas: header dari middleware (JWT verified) → URL param (fallback lama)
-  return (
-    request.headers.get('X-Verified-User-Email')?.trim().toLowerCase() ??
-    request.headers.get('X-User-Email')?.trim().toLowerCase() ??
-    new URL(request.url).searchParams.get('email')?.trim().toLowerCase() ??
-    null
-  );
-}
-
 async function fetchMutations(email: string, page: number, limit: number, type: string) {
   const { data: profile } = await supabaseAdmin
     .from('profiles').select('id').eq('email', email).single();
@@ -47,9 +37,11 @@ async function fetchMutations(email: string, page: number, limit: number, type: 
   return { items, total: count ?? 0 };
 }
 
-/** GET /api/user/mutations — backward compat */
+/** GET /api/user/mutations */
 export async function GET(request: NextRequest) {
-  const email = getVerifiedEmail(request);
+  // ✅ FIX: Hanya pakai X-Verified-User-Email dari middleware
+  // Hapus fallback X-User-Email dan URL param yang bisa dipalsukan
+  const email = request.headers.get('X-Verified-User-Email')?.trim().toLowerCase();
   if (!email) return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
 
   const { searchParams } = new URL(request.url);
@@ -60,10 +52,11 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(await fetchMutations(email, page, limit, type));
 }
 
-/** POST /api/user/mutations — versi baru */
+/** POST /api/user/mutations */
 export async function POST(request: NextRequest) {
   try {
-    const email = getVerifiedEmail(request);
+    // ✅ FIX: Hanya pakai X-Verified-User-Email dari middleware
+    const email = request.headers.get('X-Verified-User-Email')?.trim().toLowerCase();
     if (!email) return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
 
     const body = await request.json().catch(() => ({}));

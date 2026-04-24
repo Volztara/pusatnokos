@@ -41,17 +41,24 @@ export async function PATCH(req: Request) {
   if (action === 'cancel') {
     const { data: order } = await db
       .from('orders')
-      .select('user_id, price, status')
+      .select('user_id, price, status, refunded') // ✅ FIX: tambah refunded
       .eq('id', orderId)
       .single();
 
-    if (order && order.status !== 'cancelled') {
-      // ✅ Gate utama — update status hanya kalau belum cancelled
+    if (
+      order &&
+      order.status !== 'cancelled' &&  // ✅ belum di-cancel
+      order.status !== 'success'  &&   // ✅ jangan cancel order yang sudah success
+      !order.refunded                  // ✅ FIX: belum pernah direfund (cegah double refund dari cron)
+    ) {
+      // ✅ FIX: atomic update — set KEDUANYA status + refunded sekaligus
+      // Ini mencegah cron expire refund lagi order yang sudah di-cancel admin
       const { data: updated } = await db
         .from('orders')
-        .update({ status: 'cancelled' })
+        .update({ status: 'cancelled', refunded: true }) // ✅ FIX: tambah refunded: true
         .eq('id', orderId)
-        .neq('status', 'cancelled')
+        .eq('refunded', false)    // ✅ atomic guard 1
+        .neq('status', 'cancelled') // ✅ atomic guard 2
         .select()
         .single();
 
@@ -86,6 +93,9 @@ export async function PATCH(req: Request) {
           }
         }
       }
+    } else if (order) {
+      // ✅ FIX: log kenapa refund di-skip
+      console.log(`[admin cancel] Skip refund order #${orderId} — status: ${order.status}, refunded: ${order.refunded}`);
     }
   } else {
     // Update status done/success

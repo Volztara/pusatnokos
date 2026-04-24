@@ -2,8 +2,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const SECRET    = process.env.ADMIN_TOKEN_SECRET ?? process.env.ADMIN_PASSWORD ?? 'fallback-secret';
-const TOKEN_TTL = 24 * 60 * 60 * 1000;
+const SECRET         = process.env.ADMIN_TOKEN_SECRET ?? process.env.ADMIN_PASSWORD ?? 'fallback-secret';
+const TOKEN_TTL      = 24 * 60 * 60 * 1000;
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET ?? '';
 
 // ── Rate Limiting Store ───────────────────────────────────────────────
 const rateStore = new Map<string, { count: number; resetAt: number }>();
@@ -18,6 +19,23 @@ function checkRate(key: string, limit: number, windowMs: number): boolean {
   if (entry.count >= limit) return false;
   entry.count++;
   return true;
+}
+
+// ✅ Dual rate limit — per IP + per user
+function checkRateDual(
+  ip       : string,
+  userId   : string,
+  ipLimit  : number,
+  userLimit: number,
+  windowMs : number
+): { allowed: boolean; reason?: string } {
+  if (!checkRate(`ip:${ip}`, ipLimit, windowMs)) {
+    return { allowed: false, reason: 'Terlalu banyak request dari jaringan ini.' };
+  }
+  if (!checkRate(`user:${userId}`, userLimit, windowMs)) {
+    return { allowed: false, reason: 'Terlalu banyak request. Tunggu sebentar.' };
+  }
+  return { allowed: true };
 }
 
 setInterval(() => {
@@ -90,44 +108,130 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // ══ 3. USER API ROUTES ═══════════════════════════════════════════════
-  if (pathname.startsWith('/api/user/') || pathname === '/api/auth/check-blacklist') {
-    if (!checkRate(`user:${ip}`, 60, 60_000)) {
-      return NextResponse.json({ error: 'Terlalu banyak request.' }, { status: 429 });
+  // ══ 3. ORDER ROUTES ══════════════════════════════════════════════════
+  if (
+    pathname === '/api/order' ||
+    pathname === '/api/order-v2' ||
+    pathname === '/api/reactivation'
+  ) {
+    if (req.method === 'GET') {
+      if (!checkRate(`order-get:${ip}`, 30, 60_000)) {
+        return NextResponse.json({ error: 'Terlalu banyak request.' }, { status: 429 });
+      }
+      return NextResponse.next();
     }
 
-    const requestHeaders = new Headers(req.headers);
-
-    // ── Prioritas 1: Bearer token (Supabase JWT) ──────────────────────
     const authHeader = req.headers.get('Authorization') ?? '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
 
-    if (token) {
-      const userInfo = await getUserFromToken(token);
-      if (userInfo) {
-        // Token valid — inject email ke header
-        requestHeaders.set('X-Verified-User-Id',    userInfo.id);
-        requestHeaders.set('X-Verified-User-Email', userInfo.email);
-        return NextResponse.next({ request: { headers: requestHeaders } });
-      }
-      // ⚠️ Token ada tapi expired/invalid — JANGAN langsung 401
-      // Coba fallback ke X-User-Email dulu
-      console.warn(`[middleware] Bearer token invalid/expired for ${pathname}, trying X-User-Email fallback`);
+    if (!token) {
+      return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
     }
 
-    // ── Prioritas 2: X-User-Email header (fallback) ───────────────────
-    // Dipakai saat token expired tapi email masih tersimpan di session
-    const emailHeader = req.headers.get('X-User-Email')?.trim().toLowerCase();
-    if (emailHeader && emailHeader.includes('@')) {
-      requestHeaders.set('X-Verified-User-Email', emailHeader);
-      return NextResponse.next({ request: { headers: requestHeaders } });
+    const userInfo = await getUserFromToken(token);
+    if (!userInfo) {
+      return NextResponse.json({ error: 'Sesi habis. Silakan login ulang.' }, { status: 401 });
     }
 
-    // ── Tidak ada autentikasi sama sekali ─────────────────────────────
-    return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
+    const rateCheck = checkRateDual(ip, userInfo.id, 15, 5, 60_000);
+    if (!rateCheck.allowed) {
+      console.warn(`[middleware] Order rate limit — user: ${userInfo.email}, ip: ${ip}`);
+      return NextResponse.json({ error: rateCheck.reason }, { status: 429 });
+    }
+
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('X-Verified-User-Id',    userInfo.id);
+    requestHeaders.set('X-Verified-User-Email', userInfo.email);
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // ══ 4. Semua route lain ═══════════════════════════════════════════════
+  // ══ 4. DEPOSIT ROUTES ════════════════════════════════════════════════
+  // ✅ FIX: deposit routes sebelumnya tidak ada di middleware sama sekali!
+  // Webhook deposit (Paymenku & Oxapay) — tidak butuh auth user, cukup rate limit
+  if (
+    pathname === '/api/deposit/paymenku/webhook' ||
+    pathname === '/api/deposit/crypto/webhook'
+  ) {
+    // Rate limit webhook deposit — max 50/menit per IP
+    if (!checkRate(`deposit-webhook:${ip}`, 50, 60_000)) {
+      return new Response('Too Many Requests', { status: 429 });
+    }
+    // Signature verification dilakukan di dalam route handler masing-masing
+    return NextResponse.next();
+  }
+
+  // Deposit create (Paymenku & Crypto) — butuh auth user
+  if (
+    pathname === '/api/deposit/paymenku/create' ||
+    pathname === '/api/deposit/crypto'
+  ) {
+    const authHeader = req.headers.get('Authorization') ?? '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+
+    if (!token) {
+      return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
+    }
+
+    const userInfo = await getUserFromToken(token);
+    if (!userInfo) {
+      return NextResponse.json({ error: 'Sesi habis. Silakan login ulang.' }, { status: 401 });
+    }
+
+    // ✅ Rate limit deposit: max 5 deposit per user per 10 menit
+    const rateCheck = checkRateDual(ip, userInfo.id, 20, 5, 10 * 60_000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json({ error: rateCheck.reason }, { status: 429 });
+    }
+
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('X-Verified-User-Id',    userInfo.id);
+    requestHeaders.set('X-Verified-User-Email', userInfo.email);
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  // ══ 5. WEBHOOK ROUTES (HeroSMS) ═══════════════════════════════════════
+  if (pathname.startsWith('/api/webhook')) {
+    if (!checkRate(`webhook:${ip}`, 100, 60_000)) {
+      return new Response('Too Many Requests', { status: 429 });
+    }
+    if (WEBHOOK_SECRET) {
+      const { searchParams } = req.nextUrl;
+      const secretParam  = searchParams.get('secret') ?? '';
+      const secretHeader = req.headers.get('x-webhook-secret') ?? '';
+      if (secretParam !== WEBHOOK_SECRET && secretHeader !== WEBHOOK_SECRET) {
+        console.warn(`[middleware] Webhook unauthorized from IP: ${ip}`);
+        return new Response('OK', { status: 200 });
+      }
+    }
+    return NextResponse.next();
+  }
+
+  // ══ 6. USER API ROUTES ═══════════════════════════════════════════════
+  if (pathname.startsWith('/api/user/') || pathname === '/api/auth/check-blacklist') {
+    const authHeader = req.headers.get('Authorization') ?? '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+
+    if (!token) {
+      return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
+    }
+
+    const userInfo = await getUserFromToken(token);
+    if (!userInfo) {
+      return NextResponse.json({ error: 'Sesi habis. Silakan login ulang.' }, { status: 401 });
+    }
+
+    const rateCheck = checkRateDual(ip, userInfo.id, 60, 120, 60_000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json({ error: rateCheck.reason }, { status: 429 });
+    }
+
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('X-Verified-User-Id',    userInfo.id);
+    requestHeaders.set('X-Verified-User-Email', userInfo.email);
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  // ══ 7. Semua route lain ═══════════════════════════════════════════════
   return NextResponse.next();
 }
 
@@ -138,5 +242,15 @@ export const config = {
     '/api/auth/register',
     '/api/auth/check-blacklist',
     '/api/user/:path*',
+    '/api/order',
+    '/api/order-v2',
+    '/api/reactivation',
+    '/api/webhook',
+    '/api/webhook/:path*',
+    // ✅ FIX: deposit routes ditambahkan
+    '/api/deposit/paymenku/create',
+    '/api/deposit/paymenku/webhook',
+    '/api/deposit/crypto',
+    '/api/deposit/crypto/webhook',
   ],
 };

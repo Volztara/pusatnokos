@@ -1,17 +1,17 @@
 // src/app/api/order-v2/route.ts
-//
-// Versi baru dari order API menggunakan getNumberV2 + getStatusV2.
-// V2 mendukung multi-service sekaligus dan notifikasi webhook yang lebih detail.
-// Gunakan ini untuk layanan baru; /api/order tetap bisa dipakai untuk kompatibilitas.
-
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
+import { createClient } from '@supabase/supabase-js';
 
 const API_KEY  = process.env.HEROSMS_API_KEY ?? '';
 const BASE_URL = 'https://hero-sms.com/stubs/handler_api.php';
 
-// ─── MARKUP ──────────────────────────────────────────────────────────
+const db = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
 const IDR_RATE   = 17135.75;
 const MARKUP_PCT = 0.25;
 const MIN_PROFIT = 200;
@@ -22,28 +22,17 @@ function applyMarkup(costUSD: number): number {
   const profit = Math.max(modal * MARKUP_PCT, MIN_PROFIT);
   return Math.ceil((modal + profit) / ROUND_TO) * ROUND_TO;
 }
-// ─────────────────────────────────────────────────────────────────────
 
-/**
- * POST /api/order-v2
- * Pesan nomor menggunakan getNumberV2.
- *
- * Body JSON:
- *   {
- *     service  : string          // kode layanan utama, mis. "wa"
- *     country  : string          // default "6"
- *     operator : string          // default "0"
- *     multiService?: string[]    // opsional: layanan tambahan, mis. ["tg","ig"]
- *   }
- *
- * Response sukses:
- *   { activationId, phone, price, activationCost }
- *
- * Response error:
- *   { error, code? }
- */
 export async function POST(request: Request) {
   try {
+    // ✅ Ambil dari header terverifikasi middleware
+    const verifiedEmail  = request.headers.get('X-Verified-User-Email')?.trim().toLowerCase() ?? '';
+    const verifiedUserId = request.headers.get('X-Verified-User-Id')?.trim() ?? '';
+
+    if (!verifiedEmail || !verifiedUserId) {
+      return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
+    }
+
     const body        = await request.json();
     const service     = (body.service  ?? '').trim();
     const country     = (body.country  ?? '6').trim();
@@ -54,7 +43,61 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Parameter "service" wajib diisi.' }, { status: 400 });
     }
 
-    // Bangun URL — V2 mendukung parameter multiService (dipisah koma)
+    // Cek blacklist
+    const { data: profile } = await db
+      .from('profiles')
+      .select('balance, is_blacklisted')
+      .eq('email', verifiedEmail)
+      .single();
+
+    if (profile?.is_blacklisted) {
+      return NextResponse.json(
+        { error: 'Your account has been suspended. Please contact support.' },
+        { status: 403 }
+      );
+    }
+
+    // Ambil harga dari HeroSMS
+    const priceRes = await fetch(
+      `${BASE_URL}?api_key=${API_KEY}&action=getPrices&country=${country}&service=${service}`,
+      { cache: 'no-store' }
+    );
+    const priceRaw = priceRes.ok ? await priceRes.json() : null;
+
+    let estimatedPrice = 0;
+    try {
+      const countryData = priceRaw?.[country] ?? {};
+      const serviceData = countryData[service];
+      const opData =
+        typeof serviceData?.cost === 'number'
+          ? serviceData
+          : (serviceData?.[operator] ?? serviceData?.['0'] ?? null);
+      if (opData?.cost) estimatedPrice = applyMarkup(opData.cost);
+    } catch { /* estimasi harga gagal */ }
+
+    // Soft check saldo
+    if (estimatedPrice > 0 && profile && profile.balance < estimatedPrice) {
+      return NextResponse.json(
+        { error: 'Saldo tidak cukup. Silakan deposit terlebih dahulu.' },
+        { status: 402 }
+      );
+    }
+
+    // ✅ FIX: Potong saldo ATOMIC sebelum order — cegah race condition
+    if (estimatedPrice > 0) {
+      const { data: deductResult } = await db.rpc('deduct_balance_for_order', {
+        p_user_id: verifiedUserId,
+        p_amount : estimatedPrice,
+        p_desc   : `Beli ${service} V2 (pending)`,
+      });
+
+      if (!deductResult?.success) {
+        const reason = deductResult?.error ?? 'Gagal memproses pembayaran.';
+        console.warn(`[order-v2 POST] Deduct failed for user ${verifiedEmail}: ${reason}`);
+        return NextResponse.json({ error: reason }, { status: 402 });
+      }
+    }
+
     const serviceParam = multiService.length > 0
       ? `${service},${multiService.join(',')}`
       : service;
@@ -63,22 +106,79 @@ export async function POST(request: Request) {
       `${BASE_URL}?api_key=${API_KEY}&action=getNumberV2` +
       `&service=${serviceParam}&country=${country}&operator=${operator}`;
 
-    const orderRes  = await fetch(orderUrl, { cache: 'no-store' });
-    const orderText = (await orderRes.text()).trim();
+    let orderText = '';
+    try {
+      const orderRes = await fetch(orderUrl, { cache: 'no-store' });
+      orderText = (await orderRes.text()).trim();
+    } catch (e) {
+      // Fetch error — refund saldo
+      if (estimatedPrice > 0) {
+        await db.rpc('update_balance', { p_email: verifiedEmail, p_amount: estimatedPrice });
+        await db.from('mutations').insert({
+          user_id    : verifiedUserId,
+          type       : 'in',
+          amount     : estimatedPrice,
+          description: `Refund otomatis — gagal koneksi ke provider`,
+        });
+      }
+      return NextResponse.json({ error: 'Terjadi kesalahan server.' }, { status: 500 });
+    }
 
-    // V2 response: "ACCESS_NUMBER:{id}:{phone}:{cost}"
-    // (sama seperti V1 tapi dengan field cost tambahan)
     if (orderText.startsWith('ACCESS_NUMBER:')) {
       const parts        = orderText.split(':');
       const activationId = parts[1] ?? '';
       const phone        = parts[2] ?? '';
       const costUSD      = parseFloat(parts[3] ?? '0') || 0;
+      const finalPrice   = costUSD > 0 ? applyMarkup(costUSD) : estimatedPrice;
+
+      // ✅ Kalau harga aktual beda dari estimasi, adjust saldo
+      if (estimatedPrice > 0 && finalPrice !== estimatedPrice) {
+        const diff = estimatedPrice - finalPrice;
+        if (diff > 0) {
+          // Estimasi lebih mahal dari aktual → kembalikan selisih
+          await db.rpc('update_balance', { p_email: verifiedEmail, p_amount: diff });
+          await db.from('mutations').insert({
+            user_id    : verifiedUserId,
+            type       : 'in',
+            amount     : diff,
+            description: `Selisih harga order ${service} #${activationId}`,
+          });
+        }
+      }
+
+      // Catat order ke DB
+      if (verifiedUserId && activationId) {
+        try {
+          await db.from('orders').insert({
+            user_id      : verifiedUserId,
+            activation_id: activationId,
+            phone,
+            price        : finalPrice,
+            service_name : service,
+            status       : 'waiting',
+            refunded     : false,
+          });
+        } catch (e) {
+          console.error('[order-v2 POST] Gagal insert order ke DB:', e);
+        }
+      }
 
       return NextResponse.json({
         activationId,
         phone,
-        price          : applyMarkup(costUSD),   // harga setelah markup IDR
-        activationCost : costUSD,                 // harga asli USD dari HeroSMS
+        price         : finalPrice,
+        activationCost: costUSD,
+      });
+    }
+
+    // HeroSMS error — refund saldo
+    if (estimatedPrice > 0) {
+      await db.rpc('update_balance', { p_email: verifiedEmail, p_amount: estimatedPrice });
+      await db.from('mutations').insert({
+        user_id    : verifiedUserId,
+        type       : 'in',
+        amount     : estimatedPrice,
+        description: `Refund otomatis — ${orderText}`,
       });
     }
 
@@ -94,8 +194,7 @@ export async function POST(request: Request) {
       REPEATED_NUMBER : 'Nomor sudah pernah dipesan untuk layanan ini.',
     };
 
-    const friendlyMsg = ERROR_MAP[orderText] ?? `Gagal memesan nomor (V2): ${orderText}`;
-    return NextResponse.json({ error: friendlyMsg, code: orderText }, { status: 422 });
+    return NextResponse.json({ error: ERROR_MAP[orderText] ?? `Gagal memesan nomor: ${orderText}`, code: orderText }, { status: 422 });
 
   } catch (err) {
     console.error('[POST /api/order-v2]', err);
@@ -103,50 +202,22 @@ export async function POST(request: Request) {
   }
 }
 
-/**
- * GET /api/order-v2?id={activationId}
- * Cek status OTP menggunakan getStatusV2.
- *
- * V2 bisa mengembalikan MULTIPLE OTP sekaligus (untuk multi-service).
- *
- * Response:
- *   {
- *     status   : 'waiting' | 'ok' | 'wait_resend' | 'cancel' | 'unknown'
- *     otpCodes : string[]   // bisa lebih dari 1 jika multi-service
- *     raw      : string     // raw string untuk debugging
- *   }
- */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id')?.trim();
 
-    if (!id) {
-      return NextResponse.json({ error: 'Parameter "id" wajib diisi.' }, { status: 400 });
-    }
+    if (!id) return NextResponse.json({ error: 'Parameter "id" wajib diisi.' }, { status: 400 });
 
-    const res  = await fetch(
-      `${BASE_URL}?api_key=${API_KEY}&action=getStatusV2&id=${id}`,
-      { cache: 'no-store' }
-    );
+    const res  = await fetch(`${BASE_URL}?api_key=${API_KEY}&action=getStatusV2&id=${id}`, { cache: 'no-store' });
     const text = (await res.text()).trim();
 
-    if (text === 'STATUS_WAIT_CODE') {
-      return NextResponse.json({ status: 'waiting', otpCodes: [], raw: text });
-    }
-
-    if (text === 'STATUS_WAIT_RESEND') {
-      return NextResponse.json({ status: 'wait_resend', otpCodes: [], raw: text });
-    }
-
-    if (text === 'STATUS_CANCEL') {
-      return NextResponse.json({ status: 'cancel', otpCodes: [], raw: text });
-    }
+    if (text === 'STATUS_WAIT_CODE')   return NextResponse.json({ status: 'waiting',     otpCodes: [], raw: text });
+    if (text === 'STATUS_WAIT_RESEND') return NextResponse.json({ status: 'wait_resend', otpCodes: [], raw: text });
+    if (text === 'STATUS_CANCEL')      return NextResponse.json({ status: 'cancel',      otpCodes: [], raw: text });
 
     if (text.startsWith('STATUS_OK:')) {
-      // V2 bisa: "STATUS_OK:111222:333444" (multi OTP dipisah ":")
-      const parts    = text.split(':').slice(1);      // buang "STATUS_OK"
-      const otpCodes = parts.filter(p => p.length > 0);
+      const otpCodes = text.split(':').slice(1).filter(p => p.length > 0);
       return NextResponse.json({ status: 'ok', otpCodes, raw: text });
     }
 
@@ -154,6 +225,100 @@ export async function GET(request: Request) {
 
   } catch (err) {
     console.error('[GET /api/order-v2]', err);
+    return NextResponse.json({ error: 'Terjadi kesalahan server.' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const body   = await request.json();
+    const id     = (body.id     ?? '').toString().trim();
+    const action = (body.action ?? '').trim();
+
+    if (!id || !action) {
+      return NextResponse.json({ error: 'Parameters "id" and "action" are required.' }, { status: 400 });
+    }
+
+    const STATUS_CODE: Record<string, number> = { resend: 3, done: 6, cancel: 8 };
+    const statusCode = STATUS_CODE[action];
+    if (!statusCode) {
+      return NextResponse.json({ error: 'Invalid "action". Use "cancel", "done", or "resend".' }, { status: 400 });
+    }
+
+    const url  = `${BASE_URL}?api_key=${API_KEY}&action=setStatus&id=${id}&status=${statusCode}`;
+    const res  = await fetch(url, { cache: 'no-store' });
+    const text = (await res.text()).trim();
+
+    const SUCCESS_TOKENS: Record<string, string[]> = {
+      resend: ['ACCESS_RETRY_GET', 'STATUS_WAIT_RESEND'],
+      done  : ['ACCESS_ACTIVATION', 'ACTIVATION_STATUS_CHANGED'],
+      cancel: ['ACCESS_CANCEL', 'ACTIVATION_STATUS_CHANGED', 'ACCESS_ALREADY_USED'],
+    };
+
+    const isSuccess = (SUCCESS_TOKENS[action] ?? []).some(t => text.startsWith(t));
+
+    if (isSuccess) {
+      if (action === 'cancel') {
+        try {
+          const { data: order } = await db
+            .from('orders')
+            .select('id, user_id, price, service_name, refunded, status')
+            .eq('activation_id', id)
+            .maybeSingle();
+
+          if (
+            order && order.user_id && order.price > 0 &&
+            !order.refunded &&
+            order.status !== 'expired' &&
+            order.status !== 'cancelled' &&
+            order.status !== 'success'
+          ) {
+            const { data: updated } = await db
+              .from('orders')
+              .update({ status: 'cancelled', refunded: true })
+              .eq('id', order.id)
+              .eq('refunded', false)
+              .eq('status', 'waiting')
+              .select('id');
+
+            if (updated && updated.length > 0) {
+              const { data: profile } = await db
+                .from('profiles').select('email').eq('id', order.user_id).single();
+
+              if (profile?.email) {
+                await db.rpc('update_balance', { p_email: profile.email, p_amount: order.price });
+              }
+
+              await db.from('mutations').insert({
+                user_id    : order.user_id,
+                type       : 'in',
+                amount     : order.price,
+                description: `Refund pembatalan order #${order.id}`,
+              });
+
+              console.log(`[order-v2 cancel] Refunded ${order.price} to user ${order.user_id} (order #${order.id})`);
+            } else {
+              console.log(`[order-v2 cancel] Skip — order #${order?.id} status: ${order?.status}`);
+            }
+          }
+        } catch (e) {
+          console.error(`[order-v2 cancel] Refund failed for activation ${id}:`, e);
+        }
+      }
+
+      const MESSAGE: Record<string, string> = {
+        resend: 'OTP resend request sent successfully.',
+        done  : 'Order confirmed as completed.',
+        cancel: 'Order cancelled. Balance will be refunded.',
+      };
+      return NextResponse.json({ success: true, message: MESSAGE[action] });
+    }
+
+    console.error(`[PATCH /api/order-v2] upstream error: ${text}`);
+    return NextResponse.json({ success: false, error: 'Failed to update order status.' }, { status: 422 });
+
+  } catch (err) {
+    console.error('[PATCH /api/order-v2]', err);
     return NextResponse.json({ error: 'Terjadi kesalahan server.' }, { status: 500 });
   }
 }
