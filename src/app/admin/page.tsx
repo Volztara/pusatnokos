@@ -9,6 +9,7 @@ import {
   Settings, FileText, Search, ChevronDown, BarChart2, Sliders,
   UserX, UserCheck, XCircle, Eye, EyeOff, Package, LogOut, Lock, Mail, Megaphone, Bell, ClipboardList, Globe
 } from 'lucide-react';
+import { MonitoringTab } from '@/components/MonitoringTab';
 
 // ─── TYPES ───────────────────────────────────────────────────────────
 interface Stats {
@@ -166,6 +167,7 @@ const TABS = [
   { id: 'activations',  label: 'Aktivasi Live', icon: <Signal className="w-4 h-4" /> },
   { id: 'transactions', label: 'Transaksi',     icon: <ShoppingCart className="w-4 h-4" /> },
   { id: 'users',        label: 'Pengguna',      icon: <Users className="w-4 h-4" /> },
+  { id: 'monitoring',   label: 'Monitoring',    icon: <ShieldAlert className="w-4 h-4" /> },
   { id: 'pricing',      label: 'Harga Global',  icon: <Sliders className="w-4 h-4" /> },
   { id: 'override',     label: 'Harga Layanan', icon: <Package className="w-4 h-4" /> },
   { id: 'revenue',      label: 'Revenue',       icon: <TrendingUp className="w-4 h-4" /> },
@@ -174,6 +176,7 @@ const TABS = [
   { id: 'logs',         label: 'Log Aktivitas', icon: <FileText className="w-4 h-4" /> },
   { id: 'broadcast',    label: 'Broadcast',     icon: <Megaphone className="w-4 h-4" /> },
   { id: 'notice',       label: 'Papan Info',    icon: <ClipboardList className="w-4 h-4" /> },
+  { id: 'blacklist',    label: 'Riwayat Blokir', icon: <Ban className="w-4 h-4" /> },
 ];
 
 // ─── MAIN ─────────────────────────────────────────────────────────────
@@ -238,6 +241,17 @@ export default function AdminPage() {
   const [logTotal,    setLogTotal]    = useState(0);
   const [logPage,     setLogPage]     = useState(1);
 
+  // Detail Mutasi per User (modal)
+  const [userDetailModal,    setUserDetailModal]    = useState<User | null>(null);
+  const [userTxns,           setUserTxns]           = useState<Transaction[]>([]);
+  const [loadingUserTxns,    setLoadingUserTxns]    = useState(false);
+  const [userTxnsLoaded,     setUserTxnsLoaded]     = useState(false);
+
+  // Refund vs Revenue chart
+  const [refundChartData,    setRefundChartData]    = useState<{ date: string; revenue: number; refund: number }[]>([]);
+  const [loadingRefundChart, setLoadingRefundChart] = useState(false);
+  const [refundChartPeriod,  setRefundChartPeriod]  = useState<7 | 30>(7);
+
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
 
   // Set Saldo Modal
@@ -277,6 +291,24 @@ export default function AdminPage() {
   }, []);
 
   // ── Fetchers ────────────────────────────────────────────────────────
+  // Helper fetch yang otomatis kirim token — harus di atas semua fetcher lain
+  const authFetch = useCallback((url: string, options: RequestInit = {}) => {
+    const token = localStorage.getItem('admin_token') ?? '';
+    return fetch(url, {
+      ...options,
+      headers: {
+        ...(options.headers ?? {}),
+        'Authorization': `Bearer ${token}`,
+      },
+    }).then(r => {
+      if (r.status === 401) {
+        localStorage.removeItem('admin_token');
+        setIsAuthed(false);
+      }
+      return r;
+    });
+  }, []);
+
   const fetchBalance = useCallback(async () => {
     try { const r = await fetch('/api/balance'); setBalance(await r.json()); } catch {}
   }, []);
@@ -405,25 +437,6 @@ export default function AdminPage() {
     }
   };
 
-  // Helper fetch yang otomatis kirim token — pakai ini untuk semua /api/admin/*
-  const authFetch = useCallback((url: string, options: RequestInit = {}) => {
-    const token = localStorage.getItem('admin_token') ?? '';
-    return fetch(url, {
-      ...options,
-      headers: {
-        ...(options.headers ?? {}),
-        'Authorization': `Bearer ${token}`,
-      },
-    }).then(r => {
-      if (r.status === 401) {
-        // Token expired/invalid — logout
-        localStorage.removeItem('admin_token');
-        setIsAuthed(false);
-      }
-      return r;
-    });
-  }, []);
-
   const fetchChartData = useCallback(async (period: 7 | 30) => {
     setLoadingChart(true);
     try {
@@ -434,9 +447,34 @@ export default function AdminPage() {
     finally { setLoadingChart(false); }
   }, [authFetch]);
 
+  const fetchUserTxns = useCallback(async (userId: string, userEmail: string) => {
+    setLoadingUserTxns(true);
+    setUserTxns([]);
+    setUserTxnsLoaded(false);
+    try {
+      // FIX: 1 request saja, filter by userId di server (bukan while-loop)
+      const r = await authFetch(`/api/admin/transactions?userId=${userId}&limit=50`);
+      const d = await r.json();
+      setUserTxns(d.transactions ?? []);
+      setUserTxnsLoaded(true);
+    } catch { setUserTxns([]); setUserTxnsLoaded(true); }
+    finally { setLoadingUserTxns(false); }
+  }, [authFetch]);
+
+  const fetchRefundChart = useCallback(async (period: 7 | 30) => {
+    setLoadingRefundChart(true);
+    try {
+      const r = await authFetch(`/api/admin/stats?period=${period}&refund=1`);
+      const d = await r.json();
+      const chart: { date: string; revenue: number; refund?: number }[] = d.refundChart ?? d.chart ?? [];
+      setRefundChartData(chart.map(c => ({ date: c.date, revenue: c.revenue, refund: c.refund ?? 0 })));
+    } catch {}
+    finally { setLoadingRefundChart(false); }
+  }, [authFetch]);
+
   // Init chart saat pertama login
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { if (isAuthed) fetchChartData(7); }, [isAuthed]);
+  useEffect(() => { if (isAuthed) { fetchChartData(7); fetchRefundChart(7); } }, [isAuthed]);
 
   // ── Skeleton Loading (saat cek auth) ─────────────────────────────
   if (isCheckingAuth) {
@@ -797,7 +835,7 @@ export default function AdminPage() {
                     </div>
                   ) : (
                     <div className="w-full rounded-2xl overflow-hidden bg-white dark:bg-[#080b14] border border-slate-100 dark:border-white/[0.04]">
-                      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="auto">
+                      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{display:"block"}}>
                         <defs>
                           {/* Diagonal hatch pattern — light mode */}
                           <pattern id="hatchLight" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
@@ -929,8 +967,101 @@ export default function AdminPage() {
                   className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-sm font-bold transition-all shadow-sm shadow-emerald-600/30">
                   <Download className="w-4 h-4" /> Export Transaksi CSV
                 </button>
+                <button onClick={() => handleExport('monitoring')}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 active:scale-95 text-white rounded-xl text-sm font-bold transition-all shadow-sm shadow-violet-600/30">
+                  <Download className="w-4 h-4" /> Export Monitoring CSV
+                </button>
               </div>
             </div>
+
+            {/* ── REFUND VS REVENUE CHART ── */}
+            {(() => {
+              const data = refundChartData;
+              if (data.length === 0) return null;
+              const maxRev    = Math.max(...data.map(d => d.revenue), 1);
+              const maxRefund = Math.max(...data.map(d => d.refund), 1);
+              const maxVal    = Math.max(maxRev, maxRefund, 1);
+              const totalRev  = data.reduce((s, d) => s + d.revenue, 0);
+              const totalRef  = data.reduce((s, d) => s + d.refund, 0);
+              const profit    = totalRev - totalRef;
+              return (
+                <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] p-6">
+                  <div className="flex items-start justify-between mb-5">
+                    <div>
+                      <h3 className="text-base font-black text-slate-900 dark:text-white">Revenue vs Refund</h3>
+                      <p className="text-xs text-slate-400 mt-1">Perbandingan pendapatan vs total refund per hari · profit bersih sebenarnya</p>
+                    </div>
+                    <div className="flex gap-1 bg-slate-100 dark:bg-[#0f1320] rounded-xl p-1 border border-slate-200 dark:border-white/[0.07]">
+                      {([7, 30] as const).map(p => (
+                        <button key={p}
+                          onClick={() => { setRefundChartPeriod(p); fetchRefundChart(p); }}
+                          className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${refundChartPeriod === p ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}`}>
+                          {p} Hari
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Summary row */}
+                  <div className="grid grid-cols-3 gap-3 mb-5">
+                    <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/40 rounded-2xl px-4 py-3">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 mb-1">Total Revenue</div>
+                      <div className="text-sm font-black text-indigo-700 dark:text-indigo-300">{fmtIDR(totalRev)}</div>
+                    </div>
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/40 rounded-2xl px-4 py-3">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-red-500 mb-1">Total Refund</div>
+                      <div className="text-sm font-black text-red-600 dark:text-red-400">{fmtIDR(totalRef)}</div>
+                    </div>
+                    <div className={`border rounded-2xl px-4 py-3 ${profit >= 0 ? 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-800/40' : 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800/40'}`}>
+                      <div className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>Profit Bersih</div>
+                      <div className={`text-sm font-black ${profit >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-600 dark:text-red-400'}`}>{fmtIDR(profit)}</div>
+                    </div>
+                  </div>
+
+                  {/* Grouped bar chart */}
+                  {loadingRefundChart ? (
+                    <div className="h-40 flex items-center justify-center text-slate-400"><RefreshCw className="w-5 h-5 animate-spin" /></div>
+                  ) : (
+                    <>
+                      {/* Legend */}
+                      <div className="flex items-center gap-4 mb-3">
+                        <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-indigo-500" /><span className="text-xs font-bold text-slate-500">Revenue</span></div>
+                        <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded bg-red-400" /><span className="text-xs font-bold text-slate-500">Refund</span></div>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <div className="flex items-end gap-2 h-44 min-w-max pb-1">
+                          {data.map((d, i) => (
+                            <div key={i} className="flex items-end gap-0.5 group relative">
+                              {/* Tooltip */}
+                              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-bold px-2.5 py-1.5 rounded-xl whitespace-nowrap z-10 shadow-lg text-left pointer-events-none">
+                                <div className="font-black mb-0.5">{d.date}</div>
+                                <div className="text-indigo-300 dark:text-indigo-600">↑ Rev: {fmtIDR(d.revenue)}</div>
+                                <div className="text-red-300 dark:text-red-500">↓ Refund: {fmtIDR(d.refund)}</div>
+                                <div className={d.revenue - d.refund >= 0 ? 'text-green-300 dark:text-green-600' : 'text-red-300 dark:text-red-500'}>
+                                  = Profit: {fmtIDR(d.revenue - d.refund)}
+                                </div>
+                              </div>
+                              {/* Revenue bar */}
+                              <div className="w-5 bg-indigo-500 dark:bg-indigo-400 rounded-t-md hover:bg-indigo-400 dark:hover:bg-indigo-300 transition-colors cursor-pointer"
+                                style={{ height: `${Math.max(3, (d.revenue / maxVal) * 160)}px` }} />
+                              {/* Refund bar */}
+                              <div className="w-5 bg-red-400 dark:bg-red-500 rounded-t-md hover:bg-red-300 dark:hover:bg-red-400 transition-colors cursor-pointer"
+                                style={{ height: `${Math.max(d.refund > 0 ? 3 : 0, (d.refund / maxVal) * 160)}px` }} />
+                            </div>
+                          ))}
+                        </div>
+                        {/* X-axis labels */}
+                        <div className="flex items-start gap-2 mt-1 min-w-max">
+                          {data.map((d, i) => (
+                            <div key={i} className="w-[42px] text-[8px] font-bold text-slate-400 text-center truncate">{d.date.split(' ')[0]}</div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
           </>
         )}
 
@@ -983,7 +1114,7 @@ export default function AdminPage() {
             <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
               <div className="relative flex-1 min-w-40">
                 <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                <input value={txnSearch} onChange={e => setTxnSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && fetchTxns(1, txnStatus, txnSearch, txnDateFrom, txnDateTo)} placeholder="Cari nomor HP..." className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/30 dark:text-white" />
+                <input value={txnSearch} onChange={e => setTxnSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && fetchTxns(1, txnStatus, txnSearch, txnDateFrom, txnDateTo)} placeholder="Cari nomor HP atau email..." className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/30 dark:text-white" />
               </div>
               {/* ── Custom Status Dropdown ── */}
               <StatusDropdown value={txnStatus} onChange={v => { setTxnStatus(v); fetchTxns(1, v, txnSearch, txnDateFrom, txnDateTo); }} />
@@ -1125,6 +1256,7 @@ export default function AdminPage() {
                                 ? <button onClick={() => handleUserAction(u.id, 'unblacklist')} className="px-2.5 py-1.5 bg-green-50 hover:bg-green-600 text-green-600 hover:text-white rounded-lg text-xs font-bold border border-green-200 flex items-center gap-1"><UserCheck className="w-3 h-3" /> Buka</button>
                                 : <button onClick={() => handleUserAction(u.id, 'blacklist')} className="px-2.5 py-1.5 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded-lg text-xs font-bold border border-red-200 flex items-center gap-1"><UserX className="w-3 h-3" /> Blokir</button>}
                               <button onClick={() => { setSaldoModal({ userId: u.id, email: u.email, currentBalance: u.balance }); setSaldoInput(''); setSaldoMode('kurangi'); }} className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white rounded-lg text-xs font-bold border border-indigo-200 flex items-center gap-1"><Wallet className="w-3 h-3" /> Saldo</button>
+                              <button onClick={() => { setUserDetailModal(u); fetchUserTxns(u.id, u.email); }} className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-700 text-slate-600 hover:text-white rounded-lg text-xs font-bold border border-slate-200 flex items-center gap-1"><FileText className="w-3 h-3" /> Mutasi</button>
                             </div>
                           </td>
                         </tr>
@@ -1206,6 +1338,10 @@ export default function AdminPage() {
         {tab === 'admins' && <AdminRolesTab showToast={showToast} />}
         {tab === 'broadcast' && <BroadcastTab showToast={showToast} />}
         {tab === 'notice' && <NoticeBoardTab showToast={showToast} />}
+        {tab === 'blacklist' && <BlacklistHistoryTab showToast={showToast} />}
+
+        {/* ── MONITORING ── */}
+        {tab === 'monitoring' && <MonitoringTab showToast={showToast} />}
 
         {tab === 'logs' && (
           <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] overflow-hidden">
@@ -1239,6 +1375,81 @@ export default function AdminPage() {
 
       </main>
       </div>
+
+      {/* ── Modal Detail Mutasi User ─────────────────────────────────── */}
+      {userDetailModal && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setUserDetailModal(null)}>
+          <div className="bg-white dark:bg-[#0d1020] rounded-3xl shadow-2xl border border-slate-200 dark:border-white/[0.07] w-full max-w-2xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-white/[0.07] shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-2xl">
+                  <FileText className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+                </div>
+                <div>
+                  <h2 className="text-base font-black text-slate-900 dark:text-white">Riwayat Mutasi</h2>
+                  <p className="text-xs text-slate-400">{userDetailModal.name} · {userDetailModal.email}</p>
+                </div>
+              </div>
+              <button onClick={() => setUserDetailModal(null)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/[0.06] text-slate-400 transition-colors">
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+            {/* Summary strip */}
+            <div className="grid grid-cols-3 gap-3 p-4 shrink-0 border-b border-slate-100 dark:border-white/[0.07]">
+              <div className="bg-slate-50 dark:bg-[#0f1320] rounded-2xl px-3 py-2.5 text-center">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Saldo</div>
+                <div className="text-sm font-black text-slate-900 dark:text-white mt-0.5">{fmtIDR(userDetailModal.balance)}</div>
+              </div>
+              <div className="bg-slate-50 dark:bg-[#0f1320] rounded-2xl px-3 py-2.5 text-center">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Order</div>
+                <div className="text-sm font-black text-slate-900 dark:text-white mt-0.5">{userDetailModal.orderCount}</div>
+              </div>
+              <div className="bg-slate-50 dark:bg-[#0f1320] rounded-2xl px-3 py-2.5 text-center">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Spend</div>
+                <div className="text-sm font-black text-slate-900 dark:text-white mt-0.5">{fmtIDR(userDetailModal.totalSpend)}</div>
+              </div>
+            </div>
+            {/* Transaction list */}
+            <div className="flex-1 overflow-y-auto">
+              {loadingUserTxns && userTxns.length === 0 ? (
+                <div className="p-12 text-center text-slate-400">
+                  <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-3" />
+                  <div className="text-sm font-black text-slate-600 dark:text-white">Memuat semua transaksi...</div>
+                  <div className="text-xs mt-1">Mengambil data dari awal hingga sekarang</div>
+                </div>
+              ) : userTxns.length === 0 && userTxnsLoaded ? (
+                <div className="p-12 text-center text-slate-400 font-bold">Belum ada transaksi untuk user ini</div>
+              ) : (
+                <>
+                  <div className={`px-5 py-2.5 border-b text-xs font-black flex items-center gap-2 ${loadingUserTxns ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800/40 text-amber-600 dark:text-amber-400' : 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800/40 text-indigo-600 dark:text-indigo-400'}`}>
+                    {loadingUserTxns && <RefreshCw className="w-3 h-3 animate-spin" />}
+                    {loadingUserTxns
+                      ? `Memuat... ${userTxns.length} transaksi ditemukan sejauh ini`
+                      : `✓ ${userTxns.length} transaksi (data lengkap dari awal)`}
+                  </div>
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50/95 dark:bg-[#080b14]/95 border-b border-slate-200 dark:border-white/[0.07] text-[10px] uppercase tracking-widest text-slate-400 font-black sticky top-0">
+                      <tr>{['Layanan','Nomor','Harga','Status','Waktu'].map(h => <th key={h} className="px-5 py-3">{h}</th>)}</tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
+                      {userTxns.map(t => (
+                        <tr key={t.id} className="hover:bg-indigo-50/30 dark:hover:bg-white/[0.03] transition-colors">
+                          <td className="px-5 py-3 font-bold text-xs uppercase dark:text-white">{t.service_name}</td>
+                          <td className="px-5 py-3"><div className="flex items-center font-mono text-xs dark:text-white">{t.phone}<CopyBtn text={t.phone} /></div></td>
+                          <td className="px-5 py-3 font-bold text-xs dark:text-white">{fmtIDR(t.price)}</td>
+                          <td className="px-5 py-3"><StatusBadge status={t.status} /></td>
+                          <td className="px-5 py-3 text-[11px] text-slate-400">{new Date(t.created_at).toLocaleString('id-ID')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Modal Koreksi Saldo ───────────────────────────────────────── */}
       {saldoModal && (
@@ -1400,11 +1611,14 @@ function DepositTab({ showToast, isAuthed }: { showToast: (msg: string) => void;
   const [rejectNote,   setRejectNote]   = useState('');
   const [rejectId,     setRejectId]     = useState<number | null>(null);
   const [proofModal,   setProofModal]   = useState<string | null>(null);
+  const [search,       setSearch]       = useState('');
 
-  const fetchRequests = async (p: number, status: string) => {
+  const fetchRequests = async (p: number, status: string, q = '') => {
     setLoading(true);
     try {
-      const r = await authFetch(`/api/admin/deposit?page=${p}&status=${status}`);
+      const params = new URLSearchParams({ page: String(p), status });
+      if (q) params.set('search', q);
+      const r = await authFetch(`/api/admin/deposit?${params}`);
       const d = await r.json();
       setRequests(d.requests ?? []);
       setTotal(d.total ?? 0);
@@ -1412,7 +1626,7 @@ function DepositTab({ showToast, isAuthed }: { showToast: (msg: string) => void;
     finally { setLoading(false); }
   };
 
-  useEffect(() => { if (!isAuthed) return; fetchRequests(page, statusFilter); }, [page, statusFilter, isAuthed]);
+  useEffect(() => { if (!isAuthed) return; fetchRequests(page, statusFilter, search); }, [page, statusFilter, isAuthed]);
 
   const handleAction = async (requestId: number, action: 'approve' | 'reject') => {
     setActionLoading(requestId);
@@ -1499,7 +1713,7 @@ function DepositTab({ showToast, isAuthed }: { showToast: (msg: string) => void;
         </div>
       )}
 
-      {/* Filter tabs */}
+      {/* Filter tabs + Search — sama dengan pola Riwayat Blokir */}
       <div className="flex flex-wrap gap-2">
         {[
           { key: 'pending',  label: 'Menunggu' },
@@ -1520,6 +1734,20 @@ function DepositTab({ showToast, isAuthed }: { showToast: (msg: string) => void;
             )}
           </button>
         ))}
+        <div className="relative flex-1 min-w-48">
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && fetchRequests(1, statusFilter, search)}
+            placeholder="Cari nama atau email user..."
+            className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/30 dark:text-white"
+          />
+        </div>
+        <button
+          onClick={() => { setPage(1); fetchRequests(1, statusFilter, search); }}
+          className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors"
+        >Cari</button>
       </div>
 
       {/* List */}
@@ -2607,6 +2835,145 @@ function NoticeBoardTab({ showToast }: { showToast: (msg: string) => void }) {
           })}
         </div>
       )}
+    </div>
+  );
+}
+// ─── RIWAYAT BLOKIR TAB ───────────────────────────────────────────────
+function BlacklistHistoryTab({ showToast }: { showToast: (msg: string) => void }) {
+  const authFetch = (url: string, options: RequestInit = {}) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') ?? '' : '';
+    return fetch(url, { ...options, headers: { ...(options.headers ?? {}), 'Authorization': `Bearer ${token}` } });
+  };
+
+  const [logs,    setLogs]    = useState<any[]>([]);
+  const [page,    setPage]    = useState(1);
+  const [search,  setSearch]  = useState('');
+  const [loading, setLoading] = useState(false);
+  const [filter,  setFilter]  = useState<'all' | 'blacklist' | 'unblacklist'>('all');
+
+  const fetchBlacklistLogs = async (p: number, s: string, f: string) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ page: String(p) });
+      if (s) params.set('search', s);
+      const r = await authFetch(`/api/admin/logs?${params}`);
+      const d = await r.json();
+      const allLogs: any[] = d.logs ?? [];
+      const filtered = allLogs.filter((l: any) => {
+        const a = (l.action ?? '').toLowerCase();
+        if (!a.includes('blacklist') && !a.includes('banned') && !a.includes('block')) return false;
+        if (f === 'unblacklist') return a.includes('unblacklist') || a.includes('unbanned') || a.includes('unblock');
+        if (f === 'blacklist')   return !a.includes('unblacklist') && !a.includes('unbanned') && !a.includes('unblock');
+        return true;
+      });
+      setLogs(filtered);
+    } catch {}
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchBlacklistLogs(page, search, filter); }, [page, filter]);
+
+  const getActionType = (action: string) => {
+    const a = (action ?? '').toLowerCase();
+    if (a.includes('unblacklist') || a.includes('unbanned') || a.includes('unblock')) return 'unblacklist';
+    return 'blacklist';
+  };
+
+  const ACTION_CFG = {
+    blacklist:   { label: 'Diblokir',       color: 'text-red-600 dark:text-red-400',    bg: 'bg-red-50 dark:bg-red-900/20',    border: 'border-red-200 dark:border-red-800/50',   icon: '🚫' },
+    unblacklist: { label: 'Dibuka Blokir',  color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-800/50', icon: '✅' },
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-lg font-black text-slate-900 dark:text-white">Riwayat Blokir User</h2>
+          <p className="text-xs text-slate-400 mt-1">Log semua aktivitas blokir & buka blokir akun user beserta waktu kejadian</p>
+        </div>
+        <button onClick={() => fetchBlacklistLogs(page, search, filter)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-200 dark:hover:bg-white/[0.09] transition-colors border border-slate-200 dark:border-white/[0.09]">
+          <RefreshCw className="w-4 h-4" /> Refresh
+        </button>
+      </div>
+
+      {/* Filter + Search */}
+      <div className="flex flex-wrap gap-2">
+        {([
+          { key: 'all',         label: 'Semua'            },
+          { key: 'blacklist',   label: '🚫 Diblokir'      },
+          { key: 'unblacklist', label: '✅ Dibuka Blokir' },
+        ] as const).map(f => (
+          <button key={f.key} onClick={() => { setFilter(f.key); setPage(1); }}
+            className={`px-4 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${filter === f.key ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-[#0a0d16] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.09] hover:border-indigo-400 dark:hover:border-indigo-500'}`}>
+            {f.label}
+          </button>
+        ))}
+        <div className="relative flex-1 min-w-48">
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && fetchBlacklistLogs(1, search, filter)}
+            placeholder="Cari user ID atau detail..."
+            className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/30 dark:text-white" />
+        </div>
+        <button onClick={() => fetchBlacklistLogs(1, search, filter)}
+          className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors">
+          Cari
+        </button>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] overflow-hidden">
+        {loading ? (
+          <div className="p-12 text-center text-slate-400"><RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />Memuat...</div>
+        ) : logs.length === 0 ? (
+          <div className="p-12 text-center">
+            <Ban className="w-10 h-10 mx-auto mb-3 text-slate-200 dark:text-slate-700" />
+            <div className="font-bold text-slate-400">Belum ada riwayat blokir</div>
+            <p className="text-xs text-slate-400 mt-1">Aktivitas blokir & buka blokir akan otomatis tercatat di sini</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-slate-50/95 dark:bg-[#080b14]/95 border-b border-slate-200 dark:border-white/[0.07] text-[10px] uppercase tracking-widest text-slate-400 font-black">
+                <tr>{['Status Aksi','Target User ID','Detail / Alasan','Waktu'].map(h => <th key={h} className="px-5 py-4">{h}</th>)}</tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
+                {logs.map((l: any) => {
+                  const aType = getActionType(l.action ?? '');
+                  const cfg   = ACTION_CFG[aType];
+                  return (
+                    <tr key={l.id} className="hover:bg-indigo-50/30 dark:hover:bg-white/[0.03] transition-colors">
+                      <td className="px-5 py-4">
+                        <span className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black border inline-flex items-center gap-1.5 ${cfg.color} ${cfg.bg} ${cfg.border}`}>
+                          {cfg.icon} {cfg.label}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="font-mono text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-[#0f1320] px-2 py-1 rounded-lg">{l.target_id ?? '—'}</span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="text-sm text-slate-600 dark:text-slate-300 max-w-xs">{l.details || l.action || '—'}</div>
+                      </td>
+                      <td className="px-5 py-4 text-xs text-slate-400 whitespace-nowrap">{new Date(l.created_at).toLocaleString('id-ID')}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="px-5 py-4 border-t border-slate-100 dark:border-white/[0.07] flex items-center justify-between">
+          <span className="text-xs text-slate-400">{logs.length} entri ditampilkan</span>
+          <div className="flex gap-2">
+            <button onClick={() => { const p = Math.max(1, page-1); setPage(p); }} disabled={page === 1}
+              className="px-3 py-1.5 bg-slate-100 dark:bg-[#0f1320] rounded-xl text-xs font-bold disabled:opacity-50">← Prev</button>
+            <span className="px-3 py-1.5 text-xs font-bold text-slate-500">Hal {page}</span>
+            <button onClick={() => setPage(p => p+1)} disabled={logs.length < 20}
+              className="px-3 py-1.5 bg-slate-100 dark:bg-[#0f1320] rounded-xl text-xs font-bold disabled:opacity-50">Next →</button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

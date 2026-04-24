@@ -14,6 +14,7 @@ export async function GET(req: Request) {
   const limit  = Math.min(50, parseInt(searchParams.get('limit') ?? '20'));
   const status = searchParams.get('status') ?? '';
   const search = searchParams.get('search') ?? '';
+  const userId = searchParams.get('userId') ?? '';
 
   let query = db.from('orders')
     .select('*, profiles(name, email)', { count: 'exact' })
@@ -21,7 +22,22 @@ export async function GET(req: Request) {
     .range((page-1)*limit, page*limit-1);
 
   if (status) query = query.eq('status', status);
-  if (search) query = query.ilike('phone', `%${search}%`);
+  if (userId) query = query.eq('user_id', userId);
+  if (search) {
+    // Cari by nomor HP atau email user
+    if (search.includes('@')) {
+      // Kalau ada @, cari by email via profiles
+      const { data: matchedProfiles } = await db
+        .from('profiles')
+        .select('id')
+        .ilike('email', `%${search}%`);
+      const ids = (matchedProfiles ?? []).map((p: any) => p.id);
+      if (ids.length > 0) query = query.in('user_id', ids);
+      else query = query.eq('user_id', 'no-match'); // tidak ada hasil
+    } else {
+      query = query.ilike('phone', `%${search}%`);
+    }
+  }
 
   const { data, count } = await query;
   return NextResponse.json({ transactions: data ?? [], total: count ?? 0 });

@@ -17,7 +17,18 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get('status') ?? 'pending';
   const page   = Math.max(1, parseInt(searchParams.get('page') ?? '1'));
+  const search = searchParams.get('search') ?? '';
   const limit  = 20;
+
+  // Kalau ada search, cari user yang cocok dulu
+  let userIds: string[] | null = null;
+  if (search) {
+    const { data: matched } = await db
+      .from('profiles')
+      .select('id')
+      .or(`email.ilike.%${search}%,name.ilike.%${search}%`);
+    userIds = (matched ?? []).map((p: any) => p.id);
+  }
 
   let query = db
     .from('deposit_requests')
@@ -26,6 +37,12 @@ export async function GET(request: Request) {
     .range((page - 1) * limit, page * limit - 1);
 
   if (status !== 'all') query = query.eq('status', status);
+
+  // Filter by user_id kalau ada search
+  if (userIds !== null) {
+    if (userIds.length > 0) query = query.in('user_id', userIds);
+    else query = query.eq('user_id', 'no-match'); // tidak ada user cocok
+  }
 
   const { data, count } = await query;
   return NextResponse.json({ requests: data ?? [], total: count ?? 0 });

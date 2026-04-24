@@ -10,8 +10,6 @@ const supabaseAdmin = createClient(
 );
 
 export async function GET(request: NextRequest) {
-  // ✅ FIX: Hanya pakai X-Verified-User-Email dari middleware
-  // Hapus fallback X-User-Email yang bisa dipalsukan user
   const email = request.headers.get('X-Verified-User-Email')?.trim().toLowerCase();
   if (!email) return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
 
@@ -27,7 +25,6 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    // ✅ FIX: Hanya pakai X-Verified-User-Email dari middleware
     const email = request.headers.get('X-Verified-User-Email')?.trim().toLowerCase();
     if (!email) return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
 
@@ -38,18 +35,26 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Parameter tidak lengkap.' }, { status: 400 });
     }
 
-    // ✅ FIX: BLOKIR user dari menambah saldo sendiri via API ini!
-    // type='add' hanya boleh dipanggil oleh sistem internal (order cancel/refund)
-    // User tidak boleh langsung POST ke sini untuk tambah saldo
-    // Deposit harus lewat /api/deposit/* yang punya verifikasi payment gateway
+    // ✅ FIX DOUBLE DEDUCTION: Blokir type='subtract' sepenuhnya
+    // Pemotongan saldo sekarang HANYA dilakukan di /api/order POST via deduct_balance_for_order
+    // Kalau frontend masih call ini dengan subtract, akan dapat error 410 Gone
+    // → Frontend harus diupdate untuk tidak call endpoint ini untuk subtract
+    if (type === 'subtract') {
+      console.warn(`[user/balance PATCH] User ${email} masih pakai subtract — frontend perlu diupdate!`);
+      return NextResponse.json(
+        {
+          error     : 'Operasi ini sudah tidak digunakan. Pemotongan saldo dilakukan otomatis saat order.',
+          deprecated: true,
+        },
+        { status: 410 } // 410 Gone — endpoint ini sudah deprecated untuk subtract
+      );
+    }
+
+    // type='add' — hanya untuk refund dari order cancel
     if (type === 'add') {
-      // Hanya izinkan jika ada activationId — artinya ini refund dari order
       if (!activationId) {
         console.warn(`[user/balance PATCH] User ${email} coba add balance tanpa activationId!`);
-        return NextResponse.json(
-          { error: 'Operasi tidak diizinkan.' },
-          { status: 403 }
-        );
+        return NextResponse.json({ error: 'Operasi tidak diizinkan.' }, { status: 403 });
       }
 
       const { data: profile } = await supabaseAdmin
@@ -60,7 +65,7 @@ export async function PATCH(request: NextRequest) {
 
       if (!profile) return NextResponse.json({ error: 'User tidak ditemukan.' }, { status: 404 });
 
-      // Anti double-refund: cek mutation sudah ada
+      // Anti double-refund
       const { data: existingMutation } = await supabaseAdmin
         .from('mutations')
         .select('id')
@@ -76,7 +81,7 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
-      // ✅ Pakai RPC cancel_order_and_refund untuk atomic operation
+      // Pakai RPC cancel_order_and_refund untuk atomic operation
       try {
         const { data: rpcData, error: rpcErr } = await supabaseAdmin
           .rpc('cancel_order_and_refund', {
@@ -88,7 +93,8 @@ export async function PATCH(request: NextRequest) {
 
         if (!rpcData?.success) {
           const msg = (rpcData?.error ?? 'Refund sudah diproses.').toLowerCase();
-          const alreadyDone = msg.includes('already') || msg.includes('sudah') ||
+          const alreadyDone =
+            msg.includes('already') || msg.includes('sudah') ||
             msg.includes('not found') || msg.includes('tidak ditemukan') ||
             msg.includes('cancelled') || msg.includes('dibatalkan') ||
             msg.includes('duplicate') || msg.includes('processed') || msg.includes('diproses');
@@ -104,7 +110,7 @@ export async function PATCH(request: NextRequest) {
       } catch (e: any) {
         if (e?.message !== 'fallback') throw e;
 
-        // Fallback manual jika RPC tidak tersedia
+        // Fallback manual
         const { data: existCheck } = await supabaseAdmin
           .from('mutations')
           .select('id')
@@ -120,7 +126,6 @@ export async function PATCH(request: NextRequest) {
           );
         }
 
-        // ✅ FIX: Pakai RPC update_balance (atomic) bukan read-then-write
         await supabaseAdmin.rpc('update_balance', {
           p_email : email,
           p_amount: amount,
@@ -133,35 +138,10 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    // SUBTRACT — kurangi saldo (dipanggil saat beli order)
-    if (type === 'subtract') {
-      const { data: profile } = await supabaseAdmin
-        .from('profiles')
-        .select('id, balance')
-        .eq('email', email)
-        .single();
-
-      if (!profile) return NextResponse.json({ error: 'User tidak ditemukan.' }, { status: 404 });
-
-      // ✅ FIX: Pakai deduct_balance_for_order untuk atomic deduction
-      // Mencegah race condition saldo
-      const { data: deductResult } = await supabaseAdmin.rpc('deduct_balance_for_order', {
-        p_user_id: profile.id,
-        p_amount : amount,
-        p_desc   : body.description ?? 'Beli layanan',
-      });
-
-      if (!deductResult?.success) {
-        return NextResponse.json(
-          { error: deductResult?.error ?? 'Saldo tidak cukup.' },
-          { status: 402 }
-        );
-      }
-
-      return NextResponse.json({ success: true, balance: deductResult.new_balance });
-    }
-
-    return NextResponse.json({ error: 'Type tidak valid. Gunakan "subtract".' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Type tidak valid. Hanya "add" yang diizinkan.' },
+      { status: 400 }
+    );
 
   } catch (err) {
     console.error('[PATCH /api/user/balance]', err);
