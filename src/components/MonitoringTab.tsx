@@ -52,6 +52,9 @@ export function MonitoringTab({ showToast }: MonitoringTabProps) {
   const [blacklisting,  setBlacklisting]  = useState<string | null>(null);
   const [expandedUser,  setExpandedUser]  = useState<string | null>(null);
   const [lastRefresh,   setLastRefresh]   = useState<Date>(new Date());
+  const [confirmModal,  setConfirmModal]  = useState<{ userId: string; email: string } | null>(null);
+  const [period,        setPeriod]        = useState<'today' | '7' | '30'>('7');
+  const [search,        setSearch]        = useState('');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -74,7 +77,13 @@ export function MonitoringTab({ showToast }: MonitoringTabProps) {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleBlacklist = async (userId: string, email: string) => {
-    if (!confirm(`Blokir akun ${email}?`)) return;
+    setConfirmModal({ userId, email });
+  };
+
+  const doBlacklist = async () => {
+    if (!confirmModal) return;
+    const { userId, email } = confirmModal;
+    setConfirmModal(null);
     setBlacklisting(userId);
     try {
       const token = localStorage.getItem('admin_token') ?? '';
@@ -100,6 +109,38 @@ export function MonitoringTab({ showToast }: MonitoringTabProps) {
 
   return (
     <div className="space-y-6">
+
+      {/* ── Modal Konfirmasi Blokir ── */}
+      {confirmModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setConfirmModal(null)}>
+          <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] p-8 w-full max-w-sm shadow-2xl border border-slate-200 dark:border-white/[0.07]"
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="bg-red-100 dark:bg-red-900/30 p-2.5 rounded-xl">
+                <Ban className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Konfirmasi</div>
+                <div className="font-black text-slate-900 dark:text-white">Blokir Akun</div>
+              </div>
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 mt-3">
+              Akun <span className="font-bold text-slate-900 dark:text-white">{confirmModal.email}</span> akan diblokir dan tidak bisa login. Lanjutkan?
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmModal(null)}
+                className="flex-1 py-3.5 bg-slate-100 dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 rounded-2xl font-bold text-sm hover:bg-slate-200 dark:hover:bg-white/[0.09] transition-colors">
+                Batal
+              </button>
+              <button onClick={doBlacklist}
+                className="flex-1 py-3.5 bg-red-600 text-white rounded-2xl font-bold text-sm hover:bg-red-700 transition-colors flex items-center justify-center gap-2">
+                <Ban className="w-4 h-4" /> Blokir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between">

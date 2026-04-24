@@ -10,11 +10,14 @@ const db = createClient(
 
 export async function GET(req: NextRequest) {
 
-  // ── Rentang 7 hari ────────────────────────────────────────────────
+  // ── Rentang dinamis berdasarkan param ?days= ─────────────────────
+  const { searchParams } = new URL(req.url);
+  const days  = Math.min(30, Math.max(1, parseInt(searchParams.get('days') ?? '7')));
   const since = new Date();
-  since.setDate(since.getDate() - 7);
+  since.setDate(since.getDate() - (days === 1 ? 0 : days));
   since.setHours(0, 0, 0, 0);
   const sinceISO = since.toISOString();
+  const numDays  = days;
 
   // ── 1. Ambil transaksi cancelled/expired 7 hari terakhir ──────────
   const { data: refundTxns, error: errTxns } = await db
@@ -97,7 +100,7 @@ export async function GET(req: NextRequest) {
 
   // ── 6. Daily summary ─────────────────────────────────────────────
   const dayMap: Record<string, { tanggal: string; jumlah_refund: number; total_refund: number; _users: Set<string> }> = {};
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < numDays; i++) {
     const d = new Date();
     d.setDate(d.getDate() - i);
     const key = d.toISOString().slice(0, 10);
