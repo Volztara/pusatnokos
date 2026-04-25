@@ -773,7 +773,7 @@ export default function AdminPage() {
                 return { val, lbl };
               });
 
-              const W = 900, H = 200, PL = 58, PR = 16, PT = 24, PB = 32;
+              const W = 900, H = 260, PL = 58, PR = 16, PT = 24, PB = 40;
               const cW = W - PL - PR, cH = H - PT - PB;
 
               const xOf = (i: number) => PL + (n === 1 ? cW / 2 : (i / (n - 1)) * cW);
@@ -829,127 +829,175 @@ export default function AdminPage() {
 
                   {/* Chart */}
                   {loadingChart ? (
-                    <div className="flex items-center justify-center rounded-2xl bg-slate-50 dark:bg-[#080b14]"
-                      style={{ aspectRatio: `${W}/${H}` }}>
-                      <RefreshCw className="w-5 h-5 animate-spin text-indigo-400" />
+                    <div className="rounded-2xl bg-slate-50 dark:bg-[#080b14] overflow-hidden" style={{ height: '260px' }}>
+                      <div className="h-full flex items-end gap-2 px-6 pb-6 pt-8">
+                        {Array.from({ length: chartPeriod === 7 ? 7 : 14 }).map((_, i) => (
+                          <div key={i} className="flex-1 flex flex-col justify-end gap-1">
+                            <div
+                              className="w-full bg-slate-200 dark:bg-slate-700 rounded-t-md animate-pulse"
+                              style={{ height: `${30 + Math.sin(i * 0.8) * 20 + Math.cos(i * 1.3) * 30 + 60}px`, animationDelay: `${i * 60}ms` }}
+                            />
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ) : (
-                    <div className="w-full rounded-2xl overflow-hidden bg-white dark:bg-[#080b14] border border-slate-100 dark:border-white/[0.04]">
-                      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{display:"block"}}>
-                        <defs>
-                          {/* Diagonal hatch pattern — light mode */}
-                          <pattern id="hatchLight" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
-                            <line x1="0" y1="0" x2="0" y2="8" stroke="#6366f1" strokeWidth="1.2" strokeOpacity="0.12"/>
-                          </pattern>
-                          {/* Diagonal hatch pattern — dark mode */}
-                          <pattern id="hatchDark" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
-                            <line x1="0" y1="0" x2="0" y2="8" stroke="#818cf8" strokeWidth="1.2" strokeOpacity="0.18"/>
-                          </pattern>
-                          <clipPath id="chartClip">
-                            <rect x={PL} y={PT} width={cW} height={cH} />
-                          </clipPath>
-                        </defs>
+                  ) : (() => {
+                    // Build smooth cubic bezier path from pts
+                    const smoothLinePath = (() => {
+                      if (pts.length < 2) return pts.length === 1 ? `M${pts[0].x},${pts[0].y}` : '';
+                      let d = `M${pts[0].x},${pts[0].y}`;
+                      for (let i = 1; i < pts.length; i++) {
+                        const prev = pts[i - 1] as any;
+                        const curr = pts[i] as any;
+                        const tension = 0.38;
+                        const dx = (curr.x - prev.x) * tension;
+                        d += ` C${prev.x + dx},${prev.y} ${curr.x - dx},${curr.y} ${curr.x},${curr.y}`;
+                      }
+                      return d;
+                    })();
+                    const smoothAreaPath = smoothLinePath
+                      + ` L${pts[n-1].x},${PT+cH} L${pts[0].x},${PT+cH} Z`;
+                    return (
+                      // FIX ZOOM BUG: fixed height container — chart tidak ikut membesar saat zoom out
+                      <div className="w-full rounded-2xl overflow-hidden bg-white dark:bg-[#080b14] border border-slate-100 dark:border-white/[0.04]"
+                        style={{ height: '260px' }}>
+                        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{display:"block"}}>
+                          <defs>
+                            {/* Gradient fill — light */}
+                            <linearGradient id="areaGradLight" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%"   stopColor="#6366f1" stopOpacity="0.22"/>
+                              <stop offset="60%"  stopColor="#6366f1" stopOpacity="0.06"/>
+                              <stop offset="100%" stopColor="#6366f1" stopOpacity="0"/>
+                            </linearGradient>
+                            {/* Gradient fill — dark */}
+                            <linearGradient id="areaGradDark" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%"   stopColor="#818cf8" stopOpacity="0.30"/>
+                              <stop offset="60%"  stopColor="#818cf8" stopOpacity="0.08"/>
+                              <stop offset="100%" stopColor="#818cf8" stopOpacity="0"/>
+                            </linearGradient>
+                            {/* Glow filter for peak dot */}
+                            <filter id="dotGlow" x="-100%" y="-100%" width="300%" height="300%">
+                              <feGaussianBlur stdDeviation="3" result="blur"/>
+                              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                            </filter>
+                            <clipPath id="chartClip">
+                              <rect x={PL} y={PT} width={cW} height={cH} />
+                            </clipPath>
+                          </defs>
 
-                        {/* Horizontal grid lines + Y labels */}
-                        {Y_TICKS.map((tick, i) => {
-                          const y = PT + cH - (tick.val / niceMax) * cH;
-                          return (
-                            <g key={i}>
-                              <line x1={PL} y1={y} x2={W-PR} y2={y}
-                                stroke="#e2e8f0" strokeWidth="1"
-                                className="dark:stroke-white/[0.06]" />
-                              <text x={PL-8} y={y+4} textAnchor="end"
-                                fill="#94a3b8" fontSize="10" fontWeight="700" fontFamily="system-ui">
-                                {tick.lbl}
-                              </text>
-                            </g>
-                          );
-                        })}
-
-                        {/* Hatch fill area (light + dark layers) */}
-                        <path d={areaPath} fill="url(#hatchLight)" clipPath="url(#chartClip)"
-                          className="dark:opacity-0" />
-                        <path d={areaPath} fill="url(#hatchDark)" clipPath="url(#chartClip)"
-                          className="opacity-0 dark:opacity-100" />
-
-                        {/* Solid indigo line */}
-                        <polyline
-                          points={polyline}
-                          fill="none"
-                          stroke="#6366f1"
-                          strokeWidth="1.5"
-                          strokeLinejoin="round"
-                          strokeLinecap="round"
-                          clipPath="url(#chartClip)"
-                          className="dark:stroke-indigo-400"
-                        />
-
-                        {/* X-axis labels */}
-                        {pts.map((p: any, i: number) => {
-                          const show = chartPeriod === 30 ? (i % 5 === 0 || i === n - 1) : true;
-                          if (!show) return null;
-                          const raw = (data as any[])[i]?.date ?? '';
-                          const lbl = chartPeriod === 7 ? raw.slice(0, 3) + ',' : raw.slice(0, 5);
-                          return (
-                            <text key={`xl-${i}`} x={p.x} y={H - 8} textAnchor="middle"
-                              fill="#94a3b8" fontSize="10" fontWeight="700" fontFamily="system-ui">
-                              {lbl}
-                            </text>
-                          );
-                        })}
-
-                        {/* Hollow dots + hover interaction */}
-                        {pts.map((p: any, i: number) => {
-                          const isPeak = i === peakIdx;
-                          const tipW = 130, tipH = 46;
-                          const tipX = Math.min(Math.max(p.x - tipW / 2, PL), W - PR - tipW);
-                          const tipY = Math.max(p.y - tipH - 12, PT + 2);
-                          return (
-                            <g key={`dot-${i}`} className="group/dot cursor-pointer">
-                              {/* Vertical indicator line on hover */}
-                              <line x1={p.x} y1={PT} x2={p.x} y2={PT + cH}
-                                stroke="#6366f1" strokeWidth="1" strokeDasharray="3,4"
-                                strokeOpacity="0"
-                                className="group-hover/dot:stroke-opacity-40 transition-all dark:stroke-indigo-400"
-                              />
-                              {/* Hit area */}
-                              <circle cx={p.x} cy={p.y} r="18" fill="transparent" />
-                              {/* Dot glow on hover */}
-                              <circle cx={p.x} cy={p.y} r="9" fill="#6366f1" fillOpacity="0"
-                                className="group-hover/dot:fill-opacity-10 transition-all" />
-                              {/* Static hollow dot */}
-                              <circle cx={p.x} cy={p.y}
-                                r={isPeak ? 4 : 3}
-                                fill="white"
-                                stroke={isPeak ? '#6366f1' : '#6366f1'}
-                                strokeWidth={isPeak ? 2 : 1.5}
-                                className="dark:fill-[#080b14] dark:stroke-indigo-400"
-                              />
-                              {/* Tooltip */}
-                              <g transform={`translate(${tipX},${tipY})`}
-                                className="opacity-0 group-hover/dot:opacity-100 transition-opacity pointer-events-none">
-                                <rect rx="10" width={tipW} height={tipH}
-                                  fill="white" filter="drop-shadow(0 4px 12px rgba(0,0,0,0.12))"
-                                  className="dark:fill-[#0d1020]" />
-                                <rect rx="10" width={tipW} height={tipH}
-                                  fill="none" stroke="#e2e8f0" strokeWidth="1"
-                                  className="dark:stroke-white/[0.08]" />
-                                <text x={tipW/2} y="18" textAnchor="middle"
-                                  fill="#1e293b" fontSize="11" fontWeight="900" fontFamily="system-ui"
-                                  className="dark:fill-white">
-                                  {fmtIDR(p.revenue)}
-                                </text>
-                                <text x={tipW/2} y="32" textAnchor="middle"
-                                  fill="#94a3b8" fontSize="9" fontWeight="600" fontFamily="system-ui">
-                                  {p.date}
+                          {/* Subtle horizontal grid lines + Y labels */}
+                          {Y_TICKS.map((tick, i) => {
+                            const y = PT + cH - (tick.val / niceMax) * cH;
+                            return (
+                              <g key={i}>
+                                <line x1={PL} y1={y} x2={W - PR} y2={y}
+                                  stroke="#e2e8f0" strokeWidth={i === Y_STEPS ? 1.5 : 0.8}
+                                  strokeDasharray={i === Y_STEPS ? undefined : "4,6"}
+                                  className="dark:stroke-white/[0.07]" />
+                                <text x={PL - 8} y={y + 4} textAnchor="end"
+                                  fill="#94a3b8" fontSize="10" fontWeight="700" fontFamily="system-ui,sans-serif">
+                                  {tick.lbl}
                                 </text>
                               </g>
-                            </g>
-                          );
-                        })}
-                      </svg>
-                    </div>
-                  )}
+                            );
+                          })}
+
+                          {/* Smooth gradient area fill */}
+                          <path d={smoothAreaPath} fill="url(#areaGradLight)" clipPath="url(#chartClip)"
+                            className="dark:opacity-0" />
+                          <path d={smoothAreaPath} fill="url(#areaGradDark)" clipPath="url(#chartClip)"
+                            className="opacity-0 dark:opacity-100" />
+
+                          {/* Smooth indigo line */}
+                          <path
+                            d={smoothLinePath}
+                            fill="none"
+                            stroke="#6366f1"
+                            strokeWidth="2"
+                            strokeLinejoin="round"
+                            strokeLinecap="round"
+                            clipPath="url(#chartClip)"
+                            className="dark:stroke-indigo-400"
+                          />
+
+                          {/* X-axis labels */}
+                          {pts.map((p: any, i: number) => {
+                            const show = chartPeriod === 30 ? (i % 5 === 0 || i === n - 1) : true;
+                            if (!show) return null;
+                            const raw = (data as any[])[i]?.date ?? '';
+                            const lbl = chartPeriod === 7 ? raw.slice(0, 3) + ',' : raw.slice(0, 5);
+                            return (
+                              <text key={`xl-${i}`} x={p.x} y={H - 6} textAnchor="middle"
+                                fill="#94a3b8" fontSize="10" fontWeight="700" fontFamily="system-ui,sans-serif">
+                                {lbl}
+                              </text>
+                            );
+                          })}
+
+                          {/* Dots + hover tooltips */}
+                          {pts.map((p: any, i: number) => {
+                            const isPeak = i === peakIdx;
+                            const tipW = 136, tipH = 48;
+                            const tipX = Math.min(Math.max(p.x - tipW / 2, PL), W - PR - tipW);
+                            const tipY = Math.max(p.y - tipH - 14, PT + 2);
+                            return (
+                              <g key={`dot-${i}`} className="group/dot cursor-pointer">
+                                {/* Vertical dashed indicator */}
+                                <line x1={p.x} y1={PT} x2={p.x} y2={PT + cH}
+                                  stroke="#6366f1" strokeWidth="1" strokeDasharray="3,5"
+                                  strokeOpacity="0"
+                                  className="group-hover/dot:stroke-opacity-30 transition-all dark:stroke-indigo-400"
+                                />
+                                {/* Wide hit area */}
+                                <rect x={p.x - 18} y={PT} width={36} height={cH} fill="transparent" />
+                                {/* Outer glow ring on hover */}
+                                <circle cx={p.x} cy={p.y} r="12" fill="#6366f1" fillOpacity="0"
+                                  className="group-hover/dot:fill-opacity-[0.08] transition-all duration-150" />
+                                {/* Peak dot — larger + glowing */}
+                                {isPeak ? (
+                                  <>
+                                    <circle cx={p.x} cy={p.y} r="7" fill="#6366f1" fillOpacity="0.18"
+                                      filter="url(#dotGlow)" className="dark:fill-indigo-400" />
+                                    <circle cx={p.x} cy={p.y} r="4.5" fill="#6366f1"
+                                      className="dark:fill-indigo-400" />
+                                    <circle cx={p.x} cy={p.y} r="2" fill="white" />
+                                  </>
+                                ) : (
+                                  <>
+                                    <circle cx={p.x} cy={p.y} r="3.5" fill="white"
+                                      stroke="#6366f1" strokeWidth="1.8"
+                                      className="dark:fill-[#080b14] dark:stroke-indigo-400" />
+                                  </>
+                                )}
+                                {/* Tooltip */}
+                                <g transform={`translate(${tipX},${tipY})`}
+                                  className="opacity-0 group-hover/dot:opacity-100 transition-opacity duration-150 pointer-events-none">
+                                  <rect rx="12" width={tipW} height={tipH}
+                                    fill="white" filter="drop-shadow(0 6px 18px rgba(99,102,241,0.18))"
+                                    className="dark:fill-[#0d1020]" />
+                                  <rect rx="12" width={tipW} height={tipH}
+                                    fill="none" stroke="#6366f1" strokeWidth="1" strokeOpacity="0.3"
+                                    className="dark:stroke-indigo-500/40" />
+                                  {/* Coloured top strip */}
+                                  <rect rx="12" width={tipW} height="4" fill="#6366f1" fillOpacity="0.7"
+                                    className="dark:fill-indigo-500" />
+                                  <text x={tipW / 2} y="22" textAnchor="middle"
+                                    fill="#1e293b" fontSize="11.5" fontWeight="900" fontFamily="system-ui,sans-serif"
+                                    className="dark:fill-white">
+                                    {fmtIDR(p.revenue)}
+                                  </text>
+                                  <text x={tipW / 2} y="36" textAnchor="middle"
+                                    fill="#94a3b8" fontSize="9" fontWeight="600" fontFamily="system-ui,sans-serif">
+                                    {p.date}
+                                  </text>
+                                </g>
+                              </g>
+                            );
+                          })}
+                        </svg>
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })()}
@@ -1020,7 +1068,18 @@ export default function AdminPage() {
 
                   {/* Grouped bar chart */}
                   {loadingRefundChart ? (
-                    <div className="h-40 flex items-center justify-center text-slate-400"><RefreshCw className="w-5 h-5 animate-spin" /></div>
+                    <div className="rounded-2xl bg-slate-50 dark:bg-[#080b14] overflow-hidden h-44">
+                      <div className="h-full flex items-end gap-2 px-4 pb-4 pt-6">
+                        {Array.from({ length: refundChartPeriod === 7 ? 7 : 14 }).map((_, i) => (
+                          <div key={i} className="flex-1 flex items-end gap-0.5">
+                            <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-t-md animate-pulse"
+                              style={{ height: `${25 + Math.abs(Math.sin(i * 1.1)) * 80}px`, animationDelay: `${i * 50}ms` }} />
+                            <div className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-t-md animate-pulse"
+                              style={{ height: `${10 + Math.abs(Math.cos(i * 1.4)) * 40}px`, animationDelay: `${i * 50 + 25}ms` }} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   ) : (
                     <>
                       {/* Legend */}
@@ -1069,7 +1128,26 @@ export default function AdminPage() {
         {tab === 'activations' && (
           <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] overflow-hidden">
             {loadingAct ? (
-              <div className="p-12 text-center text-slate-400"><RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />Memuat...</div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50/95 dark:bg-[#080b14]/95 border-b border-slate-200 dark:border-white/[0.07] text-[10px] uppercase tracking-widest text-slate-400 font-black">
+                    <tr>{['ID','Nomor','Layanan','Status','OTP','Harga','Aksi'].map(h => <th key={h} className="px-5 py-4">{h}</th>)}</tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <tr key={i}>
+                        <td className="px-5 py-4"><div className="h-3 w-12 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                        <td className="px-5 py-4"><div className="h-3 w-28 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                        <td className="px-5 py-4"><div className="h-3 w-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                        <td className="px-5 py-4"><div className="h-5 w-20 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse" /></td>
+                        <td className="px-5 py-4"><div className="h-3 w-16 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                        <td className="px-5 py-4"><div className="h-3 w-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                        <td className="px-5 py-4"><div className="h-7 w-24 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse" /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : activations.length === 0 ? (
               <div className="p-12 text-center text-slate-400"><Signal className="w-8 h-8 mx-auto mb-2 opacity-30" /><div className="font-bold">Tidak ada aktivasi aktif</div></div>
             ) : (
@@ -1135,7 +1213,28 @@ export default function AdminPage() {
             </div>
 
             <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] overflow-hidden">
-              {loadingTxns ? <div className="p-12 text-center text-slate-400"><RefreshCw className="w-6 h-6 animate-spin mx-auto" /></div> : (
+              {loadingTxns ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50/95 dark:bg-[#080b14]/95 border-b border-slate-200 dark:border-white/[0.07] text-[10px] uppercase tracking-widest text-slate-400 font-black">
+                      <tr>{['User','Layanan','Nomor','Harga','Status','Waktu','Aksi'].map(h => <th key={h} className="px-5 py-4">{h}</th>)}</tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
+                      {Array.from({ length: 8 }).map((_, i) => (
+                        <tr key={i}>
+                          <td className="px-5 py-4 space-y-1.5"><div className="h-3 w-24 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /><div className="h-2.5 w-32 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" /></td>
+                          <td className="px-5 py-4"><div className="h-3 w-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                          <td className="px-5 py-4"><div className="h-3 w-28 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                          <td className="px-5 py-4"><div className="h-3 w-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                          <td className="px-5 py-4"><div className="h-5 w-20 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse" /></td>
+                          <td className="px-5 py-4"><div className="h-3 w-24 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                          <td className="px-5 py-4"><div className="h-7 w-20 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse" /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead className="bg-slate-50/95 dark:bg-[#080b14]/95 border-b border-slate-200 dark:border-white/[0.07] text-[10px] uppercase tracking-widest text-slate-400 font-black">
@@ -1210,7 +1309,32 @@ export default function AdminPage() {
             )}
 
             <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] overflow-hidden">
-              {loadingUsers ? <div className="p-12 text-center text-slate-400"><RefreshCw className="w-6 h-6 animate-spin mx-auto" /></div> : (
+              {loadingUsers ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50/95 dark:bg-[#080b14]/95 border-b border-slate-200 dark:border-white/[0.07] text-[10px] uppercase tracking-widest text-slate-400 font-black">
+                      <tr>
+                        <th className="px-5 py-4 w-10" />
+                        {['User','Saldo','Order','Total Spend','Status','Terdaftar','Aksi'].map(h => <th key={h} className="px-5 py-4">{h}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
+                      {Array.from({ length: 8 }).map((_, i) => (
+                        <tr key={i}>
+                          <td className="px-5 py-4"><div className="h-4 w-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                          <td className="px-5 py-4 space-y-1.5"><div className="h-3 w-24 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /><div className="h-2.5 w-32 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" /></td>
+                          <td className="px-5 py-4"><div className="h-3 w-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                          <td className="px-5 py-4"><div className="h-3 w-10 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                          <td className="px-5 py-4"><div className="h-3 w-24 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                          <td className="px-5 py-4"><div className="h-5 w-16 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse" /></td>
+                          <td className="px-5 py-4"><div className="h-3 w-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                          <td className="px-5 py-4"><div className="flex gap-1.5"><div className="h-7 w-16 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse" /><div className="h-7 w-16 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse" /><div className="h-7 w-16 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse" /></div></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead className="bg-slate-50/95 dark:bg-[#080b14]/95 border-b border-slate-200 dark:border-white/[0.07] text-[10px] uppercase tracking-widest text-slate-400 font-black">
@@ -1413,10 +1537,26 @@ export default function AdminPage() {
             {/* Transaction list */}
             <div className="flex-1 overflow-y-auto">
               {loadingUserTxns && userTxns.length === 0 ? (
-                <div className="p-12 text-center text-slate-400">
-                  <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-3" />
-                  <div className="text-sm font-black text-slate-600 dark:text-white">Memuat semua transaksi...</div>
-                  <div className="text-xs mt-1">Mengambil data dari awal hingga sekarang</div>
+                <div className="p-4">
+                  <div className="px-5 py-2.5 mb-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/40 rounded-xl">
+                    <div className="h-3 w-40 bg-amber-200 dark:bg-amber-800 rounded animate-pulse" />
+                  </div>
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50 dark:bg-[#080b14] border-b border-slate-200 dark:border-white/[0.07] text-[10px] uppercase tracking-widest text-slate-400 font-black">
+                      <tr>{['Layanan','Nomor','Harga','Status','Waktu'].map(h => <th key={h} className="px-5 py-3">{h}</th>)}</tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <tr key={i}>
+                          <td className="px-5 py-3"><div className="h-3 w-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                          <td className="px-5 py-3"><div className="h-3 w-28 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                          <td className="px-5 py-3"><div className="h-3 w-16 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                          <td className="px-5 py-3"><div className="h-5 w-18 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse" /></td>
+                          <td className="px-5 py-3"><div className="h-3 w-24 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               ) : userTxns.length === 0 && userTxnsLoaded ? (
                 <div className="p-12 text-center text-slate-400 font-bold">Belum ada transaksi untuk user ini</div>
@@ -1753,9 +1893,31 @@ function DepositTab({ showToast, isAuthed }: { showToast: (msg: string) => void;
       {/* List */}
       <div className="space-y-4">
         {loading && requests.length === 0 ? (
-          <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] p-12 text-center text-slate-400">
-            <RefreshCw className="w-7 h-7 animate-spin mx-auto mb-3" />
-            <div className="font-bold text-sm">Memuat data...</div>
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] p-5 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                  <div className="flex-1 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-7 w-32 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                      <div className="h-6 w-20 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
+                      <div className="h-3 w-36 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                    </div>
+                    <div className="flex gap-4">
+                      <div className="h-3 w-28 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                      <div className="h-3 w-24 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="h-9 w-20 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
+                    <div className="h-9 w-20 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : requests.length === 0 ? (
           <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] p-12 text-center text-slate-400">
@@ -1956,7 +2118,14 @@ function RevenueTab({ isAuthed }: { isAuthed: boolean }) {
       <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] p-6">
         <h3 className="text-sm font-black text-slate-900 dark:text-white mb-6">Revenue per Hari</h3>
         {loading ? (
-          <div className="h-40 flex items-center justify-center text-slate-400"><RefreshCw className="w-6 h-6 animate-spin" /></div>
+          <div className="rounded-2xl bg-slate-50 dark:bg-[#0f1320] overflow-hidden h-40">
+            <div className="h-full flex items-end gap-1.5 px-4 pb-4 pt-6">
+              {Array.from({ length: 14 }).map((_, i) => (
+                <div key={i} className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-t-md animate-pulse"
+                  style={{ height: `${20 + Math.abs(Math.sin(i * 0.9)) * 90}px`, animationDelay: `${i * 40}ms` }} />
+              ))}
+            </div>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <div className="flex items-end gap-1.5 h-48 min-w-max">
@@ -2164,8 +2333,29 @@ function OverridePricingTab({ showToast }: { showToast: (msg: string) => void })
       </div>
 
       {loading ? (
-        <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] p-12 text-center text-slate-400">
-          <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" /> Memuat layanan...
+        <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-slate-50/95 dark:bg-[#080b14]/95 border-b border-slate-200 dark:border-white/[0.07] text-[10px] uppercase tracking-widest text-slate-400 font-black">
+                <tr>
+                  <th className="px-5 py-4">Layanan</th>
+                  <th className="px-5 py-4">Harga Default</th>
+                  <th className="px-5 py-4">Harga Override</th>
+                  <th className="px-5 py-4">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <tr key={i}>
+                    <td className="px-5 py-3 space-y-1.5"><div className="h-3 w-32 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /><div className="h-2.5 w-16 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" /></td>
+                    <td className="px-5 py-3"><div className="h-3 w-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                    <td className="px-5 py-3"><div className="h-8 w-28 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" /></td>
+                    <td className="px-5 py-3"><div className="h-7 w-16 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : (
         <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] overflow-hidden">
@@ -2419,7 +2609,20 @@ function AdminRolesTab({ showToast }: { showToast: (msg: string) => void }) {
 
       {/* Admin list */}
       <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] overflow-hidden">
-        {loading ? <div className="p-12 text-center text-slate-400"><RefreshCw className="w-6 h-6 animate-spin mx-auto" /></div> : admins.length === 0 ? (
+        {loading ? (
+          <div className="divide-y divide-slate-100 dark:divide-white/[0.06]">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="p-5 flex items-center gap-4">
+                <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 rounded-2xl animate-pulse shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3 w-32 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                  <div className="h-2.5 w-40 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                </div>
+                <div className="h-8 w-24 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
+              </div>
+            ))}
+          </div>
+        ) : admins.length === 0 ? (
           <div className="p-12 text-center text-slate-400 font-bold">Belum ada admin terdaftar.</div>
         ) : (
           <div className="divide-y divide-slate-100 dark:divide-white/[0.06]">
@@ -2623,7 +2826,19 @@ function BroadcastTab({ showToast }: { showToast: (msg: string) => void }) {
       <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] p-6">
         <h3 className="font-black text-slate-900 dark:text-white mb-4">Riwayat Broadcast</h3>
         {loadHist ? (
-          <div className="flex justify-center py-8"><RefreshCw className="w-6 h-6 animate-spin text-slate-400" /></div>
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-start gap-4 p-4 bg-slate-50 dark:bg-[#0f1320] rounded-2xl">
+                <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-40 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                  <div className="h-2.5 w-64 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                  <div className="h-2 w-32 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                </div>
+                <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse shrink-0" />
+              </div>
+            ))}
+          </div>
         ) : history.length === 0 ? (
           <div className="text-center py-8 text-slate-400 font-bold">Belum ada broadcast dikirim.</div>
         ) : (
@@ -2799,7 +3014,22 @@ function NoticeBoardTab({ showToast }: { showToast: (msg: string) => void }) {
 
       {/* Daftar papan info */}
       {loading ? (
-        <div className="flex justify-center py-12"><RefreshCw className="w-6 h-6 animate-spin text-slate-400" /></div>
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] p-5 flex items-start gap-4">
+              <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 w-36 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                <div className="h-2.5 w-full max-w-xs bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                <div className="h-2 w-24 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <div className="h-8 w-8 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
+                <div className="h-8 w-8 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : notices.length === 0 ? (
         <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] p-12 text-center text-slate-400 font-bold">
           Belum ada papan info. Klik "+ Tambah Info" untuk mulai.
@@ -2925,7 +3155,23 @@ function BlacklistHistoryTab({ showToast }: { showToast: (msg: string) => void }
       {/* Table */}
       <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-slate-400"><RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />Memuat...</div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-slate-50/95 dark:bg-[#080b14]/95 border-b border-slate-200 dark:border-white/[0.07] text-[10px] uppercase tracking-widest text-slate-400 font-black">
+                <tr>{['Status Aksi','Target User ID','Detail / Alasan','Waktu'].map(h => <th key={h} className="px-5 py-4">{h}</th>)}</tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <tr key={i}>
+                    <td className="px-5 py-4"><div className="h-6 w-24 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" /></td>
+                    <td className="px-5 py-4"><div className="h-5 w-40 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse" /></td>
+                    <td className="px-5 py-4"><div className="h-3 w-48 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                    <td className="px-5 py-4"><div className="h-3 w-28 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : logs.length === 0 ? (
           <div className="p-12 text-center">
             <Ban className="w-10 h-10 mx-auto mb-3 text-slate-200 dark:text-slate-700" />

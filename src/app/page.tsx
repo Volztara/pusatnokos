@@ -180,8 +180,13 @@ const restoreSecureSession = (): (UserData & { _savedAt: number }) | null => {
     if (s) {
       const parsed = JSON.parse(s) as UserData & { _savedAt: number; _st: string; _at?: string };
       if (parsed?.email && parsed._savedAt && Date.now() - parsed._savedAt < SESSION_TTL) {
-        // Restore Supabase access_token jika tersimpan (_at), atau gunakan session token lama
-        _sessionToken = parsed._at || parsed._st || genToken();
+        // ✅ FIX: Hanya pakai _at (Supabase JWT) — _st adalah random string, bukan JWT valid
+        // Kalau _at kosong, paksa re-login agar user dapat token Supabase yang baru
+        if (!parsed._at) {
+          sessionStorage.removeItem('nokos_s');
+          return null;
+        }
+        _sessionToken = parsed._at;
         _csrfToken    = genToken();
         return parsed;
       }
@@ -845,12 +850,15 @@ function getAvatarPalette(name: string) {
 }
 
 
-// Komponen gambar logo dengan fallback otomatis ke inisial
+// Komponen gambar logo dengan dual fallback:
+// primary src → fallbackSrc (icon.horse) → inisial
+// Fixes icon tidak muncul di iOS/Android karena Google Favicon diblok privacy filter
 function ServiceLogoImg({
-  src, bg, initial, color,
-}: { src: string; bg: string; initial: string; color: string }) {
-  const [err, setErr] = React.useState(false);
-  if (err) {
+  src, fallbackSrc, bg, initial, color,
+}: { src: string; fallbackSrc?: string; bg: string; initial: string; color: string }) {
+  const [state, setState] = React.useState<'primary' | 'fallback' | 'error'>('primary');
+
+  if (state === 'error') {
     return (
       <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-base font-black"
         style={{ background: bg, color }}>
@@ -858,16 +866,25 @@ function ServiceLogoImg({
       </div>
     );
   }
+
+  const currentSrc = state === 'primary' ? src : (fallbackSrc ?? src);
+
   return (
     <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden"
       style={{ background: bg }}>
       <img
-        src={src}
+        src={currentSrc}
         alt={initial}
         width={26}
         height={26}
         style={{ width: 26, height: 26, objectFit: 'contain', display: 'block' }}
-        onError={() => setErr(true)}
+        onError={() => {
+          if (state === 'primary' && fallbackSrc) {
+            setState('fallback'); // coba sumber kedua dulu
+          } else {
+            setState('error');   // baru tampilkan inisial
+          }
+        }}
         loading="lazy"
         decoding="async"
       />
@@ -884,9 +901,11 @@ function getServiceIconByName(name: string): React.ReactNode {
 
       if (cfg.type === 'si') {
         // Simple Icons CDN — SVG logo dengan warna brand asli
+        // fallback: Google Favicon jika SimpleIcons gagal
         return (
           <ServiceLogoImg
             src={`https://cdn.simpleicons.org/${cfg.slug}/${cfg.color}`}
+            fallbackSrc={`https://icon.horse/icon/${cfg.slug}.com`}
             bg={cfg.bg}
             initial={initial}
             color={`#${cfg.color}`}
@@ -895,10 +914,12 @@ function getServiceIconByName(name: string): React.ReactNode {
       }
 
       if (cfg.type === 'fav') {
-        // Google Favicon CDN — favicon resolusi tinggi 64px
+        // Google Favicon CDN — primary
+        // fallback: icon.horse (lebih reliable di iOS/Android, tidak diblok privacy filter)
         return (
           <ServiceLogoImg
             src={`https://www.google.com/s2/favicons?sz=64&domain=${cfg.domain}`}
+            fallbackSrc={`https://icon.horse/icon/${cfg.domain}`}
             bg={cfg.bg}
             initial={initial}
             color="#4f46e5"
@@ -1212,7 +1233,7 @@ export default function App() {
     if (!user?.email) return;
     const checkBlacklist = async () => {
       try {
-        const res = await fetch(`/api/auth/check-blacklist?email=${encodeURIComponent(user.email)}`, { headers: authHeaders({ 'X-User-Email': user.email }) });
+        const res = await fetch('/api/auth/check-blacklist', { headers: authHeaders() });
         const data = await res.json();
         if (data.is_blacklisted) {
           setUser(null);
@@ -2407,13 +2428,13 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
     if (!user?.email) return;
 
     // Fetch saldo
-    fetch(`/api/user/balance?email=${encodeURIComponent(user.email)}`, { headers: authHeaders({ 'X-User-Email': user.email }) })
+    fetch('/api/user/balance', { headers: authHeaders() })
       .then(r => r.json())
       .then(d => { if (typeof d.balance === 'number') setBalance(d.balance); })
       .catch(() => {});
 
     // Fetch orders aktif
-    fetch(`/api/user/orders?email=${encodeURIComponent(user.email)}`, { headers: authHeaders({ 'X-User-Email': user.email }) })
+    fetch('/api/user/orders', { headers: authHeaders() })
       .then(r => r.json())
       .then((data: any[]) => {
         if (!Array.isArray(data)) return;
@@ -2481,7 +2502,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
   const refreshBalance = async () => {
     if (!user?.email) return;
     try {
-      const res = await fetch(`/api/user/balance?email=${encodeURIComponent(user.email)}`, { headers: authHeaders({ 'X-User-Email': user.email }) });
+      const res = await fetch('/api/user/balance', { headers: authHeaders() });
       const d = await res.json();
       if (typeof d.balance === 'number') setBalance(d.balance);
     } catch {}
@@ -3314,7 +3335,7 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
 
   useEffect(() => {
     if (!user?.email) return;
-    fetch(`/api/user/account-info?email=${encodeURIComponent(user.email)}`, { headers: authHeaders({ 'X-User-Email': user.email }) })
+    fetch('/api/user/account-info', { headers: authHeaders() })
       .then(r => r.json())
       .then(d => { if (d.totalOrders !== undefined) setDbStats(d); })
       .catch(() => {});
@@ -4759,7 +4780,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
   const fetchMyRequests = async () => {
     if (!user?.email) return;
     try {
-      const r = await fetch(`/api/user/deposit-history?email=${encodeURIComponent(user.email)}`, { headers: authHeaders({ 'X-User-Email': user.email }) });
+      const r = await fetch('/api/user/deposit-history', { headers: authHeaders() });
       const data = await r.json();
       setMyRequests(Array.isArray(data) ? data : []);
     } catch {}
@@ -5917,7 +5938,7 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
     const fetchInfo = async () => {
       setLoadingInfo(true);
       try {
-        const r = await fetch(`/api/user/account-info?email=${encodeURIComponent(user.email)}`, { headers: authHeaders({ 'X-User-Email': user.email }) });
+        const r = await fetch('/api/user/account-info', { headers: authHeaders() });
         const d = await r.json();
         setAccountInfo(d);
       } catch {}
