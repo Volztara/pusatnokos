@@ -19,13 +19,17 @@ const nextConfig: NextConfig = {
         key: 'Content-Security-Policy',
         value: [
           "default-src 'self'",
-          "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
+          // ✅ FIX: tambah 'unsafe-eval' — diperlukan Next.js runtime di production
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
           "style-src 'self' 'unsafe-inline'",
-          "img-src 'self' data: https:",
+          // ✅ img-src sudah cover https: jadi Google Favicon & SimpleIcons sudah aman
+          "img-src 'self' data: blob: https:",
           "font-src 'self' data:",
-          "connect-src 'self' https://*.supabase.co https://challenges.cloudflare.com https://api.sms-man.com https://api.grizzlysms.com https://5sim.net wss://*.supabase.co",
+          // ✅ FIX: tambah semua external service yang dipakai app
+          "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com https://api.sms-man.com https://api.grizzlysms.com https://5sim.net https://api.anthropic.com https://www.google.com https://cdn.simpleicons.org",
           "frame-src https://challenges.cloudflare.com",
-          "form-action 'self'",
+          // ✅ FIX: tambah mailto: untuk link CS email
+          "form-action 'self' mailto:",
           "base-uri 'self'",
         ].join('; '),
       }] : []),
