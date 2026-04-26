@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 
 const API_KEY  = process.env.HEROSMS_API_KEY ?? '';
 const BASE_URL = 'https://hero-sms.com/stubs/handler_api.php';
@@ -25,12 +26,28 @@ function applyMarkup(costUSD: number): number {
 
 export async function POST(request: Request) {
   try {
-    // ✅ Ambil dari header terverifikasi middleware
     const verifiedEmail  = request.headers.get('X-Verified-User-Email')?.trim().toLowerCase() ?? '';
     const verifiedUserId = request.headers.get('X-Verified-User-Id')?.trim() ?? '';
 
     if (!verifiedEmail || !verifiedUserId) {
       return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
+    }
+
+    // ✅ Rate limit — cek SEBELUM apapun
+    const rlFast = checkRateLimit(`order_fast_${verifiedUserId}`, RATE_LIMITS.orderFast);
+    if (!rlFast.allowed) {
+      return NextResponse.json(
+        { error: 'Terlalu cepat. Tunggu sebentar sebelum order lagi.' },
+        { status: 429 }
+      );
+    }
+
+    const rlHour = checkRateLimit(`order_hour_${verifiedUserId}`, RATE_LIMITS.order);
+    if (!rlHour.allowed) {
+      return NextResponse.json(
+        { error: 'Batas order per jam tercapai (10x). Coba lagi nanti.' },
+        { status: 429 }
+      );
     }
 
     const body        = await request.json();
@@ -83,7 +100,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // ✅ FIX: Potong saldo ATOMIC sebelum order — cegah race condition
+    // ✅ Potong saldo ATOMIC sebelum order
     if (estimatedPrice > 0) {
       const { data: deductResult } = await db.rpc('deduct_balance_for_order', {
         p_user_id: verifiedUserId,
@@ -111,7 +128,6 @@ export async function POST(request: Request) {
       const orderRes = await fetch(orderUrl, { cache: 'no-store' });
       orderText = (await orderRes.text()).trim();
     } catch (e) {
-      // Fetch error — refund saldo
       if (estimatedPrice > 0) {
         await db.rpc('update_balance', { p_email: verifiedEmail, p_amount: estimatedPrice });
         await db.from('mutations').insert({
@@ -131,11 +147,10 @@ export async function POST(request: Request) {
       const costUSD      = parseFloat(parts[3] ?? '0') || 0;
       const finalPrice   = costUSD > 0 ? applyMarkup(costUSD) : estimatedPrice;
 
-      // ✅ Kalau harga aktual beda dari estimasi, adjust saldo
+      // Kalau harga aktual beda dari estimasi, adjust saldo
       if (estimatedPrice > 0 && finalPrice !== estimatedPrice) {
         const diff = estimatedPrice - finalPrice;
         if (diff > 0) {
-          // Estimasi lebih mahal dari aktual → kembalikan selisih
           await db.rpc('update_balance', { p_email: verifiedEmail, p_amount: diff });
           await db.from('mutations').insert({
             user_id    : verifiedUserId,
@@ -146,7 +161,6 @@ export async function POST(request: Request) {
         }
       }
 
-      // Catat order ke DB
       if (verifiedUserId && activationId) {
         try {
           await db.from('orders').insert({

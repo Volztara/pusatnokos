@@ -74,18 +74,19 @@ interface Activation {
 const fmtIDR = (n: number | undefined | null) => n == null ? '—' : 'Rp ' + n.toLocaleString('id-ID');
 const fmtUSD = (n: number | undefined | null) => n == null ? '—' : '$ ' + n.toFixed(2);
 
-const STATUS_CFG: Record<string, { color: string; bg: string; border: string }> = {
-  waiting    : { color: 'text-amber-600', bg: 'bg-amber-50',  border: 'border-amber-200' },
-  success    : { color: 'text-green-600', bg: 'bg-green-50',  border: 'border-green-200' },
-  cancelled  : { color: 'text-slate-500', bg: 'bg-slate-100', border: 'border-slate-200' },
-  expired    : { color: 'text-red-500',   bg: 'bg-red-50',    border: 'border-red-200'   },
+const STATUS_CFG: Record<string, { color: string; bg: string; dot: string; label: string }> = {
+  waiting    : { color: 'text-amber-800',  bg: 'bg-amber-50  dark:bg-amber-900/20',  dot: 'bg-amber-400',  label: 'Menunggu'  },
+  success    : { color: 'text-green-800',  bg: 'bg-green-50  dark:bg-green-900/20',  dot: 'bg-green-500',  label: 'Berhasil'  },
+  cancelled  : { color: 'text-slate-600',  bg: 'bg-slate-100 dark:bg-slate-800/40',  dot: 'bg-slate-400',  label: 'Dibatalkan' },
+  expired    : { color: 'text-red-800',    bg: 'bg-red-50    dark:bg-red-900/20',    dot: 'bg-red-500',    label: 'Kadaluarsa' },
 };
 
 function StatusBadge({ status }: { status: string }) {
   const cfg = STATUS_CFG[status] ?? STATUS_CFG['cancelled'];
   return (
-    <span className={`px-2.5 py-1 rounded-lg text-[11px] font-black border uppercase tracking-wider ${cfg.color} ${cfg.bg} ${cfg.border}`}>
-      {status === 'cancelled' ? 'BATAL' : status === 'waiting' ? 'MENUNGGU' : status === 'success' ? 'BERHASIL' : status.toUpperCase()}
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${cfg.color} ${cfg.bg}`}>
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dot}`} />
+      {cfg.label}
     </span>
   );
 }
@@ -100,14 +101,20 @@ function CopyBtn({ text }: { text: string }) {
 }
 
 function StatCard({ icon, label, value, sub, accent }: { icon: React.ReactNode; label: string; value: string | number; sub?: string; accent: string }) {
+  const isPositive = sub?.startsWith('+');
+  const isNeutral  = !sub || (!sub.startsWith('+') && !sub.startsWith('-'));
   return (
-    <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] p-5">
+    <div className="bg-white dark:bg-[#0d1020] rounded-[2rem] border border-slate-200 dark:border-white/[0.07] p-5 hover:border-indigo-200 dark:hover:border-indigo-800/50 transition-colors">
       <div className="flex items-center gap-3 mb-3">
         <div className={`${accent} p-2.5 rounded-xl`}>{icon}</div>
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{label}</span>
+        <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">{label}</span>
       </div>
-      <div className="text-2xl font-black text-slate-900 dark:text-white">{value}</div>
-      {sub && <div className="text-xs text-slate-400 mt-1">{sub}</div>}
+      <div className="text-2xl font-bold text-slate-900 dark:text-white">{value}</div>
+      {sub && (
+        <div className={`text-xs mt-1.5 font-medium ${isPositive ? 'text-green-600 dark:text-green-400' : isNeutral ? 'text-slate-400' : 'text-red-500'}`}>
+          {sub}
+        </div>
+      )}
     </div>
   );
 }
@@ -359,7 +366,9 @@ export default function AdminPage() {
   }, []);
 
   const refreshAll = useCallback(() => {
-    fetchBalance(); fetchActivations(); fetchStats();
+    fetchBalance();
+    setTimeout(() => fetchActivations(), 600);
+    setTimeout(() => fetchStats(), 1200);
     setLastRefresh(new Date());
   }, [fetchBalance, fetchActivations, fetchStats]);
 
@@ -405,7 +414,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (!isAuthed) return;
     refreshAll();
-    const t = setInterval(refreshAll, 15000);
+    const t = setInterval(refreshAll, 30000);
     return () => clearInterval(t);
   }, [refreshAll, isAuthed]);
   useEffect(() => { if (!isAuthed) return; if (tab === 'users') fetchUsers(userPage, userSearch); }, [tab, userPage, isAuthed]);
@@ -693,20 +702,21 @@ export default function AdminPage() {
 
         {/* ── SIDEBAR ── */}
         <aside className="w-64 shrink-0 bg-white dark:bg-[#0d1020] border-r border-slate-200 dark:border-white/[0.07] flex flex-col sticky top-[65px] h-[calc(100vh-65px)] overflow-y-auto">
-          <nav className="flex-1 p-3 space-y-1">
+          <nav className="flex-1 p-3 space-y-0.5">
+            <div className="px-3 py-2 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Menu Utama</div>
             {TABS.map(t => (
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                className={"w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all text-left " + (tab === t.id
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 rounded-2xl'
+                className={"w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all text-left " + (tab === t.id
+                  ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-900 dark:hover:text-white'
                 )}
               >
-                <span className={tab === t.id ? 'text-white' : 'text-slate-400'}>{t.icon}</span>
+                <span className={tab === t.id ? 'text-indigo-500' : 'text-slate-400'}>{t.icon}</span>
                 <span className="flex-1">{t.label}</span>
                 {t.id === 'deposit' && depositNotifCount > 0 && (
-                  <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                  <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
                     {depositNotifCount}
                   </span>
                 )}
@@ -1189,26 +1199,39 @@ export default function AdminPage() {
         {/* ── TRANSAKSI ── */}
         {tab === 'transactions' && (
           <>
-            <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
-              <div className="relative flex-1 min-w-40">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                <input value={txnSearch} onChange={e => setTxnSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && fetchTxns(1, txnStatus, txnSearch, txnDateFrom, txnDateTo)} placeholder="Cari nomor HP atau email..." className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/30 dark:text-white" />
+            <div className="flex flex-col gap-3">
+              {/* Row 1: search + date filter */}
+              <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+                <div className="relative flex-1 min-w-40">
+                  <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                  <input value={txnSearch} onChange={e => setTxnSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && fetchTxns(1, txnStatus, txnSearch, txnDateFrom, txnDateTo)} placeholder="Cari nomor HP atau email..." className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500/30 dark:text-white" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="date" value={txnDateFrom} onChange={e => setTxnDateFrom(e.target.value)} className="px-3 py-2.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl text-sm font-semibold outline-none dark:text-white dark:[color-scheme:dark]" title="Dari tanggal" />
+                  <span className="text-slate-400 text-xs font-semibold shrink-0">s/d</span>
+                  <input type="date" value={txnDateTo} onChange={e => setTxnDateTo(e.target.value)} className="px-3 py-2.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl text-sm font-semibold outline-none dark:text-white dark:[color-scheme:dark]" title="Sampai tanggal" />
+                  <button onClick={() => fetchTxns(1, txnStatus, txnSearch, txnDateFrom, txnDateTo)} className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors shrink-0">Filter</button>
+                  {(txnDateFrom || txnDateTo) && (
+                    <button onClick={() => { setTxnDateFrom(''); setTxnDateTo(''); fetchTxns(1, txnStatus, txnSearch, '', ''); }} className="px-3 py-2.5 bg-slate-100 dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-colors shrink-0">Reset</button>
+                  )}
+                </div>
               </div>
-              {/* ── Custom Status Dropdown ── */}
-              <StatusDropdown value={txnStatus} onChange={v => { setTxnStatus(v); fetchTxns(1, v, txnSearch, txnDateFrom, txnDateTo); }} />
-              {/* Filter tanggal */}
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <input type="date" value={txnDateFrom} onChange={e => setTxnDateFrom(e.target.value)} className="px-3 py-2.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl text-sm font-bold outline-none dark:text-white dark:[color-scheme:dark]" title="Dari tanggal" />
-                </div>
-                <span className="text-slate-400 text-xs font-bold shrink-0">s/d</span>
-                <div className="relative">
-                  <input type="date" value={txnDateTo} onChange={e => setTxnDateTo(e.target.value)} className="px-3 py-2.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl text-sm font-bold outline-none dark:text-white dark:[color-scheme:dark]" title="Sampai tanggal" />
-                </div>
-                <button onClick={() => fetchTxns(1, txnStatus, txnSearch, txnDateFrom, txnDateTo)} className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors shrink-0">Filter</button>
-                {(txnDateFrom || txnDateTo) && (
-                  <button onClick={() => { setTxnDateFrom(''); setTxnDateTo(''); fetchTxns(1, txnStatus, txnSearch, '', ''); }} className="px-3 py-2.5 bg-slate-100 dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors shrink-0">Reset</button>
-                )}
+              {/* Row 2: Status chip filters */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {STATUS_OPTS.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => { setTxnStatus(opt.value); fetchTxns(1, opt.value, txnSearch, txnDateFrom, txnDateTo); }}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                      txnStatus === opt.value
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-white dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.09] hover:border-indigo-300 dark:hover:border-indigo-700'
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${txnStatus === opt.value ? 'bg-white' : opt.dot}`} />
+                    {opt.label}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -1241,7 +1264,17 @@ export default function AdminPage() {
                       <tr>{['User','Layanan','Nomor','Harga','Status','Waktu','Aksi'].map(h => <th key={h} className="px-5 py-4">{h}</th>)}</tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
-                      {txns.length === 0 ? <tr><td colSpan={7} className="py-16 text-center text-slate-400 font-bold">Tidak ada data</td></tr> : txns.map(t => (
+                      {txns.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="py-16 text-center">
+                            <div className="flex flex-col items-center gap-2">
+                              <ShoppingCart className="w-8 h-8 text-slate-200 dark:text-slate-700" />
+                              <div className="font-semibold text-slate-400">Tidak ada transaksi</div>
+                              <div className="text-xs text-slate-300 dark:text-slate-600">Coba ubah filter atau rentang tanggal</div>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : txns.map(t => (
                         <tr key={t.id} className="hover:bg-indigo-50/40 dark:hover:bg-white/[0.05]/40 transition-colors">
                           <td className="px-5 py-4"><div className="font-bold text-sm dark:text-white">{(t.profiles as any)?.name ?? '—'}</div><div className="text-xs text-slate-400">{(t.profiles as any)?.email ?? ''}</div></td>
                           <td className="px-5 py-4 font-bold text-sm uppercase dark:text-white">{t.service_name}</td>
@@ -1352,7 +1385,17 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
-                      {users.length === 0 ? <tr><td colSpan={8} className="py-16 text-center text-slate-400 font-bold">Tidak ada user</td></tr> : users.map(u => (
+                      {users.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="py-16 text-center">
+                            <div className="flex flex-col items-center gap-2">
+                              <Users className="w-8 h-8 text-slate-200 dark:text-slate-700" />
+                              <div className="font-semibold text-slate-400">Tidak ada user ditemukan</div>
+                              <div className="text-xs text-slate-300 dark:text-slate-600">Coba ubah kata kunci pencarian</div>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : users.map(u => (
                         <tr key={u.id} className={"hover:bg-indigo-50/40 dark:hover:bg-white/[0.05]/40 transition-colors " + (u.is_blacklisted ? 'opacity-50' : '') + (selectedUsers.has(u.id) ? ' bg-indigo-50/50 dark:bg-indigo-900/10' : '')}>
                           <td className="px-5 py-4">
                             <input type="checkbox" className="rounded"
@@ -1364,14 +1407,24 @@ export default function AdminPage() {
                               }}
                             />
                           </td>
-                          <td className="px-5 py-4"><div className="font-bold text-sm dark:text-white">{u.name}</div><div className="text-xs text-slate-400">{u.email}</div></td>
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 ${u.is_blacklisted ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'}`}>
+                                {(u.name || u.email).split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                              </div>
+                              <div>
+                                <div className="font-semibold text-sm dark:text-white">{u.name}</div>
+                                <div className="text-xs text-slate-400">{u.email}</div>
+                              </div>
+                            </div>
+                          </td>
                           <td className="px-5 py-4 font-bold text-sm dark:text-white">{fmtIDR(u.balance)}</td>
                           <td className="px-5 py-4 font-bold text-sm dark:text-white">{u.orderCount}</td>
                           <td className="px-5 py-4 font-bold text-sm dark:text-white">{fmtIDR(u.totalSpend)}</td>
                           <td className="px-5 py-4">
                             {u.is_blacklisted
-                              ? <span className="px-2.5 py-1 bg-red-50 text-red-600 border border-red-200 rounded-lg text-xs font-black">DIBLOKIR</span>
-                              : <span className="px-2.5 py-1 bg-green-50 text-green-600 border border-green-200 rounded-lg text-xs font-black">AKTIF</span>}
+                              ? <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400"><span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />Diblokir</span>
+                              : <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400"><span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />Aktif</span>}
                           </td>
                           <td className="px-5 py-4 text-xs text-slate-400">{new Date(u.created_at).toLocaleDateString('id-ID')}</td>
                           <td className="px-5 py-4">
@@ -2205,21 +2258,139 @@ function RevenueTab({ isAuthed }: { isAuthed: boolean }) {
 
 // ─── OVERRIDE HARGA TAB ───────────────────────────────────────────────
 const OVERRIDE_COUNTRIES = [
+  // Asia Tenggara
   { id: '6',   label: '🇮🇩 Indonesia' },
   { id: '7',   label: '🇲🇾 Malaysia' },
-  { id: '12',  label: '🇺🇸 USA' },
-  { id: '16',  label: '🇬🇧 UK' },
+  { id: '4',   label: '🇵🇭 Philippines' },
   { id: '52',  label: '🇹🇭 Thailand' },
   { id: '10',  label: '🇻🇳 Vietnam' },
-  { id: '4',   label: '🇵🇭 Philippines' },
-  { id: '0',   label: '🇷🇺 Russia' },
-  { id: '22',  label: '🇮🇳 India' },
-  { id: '43',  label: '🇩🇪 Germany' },
-  { id: '73',  label: '🇧🇷 Brazil' },
   { id: '135', label: '🇸🇬 Singapore' },
-  { id: '133', label: '🇦🇺 Australia' },
+  { id: '24',  label: '🇰🇭 Cambodia' },
+  { id: '5',   label: '🇲🇲 Myanmar' },
+  { id: '25',  label: '🇱🇦 Laos' },
+  { id: '136', label: '🇧🇳 Brunei' },
+  // Asia Timur
+  { id: '124', label: '🇰🇷 South Korea' },
   { id: '132', label: '🇯🇵 Japan' },
+  { id: '14',  label: '🇭🇰 Hong Kong' },
+  { id: '55',  label: '🇹🇼 Taiwan' },
+  { id: '3',   label: '🇨🇳 China' },
+  // Asia Selatan
+  { id: '22',  label: '🇮🇳 India' },
+  { id: '66',  label: '🇵🇰 Pakistan' },
+  { id: '60',  label: '🇧🇩 Bangladesh' },
+  { id: '64',  label: '🇱🇰 Sri Lanka' },
+  { id: '81',  label: '🇳🇵 Nepal' },
+  // Asia Tengah & Timur Tengah
+  { id: '53',  label: '🇸🇦 Saudi Arabia' },
+  { id: '95',  label: '🇦🇪 UAE' },
+  { id: '47',  label: '🇮🇶 Iraq' },
+  { id: '21',  label: '🇪🇬 Egypt' },
+  { id: '62',  label: '🇹🇷 Turkey' },
+  { id: '13',  label: '🇮🇱 Israel' },
+  { id: '2',   label: '🇰🇿 Kazakhstan' },
+  { id: '40',  label: '🇺🇿 Uzbekistan' },
+  // Eropa
+  { id: '12',  label: '🇺🇸 USA' },
+  { id: '16',  label: '🇬🇧 UK' },
+  { id: '43',  label: '🇩🇪 Germany' },
+  { id: '78',  label: '🇫🇷 France' },
+  { id: '86',  label: '🇮🇹 Italy' },
+  { id: '56',  label: '🇪🇸 Spain' },
+  { id: '48',  label: '🇳🇱 Netherlands' },
+  { id: '15',  label: '🇵🇱 Poland' },
+  { id: '46',  label: '🇸🇪 Sweden' },
+  { id: '82',  label: '🇧🇪 Belgium' },
+  { id: '32',  label: '🇷🇴 Romania' },
+  { id: '83',  label: '🇧🇬 Bulgaria' },
+  { id: '63',  label: '🇨🇿 Czech Republic' },
+  { id: '84',  label: '🇭🇺 Hungary' },
+  { id: '50',  label: '🇦🇹 Austria' },
+  { id: '34',  label: '🇪🇪 Estonia' },
+  { id: '49',  label: '🇱🇻 Latvia' },
+  { id: '44',  label: '🇱🇹 Lithuania' },
+  { id: '1',   label: '🇺🇦 Ukraine' },
+  { id: '51',  label: '🇧🇾 Belarus' },
+  { id: '0',   label: '🇷🇺 Russia' },
+  // Amerika
+  { id: '36',  label: '🇨🇦 Canada' },
+  { id: '54',  label: '🇲🇽 Mexico' },
+  { id: '73',  label: '🇧🇷 Brazil' },
+  { id: '39',  label: '🇦🇷 Argentina' },
+  { id: '33',  label: '🇨🇴 Colombia' },
+  { id: '65',  label: '🇵🇪 Peru' },
+  { id: '105', label: '🇪🇨 Ecuador' },
+  // Afrika
+  { id: '19',  label: '🇳🇬 Nigeria' },
+  { id: '31',  label: '🇿🇦 South Africa' },
+  { id: '38',  label: '🇬🇭 Ghana' },
+  { id: '37',  label: '🇲🇦 Morocco' },
+  { id: '75',  label: '🇺🇬 Uganda' },
+  { id: '121', label: '🇷🇼 Rwanda' },
+  { id: '8',   label: '🇰🇪 Kenya' },
+  // Oseania
+  { id: '133', label: '🇦🇺 Australia' },
+  { id: '67',  label: '🇳🇿 New Zealand' },
 ];
+
+function CountryDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ]       = useState('');
+  const ref             = React.useRef<HTMLDivElement>(null);
+  const selected        = OVERRIDE_COUNTRIES.find(c => c.id === value) ?? OVERRIDE_COUNTRIES[0];
+  const filtered        = q.trim()
+    ? OVERRIDE_COUNTRIES.filter(c => c.label.toLowerCase().includes(q.toLowerCase()))
+    : OVERRIDE_COUNTRIES;
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) { setOpen(false); setQ(''); } };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => { setOpen(v => !v); setQ(''); }}
+        className="flex items-center gap-2.5 px-4 py-2.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl text-sm font-bold outline-none dark:text-white hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors min-w-[170px]"
+      >
+        <Globe className="w-4 h-4 text-slate-400 shrink-0" />
+        <span className="flex-1 text-left">{selected.label}</span>
+        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1.5 w-56 bg-white dark:bg-[#0d1020] border border-slate-200 dark:border-white/[0.09] rounded-2xl shadow-xl z-30 overflow-hidden">
+          <div className="p-2 border-b border-slate-100 dark:border-white/[0.06]">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-slate-400" />
+              <input
+                autoFocus
+                value={q}
+                onChange={e => setQ(e.target.value)}
+                placeholder="Cari negara..."
+                className="w-full pl-7 pr-3 py-1.5 bg-slate-50 dark:bg-[#0f1320] rounded-xl text-xs font-semibold outline-none dark:text-white border border-slate-200 dark:border-white/[0.09]"
+              />
+            </div>
+          </div>
+          <div className="max-h-64 overflow-y-auto py-1.5">
+            {filtered.length === 0 ? (
+              <div className="px-4 py-3 text-xs text-slate-400 text-center">Tidak ditemukan</div>
+            ) : filtered.map(c => (
+              <button
+                key={c.id}
+                onClick={() => { onChange(c.id); setOpen(false); setQ(''); }}
+                className={`w-full flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-colors text-left ${value === c.id ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/[0.05]'}`}
+              >
+                {c.label}
+                {value === c.id && <Check className="w-3.5 h-3.5 ml-auto text-indigo-500" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function OverridePricingTab({ showToast }: { showToast: (msg: string) => void }) {
 
@@ -2235,9 +2406,6 @@ function OverridePricingTab({ showToast }: { showToast: (msg: string) => void })
   const [edited,         setEdited]         = useState<Record<string, number>>({});
   const [selectedCountry,setSelectedCountry]= useState('6');
 
-  const fmtIDR = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
-
-  // key unik per negara + layanan
   const overrideKey = (code: string) => `${selectedCountry}_${code}`;
 
   useEffect(() => {
@@ -2259,7 +2427,6 @@ function OverridePricingTab({ showToast }: { showToast: (msg: string) => void })
     fetchData();
   }, [selectedCountry]);
 
-  // Filter by search
   const services = search
     ? allServices.filter(s => s.name.toLowerCase().includes(search.toLowerCase()) || s.code.toLowerCase().includes(search.toLowerCase()))
     : allServices;
@@ -2307,18 +2474,7 @@ function OverridePricingTab({ showToast }: { showToast: (msg: string) => void })
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {/* Country selector */}
-          <div className="relative">
-            <Globe className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-            <select
-              value={selectedCountry}
-              onChange={e => setSelectedCountry(e.target.value)}
-              className="pl-9 pr-8 py-2.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/30 dark:text-white appearance-none cursor-pointer"
-            >
-              {OVERRIDE_COUNTRIES.map(c => (
-                <option key={c.id} value={c.id}>{c.label}</option>
-              ))}
-            </select>
-          </div>
+          <CountryDropdown value={selectedCountry} onChange={v => setSelectedCountry(v)} />
           <div className="relative">
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari layanan..." className="pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500/30 dark:text-white w-48" />
@@ -2380,7 +2536,10 @@ function OverridePricingTab({ showToast }: { showToast: (msg: string) => void })
                         <div className="font-bold text-sm text-slate-900 dark:text-white">{s.name}</div>
                         <div className="text-[10px] font-mono text-slate-400">{s.code}</div>
                       </td>
-                      <td className="px-5 py-3 text-sm font-bold text-slate-600 dark:text-slate-300">{fmtIDR(s.price)}</td>
+                      <td className="px-5 py-3 text-sm font-bold text-slate-600 dark:text-slate-300">
+                        {fmtIDR(s.price)}
+                        <div className="text-[10px] text-slate-400 font-normal">harga setelah markup</div>
+                      </td>
                       <td className="px-5 py-3">
                         <div className="relative">
                           <span className="absolute left-3 top-2.5 text-slate-400 text-xs font-bold">Rp</span>
@@ -2388,10 +2547,24 @@ function OverridePricingTab({ showToast }: { showToast: (msg: string) => void })
                             type="number"
                             placeholder="—"
                             value={currentOverride}
-                            onChange={e => setEdited(prev => ({ ...prev, [key]: parseInt(e.target.value) || 0 }))}
+                            onChange={e => {
+                              const val = e.target.value;
+                              if (val === '' || val === '0') {
+                                // Kosongkan = hapus override
+                                setEdited(prev => { const n = { ...prev }; delete n[key]; return n; });
+                              } else {
+                                setEdited(prev => ({ ...prev, [key]: parseInt(val) }));
+                              }
+                            }}
+                            min={0}
                             className={"pl-8 pr-3 py-2 border rounded-xl text-sm font-bold outline-none w-36 transition-colors " + (hasOverride ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-600 text-amber-700 dark:text-amber-400' : 'border-slate-200 dark:border-white/[0.09] bg-slate-50 dark:bg-[#0f1320] dark:text-white focus:border-indigo-500')}
                           />
                         </div>
+                        {hasOverride && (
+                          <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 font-medium">
+                            override aktif
+                          </div>
+                        )}
                       </td>
                       <td className="px-5 py-3">
                         {hasOverride && (
@@ -2436,31 +2609,53 @@ function AdminRolesTab({ showToast }: { showToast: (msg: string) => void }) {
     viewer    : { label: 'Viewer',      color: 'text-slate-600 dark:text-slate-400',  bg: 'bg-slate-50 dark:bg-[#0f1320]',     border: 'border-slate-200 dark:border-white/[0.09]',     perms: ['Lihat dashboard saja'] },
   };
 
-  const fetchAdmins = async () => {
+  const fetchAdmins = async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const r = await authFetch('/api/admin/roles');
+      const r = await authFetch('/api/admin/roles', { signal });
+      if (!r.ok) return;
       const d = await r.json();
-      setAdmins(d ?? []);
-    } catch {}
+      const list = Array.isArray(d) ? d : (d.admins ?? d.data ?? d.roles ?? []);
+      setAdmins(list);
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') setAdmins([]);
+    }
     finally { setLoading(false); }
   };
 
-  const fetchUsers = async () => {
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  const fetchUsers = async (q: string, signal?: AbortSignal) => {
+    if (!q.trim()) { setUsers([]); return; }
+    setSearchLoading(true);
     try {
-      const r = await authFetch('/api/admin/users?limit=100');
+      const r = await authFetch(`/api/admin/users?limit=20&search=${encodeURIComponent(q.trim())}`, { signal });
+      if (!r.ok) return;
       const d = await r.json();
       setUsers(d.users ?? []);
-    } catch {}
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') setUsers([]);
+    }
+    finally { setSearchLoading(false); }
   };
 
-  useEffect(() => { fetchAdmins(); fetchUsers(); }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchAdmins(controller.signal);
+    return () => controller.abort();
+  }, []);
+
+  // Server-side search dengan debounce 400ms
+  useEffect(() => {
+    if (!userSearch.trim()) { setUsers([]); return; }
+    const controller = new AbortController();
+    const t = setTimeout(() => fetchUsers(userSearch, controller.signal), 400);
+    return () => { clearTimeout(t); controller.abort(); };
+  }, [userSearch]);
 
   // Filter user yang belum jadi admin
-  const adminIds  = new Set(admins.map(a => a.id));
-  const filteredUsers = users
-    .filter(u => !adminIds.has(u.id))
-    .filter(u => !userSearch || u.email.toLowerCase().includes(userSearch.toLowerCase()) || u.name?.toLowerCase().includes(userSearch.toLowerCase()));
+  const adminIds     = new Set(admins.map((a: any) => a.id));
+  const filteredUsers = users.filter((u: any) => !adminIds.has(u.id));
 
   const handleAddExisting = async (user: any) => {
     setSaving(true);
@@ -2564,12 +2759,22 @@ function AdminRolesTab({ showToast }: { showToast: (msg: string) => void }) {
             <div className="space-y-3">
               <div className="relative">
                 <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                <input value={userSearch} onChange={e => setUserSearch(e.target.value)} placeholder="Cari nama atau email user..." className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-xl text-sm font-medium outline-none dark:text-white" />
+                <input
+                  value={userSearch}
+                  onChange={e => setUserSearch(e.target.value)}
+                  placeholder="Ketik nama atau email untuk mencari..."
+                  className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-xl text-sm font-medium outline-none dark:text-white focus:ring-2 focus:ring-indigo-500/30"
+                />
+                {searchLoading && <RefreshCw className="absolute right-3 top-3 w-4 h-4 text-slate-400 animate-spin" />}
               </div>
               <div className="max-h-48 overflow-y-auto space-y-2">
-                {filteredUsers.length === 0 ? (
-                  <div className="text-center py-6 text-slate-400 text-sm font-bold">Tidak ada user ditemukan</div>
-                ) : filteredUsers.map(u => (
+                {!userSearch.trim() ? (
+                  <div className="text-center py-6 text-slate-400 text-sm">Ketik email atau nama user di atas</div>
+                ) : searchLoading ? (
+                  <div className="text-center py-6 text-slate-400 text-sm">Mencari...</div>
+                ) : filteredUsers.length === 0 ? (
+                  <div className="text-center py-6 text-slate-400 text-sm font-semibold">Tidak ada user ditemukan</div>
+                ) : filteredUsers.map((u: any) => (
                   <div key={u.id} className="flex items-center justify-between bg-slate-50 dark:bg-[#0f1320] rounded-2xl p-4">
                     <div>
                       <div className="font-bold text-sm text-slate-900 dark:text-white">{u.name}</div>

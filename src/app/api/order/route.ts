@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
 
 const API_KEY  = process.env.HEROSMS_API_KEY ?? '';
 const BASE_URL = 'https://hero-sms.com/stubs/handler_api.php';
@@ -58,6 +59,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
     }
 
+    // ✅ Rate limit — cek SEBELUM apapun, pakai userId supaya tidak bisa bypass ganti IP
+    const rlFast = checkRateLimit(`order_fast_${verifiedUserId}`, RATE_LIMITS.orderFast);
+    if (!rlFast.allowed) {
+      return NextResponse.json(
+        { error: 'Terlalu cepat. Tunggu sebentar sebelum order lagi.' },
+        { status: 429 }
+      );
+    }
+
+    const rlHour = checkRateLimit(`order_hour_${verifiedUserId}`, RATE_LIMITS.order);
+    if (!rlHour.allowed) {
+      return NextResponse.json(
+        { error: 'Batas order per jam tercapai (10x). Coba lagi nanti.' },
+        { status: 429 }
+      );
+    }
+
     // Cek blacklist
     const { data: profile } = await db
       .from('profiles')
@@ -101,8 +119,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // ✅ FIX: Potong saldo ATOMIC sebelum order ke HeroSMS
-    // Ini mencegah race condition — 5 request bersamaan tidak bisa lolos semua
+    // ✅ Potong saldo ATOMIC sebelum order ke HeroSMS
     if (priceIDR > 0) {
       const { data: deductResult } = await db.rpc('deduct_balance_for_order', {
         p_user_id: verifiedUserId,
@@ -127,7 +144,6 @@ export async function POST(request: Request) {
       const orderRes = await fetch(orderUrl, { cache: 'no-store' });
       orderText = (await orderRes.text()).trim();
     } catch (e) {
-      // Fetch error — refund saldo karena order tidak jadi
       if (priceIDR > 0) {
         await db.rpc('update_balance', { p_email: verifiedEmail, p_amount: priceIDR });
         await db.from('mutations').insert({
@@ -143,7 +159,6 @@ export async function POST(request: Request) {
     if (orderText.startsWith('ACCESS_NUMBER:')) {
       const [, activationId, phone] = orderText.split(':');
 
-      // Catat order ke DB
       if (verifiedUserId && activationId) {
         try {
           await db.from('orders').insert({
@@ -163,7 +178,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ activationId, phone, price: priceIDR });
     }
 
-    // HeroSMS error — refund saldo karena order tidak jadi
+    // HeroSMS error — refund saldo
     if (priceIDR > 0) {
       await db.rpc('update_balance', { p_email: verifiedEmail, p_amount: priceIDR });
       await db.from('mutations').insert({
