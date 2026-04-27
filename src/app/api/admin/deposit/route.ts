@@ -20,7 +20,6 @@ export async function GET(request: Request) {
   const search = searchParams.get('search') ?? '';
   const limit  = 20;
 
-  // Kalau ada search, cari user yang cocok dulu
   let userIds: string[] | null = null;
   if (search) {
     const { data: matched } = await db
@@ -38,10 +37,9 @@ export async function GET(request: Request) {
 
   if (status !== 'all') query = query.eq('status', status);
 
-  // Filter by user_id kalau ada search
   if (userIds !== null) {
     if (userIds.length > 0) query = query.in('user_id', userIds);
-    else query = query.eq('user_id', 'no-match'); // tidak ada user cocok
+    else query = query.eq('user_id', 'no-match');
   }
 
   const { data, count } = await query;
@@ -63,30 +61,51 @@ export async function PATCH(request: Request) {
       .single();
 
     if (!req) return NextResponse.json({ error: 'Request tidak ditemukan.' }, { status: 404 });
-    if (req.status !== 'pending') return NextResponse.json({ error: 'Request sudah diproses.' }, { status: 400 });
+
+    // ✅ Allow approve juga untuk status 'pending_payment' (deposit otomatis yang RPC-nya gagal)
+    const allowedStatuses = ['pending', 'pending_payment'];
+    if (!allowedStatuses.includes(req.status)) {
+      return NextResponse.json({ error: 'Request sudah diproses.' }, { status: 400 });
+    }
 
     if (action === 'approve') {
-      const profile    = req.profiles as any;
-      const newBalance = (profile.balance ?? 0) + req.amount;
+      const profile = req.profiles as any;
 
-      await db.from('profiles').update({ balance: newBalance }).eq('id', profile.id);
+      // ✅ FIX: Pakai RPC atomic (bukan manual update balance) — sama seperti webhook
+      // Ini mencegah race condition dan konsisten dengan deduct_balance_for_order
+      const { error: rpcErr } = await db.rpc('update_balance', {
+        p_email : profile.email,
+        p_amount: req.amount,
+      });
+
+      if (rpcErr) {
+        console.error('[admin/deposit approve] RPC gagal:', rpcErr);
+        return NextResponse.json({ error: 'Gagal update saldo. Coba lagi.' }, { status: 500 });
+      }
 
       await db.from('mutations').insert({
         user_id    : profile.id,
         type       : 'in',
         amount     : req.amount,
-        description: 'Deposit manual disetujui admin',
+        description: `Deposit manual disetujui admin`,
       });
 
       await db.from('deposit_requests').update({
         status     : 'approved',
-        admin_note : adminNote ?? 'Disetujui',
+        admin_note : adminNote ?? 'Manual approve - selesai',
         approved_at: new Date().toISOString(),
       }).eq('id', requestId);
 
-      await log('approve_deposit', String(requestId), `Deposit Rp ${req.amount.toLocaleString('id-ID')} untuk ${profile.email} disetujui`);
+      await log(
+        'approve_deposit',
+        String(requestId),
+        `Deposit Rp ${req.amount.toLocaleString('id-ID')} untuk ${profile.email} disetujui`
+      );
 
-      return NextResponse.json({ success: true, message: `Deposit Rp ${req.amount.toLocaleString('id-ID')} berhasil disetujui.` });
+      return NextResponse.json({
+        success: true,
+        message: `Deposit Rp ${req.amount.toLocaleString('id-ID')} berhasil disetujui.`,
+      });
     }
 
     if (action === 'reject') {
@@ -95,7 +114,11 @@ export async function PATCH(request: Request) {
         admin_note: adminNote ?? 'Ditolak',
       }).eq('id', requestId);
 
-      await log('reject_deposit', String(requestId), `Deposit Rp ${req.amount.toLocaleString('id-ID')} untuk ${(req.profiles as any).email} ditolak`);
+      await log(
+        'reject_deposit',
+        String(requestId),
+        `Deposit Rp ${req.amount.toLocaleString('id-ID')} untuk ${(req.profiles as any).email} ditolak`
+      );
 
       return NextResponse.json({ success: true, message: 'Request deposit ditolak.' });
     }

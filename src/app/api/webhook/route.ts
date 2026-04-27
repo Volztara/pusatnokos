@@ -1,173 +1,140 @@
-// src/app/api/webhook/route.ts
+// src/app/api/deposit/paymenku/webhook/route.ts
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const API_KEY  = process.env.HEROSMS_API_KEY ?? '';
-const BASE_URL = 'https://hero-sms.com/stubs/handler_api.php';
+const PAYMENKU_KEY   = process.env.PAYMENKU_API_KEY ?? '';
+const WEBHOOK_SECRET = process.env.PAYMENKU_WEBHOOK_SECRET ?? '';
 
-/** Ekstrak angka OTP 4-10 digit dari teks */
-function extractNumericOtp(text: string): string | null {
-  if (!text) return null;
-  const match = text.match(/\b(\d{4,10})\b/);
-  return match ? match[1] : null;
-}
-
-/** Scan semua field body untuk cari angka OTP */
-function findOtpFromBody(body: Record<string, string>): string | null {
-  const priorityFields = ['code', 'smsCode', 'smsText', 'text', 'otp', 'sms'];
-  for (const field of priorityFields) {
-    if (body[field]) {
-      const found = extractNumericOtp(body[field]);
-      if (found) return found;
-    }
-  }
-  for (const val of Object.values(body)) {
-    if (typeof val === 'string') {
-      const found = extractNumericOtp(val);
-      if (found) return found;
-    }
-  }
-  return null;
-}
-
-/** Fallback: ambil kode langsung dari HeroSMS API via getStatus */
-async function fetchOtpFromHeroSMS(activationId: string): Promise<string | null> {
+export async function POST(req: Request) {
   try {
-    const res = await fetch(
-      `${BASE_URL}?api_key=${API_KEY}&action=getStatus&id=${activationId}`,
-      { cache: 'no-store', signal: AbortSignal.timeout(6000) }
-    );
-    if (!res.ok) return null;
-    const text = (await res.text()).trim();
-    console.log('[webhook] getStatus fallback:', text.slice(0, 80));
+    const rawBody = await req.text();
 
-    if (text.startsWith('STATUS_OK:')) {
-      const fullText = text.slice('STATUS_OK:'.length);
-      return extractNumericOtp(fullText) || fullText;
-    }
-  } catch (err) {
-    console.warn('[webhook] getStatus fallback error:', err);
-  }
-  return null;
-}
+    // ✅ Verifikasi signature Paymenku SEBELUM proses apapun
+    if (WEBHOOK_SECRET) {
+      const receivedSig =
+        req.headers.get('x-paymenku-signature') ??
+        req.headers.get('x-signature') ?? '';
 
-export async function POST(request: Request) {
-  try {
-    let body: Record<string, string> = {};
+      const expectedSig = crypto
+        .createHmac('sha256', WEBHOOK_SECRET)
+        .update(rawBody)
+        .digest('hex');
 
-    const contentType = request.headers.get('content-type') ?? '';
-    if (contentType.includes('application/json')) {
-      body = await request.json();
+      if (receivedSig !== expectedSig) {
+        console.warn('[paymenku/webhook] Invalid signature — kemungkinan request palsu!');
+        return NextResponse.json({ ok: false, message: 'Invalid signature' }, { status: 200 });
+      }
     } else {
-      const text = await request.text();
-      new URLSearchParams(text).forEach((v, k) => { body[k] = v; });
+      console.warn('[paymenku/webhook] ⚠️ PAYMENKU_WEBHOOK_SECRET belum di-set!');
     }
 
-    const activationId = body.activationId ?? body.id ?? '';
-    const rawText      = body.smsCode ?? body.code ?? body.smsText ?? body.text ?? '';
+    const body = JSON.parse(rawBody);
+    console.log('[paymenku/webhook]', JSON.stringify(body));
 
-    console.log('[webhook] body:', JSON.stringify(body));
+    const { event, trx_id, reference_id, status, amount_received } = body;
 
-    if (!activationId || !rawText) {
-      return new Response('OK', { status: 200 });
+    if (!trx_id || !status) {
+      console.warn('[paymenku/webhook] Body tidak valid:', body);
+      return NextResponse.json({ ok: true });
     }
 
-    // ✅ FIX: Validasi activationId — harus berupa angka saja (format HeroSMS)
-    // Mencegah injeksi activation_id palsu
-    if (!/^\d+$/.test(activationId)) {
-      console.warn(`[webhook] Invalid activationId format: ${activationId}`);
-      return new Response('OK', { status: 200 });
+    if (event !== 'payment.status_updated') {
+      return NextResponse.json({ ok: true });
     }
 
-    // ✅ FIX: Verifikasi order benar-benar ada di DB dan masih 'waiting'
-    // Mencegah webhook palsu mark order orang lain jadi success
-    const { data: existingOrder } = await db
-      .from('orders')
-      .select('id, status, refunded')
-      .eq('activation_id', activationId)
-      .maybeSingle();
-
-    if (!existingOrder) {
-      console.warn(`[webhook] Order tidak ditemukan untuk activation_id: ${activationId}`);
-      return new Response('OK', { status: 200 });
+    if (status !== 'paid') {
+      await db
+        .from('deposit_requests')
+        .update({ status: 'rejected', admin_note: `Paymenku: ${status}` })
+        .like('note', `%trx:${trx_id}%`);
+      return NextResponse.json({ ok: true });
     }
 
-    // ✅ FIX: Jangan update order yang sudah bukan 'waiting'
-    // Mencegah webhook palsu override order yang sudah cancelled/expired
-    if (existingOrder.status !== 'waiting') {
-      console.warn(`[webhook] Skip — order #${existingOrder.id} status sudah: ${existingOrder.status}`);
-      return new Response('OK', { status: 200 });
+    // Ambil deposit request
+    const { data: depositReq } = await db
+      .from('deposit_requests')
+      .select('id, user_id, amount, status')
+      .like('note', `%trx:${trx_id}%`)
+      .single();
+
+    if (!depositReq) {
+      console.error('[paymenku/webhook] deposit request tidak ditemukan untuk trx_id:', trx_id);
+      return NextResponse.json({ ok: true });
     }
 
-    // Cari OTP dari body dulu
-    let smsCode = findOtpFromBody(body);
+    // ✅ Atomic idempotency guard — cegah double processing
+    const { data: claimed } = await db
+      .from('deposit_requests')
+      .update({ status: 'approved', admin_note: `Otomatis via Paymenku. TrxID: ${trx_id}` })
+      .eq('id', depositReq.id)
+      .eq('status', 'pending_payment')
+      .select('id');
 
-    // Kalau tidak ada angka di body → fallback ke HeroSMS getStatus
-    if (!smsCode) {
-      console.log('[webhook] angka tidak ditemukan di body, fallback ke getStatus...');
-      smsCode = await fetchOtpFromHeroSMS(activationId);
+    if (!claimed || claimed.length === 0) {
+      console.log('[paymenku/webhook] Already processed:', trx_id);
+      return NextResponse.json({ ok: true, message: 'Already processed' });
     }
 
-    // Kalau masih tidak dapat angka → simpan teks asli
-    const finalCode = smsCode ?? rawText;
+    const finalAmount = depositReq.amount;
 
-    console.log('[webhook] OTP final:', finalCode, '→ activation_id:', activationId);
+    // Ambil email user
+    const { data: profile } = await db
+      .from('profiles')
+      .select('email')
+      .eq('id', depositReq.user_id)
+      .single();
 
-    // ✅ FIX: Tambah .eq('status', 'waiting') untuk atomic update
-    // Mencegah race condition — hanya update kalau masih waiting
-    const { error } = await db
-      .from('orders')
-      .update({
-        otp_code  : finalCode,
-        status    : 'success',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('activation_id', activationId)
-      .eq('status', 'waiting'); // ✅ atomic guard
+    if (!profile?.email) {
+      console.error('[paymenku/webhook] profil user tidak ditemukan:', depositReq.user_id);
+      // ✅ FIX: Rollback status supaya admin bisa approve manual
+      await db
+        .from('deposit_requests')
+        .update({ status: 'pending_payment', admin_note: 'RPC gagal — profil tidak ditemukan, perlu manual' })
+        .eq('id', depositReq.id);
+      // ✅ FIX: Return 200 bukan 500 — jangan bikin Paymenku retry
+      return NextResponse.json({ ok: true, message: 'Profile not found, marked for manual review' });
+    }
 
-    if (error) console.error('[webhook] gagal update orders:', error);
+    // Credit saldo via RPC atomic
+    const { error: rpcErr } = await db.rpc('update_balance', {
+      p_email : profile.email,
+      p_amount: finalAmount,
+    });
 
-    return new Response('OK', { status: 200 });
+    if (rpcErr) {
+      console.error('[paymenku/webhook] RPC update_balance gagal:', rpcErr);
+      // ✅ FIX: Rollback ke pending_payment supaya admin bisa approve manual
+      await db
+        .from('deposit_requests')
+        .update({ status: 'pending_payment', admin_note: 'RPC gagal, perlu retry' })
+        .eq('id', depositReq.id);
+      // ✅ FIX: Return 200 bukan 500 — Paymenku tidak perlu retry
+      // Admin akan approve manual via admin panel
+      return NextResponse.json({ ok: true, message: 'RPC failed, marked for manual review' });
+    }
+
+    // Catat mutasi
+    await db.from('mutations').insert({
+      user_id    : depositReq.user_id,
+      type       : 'in',
+      amount     : finalAmount,
+      description: `Deposit Otomatis via Paymenku (${reference_id ?? trx_id})`,
+    });
+
+    console.log(`[paymenku/webhook] ✅ Saldo user ${depositReq.user_id} bertambah Rp ${finalAmount}`);
+    return NextResponse.json({ ok: true });
 
   } catch (err) {
-    console.error('[POST /api/webhook]', err);
-    return new Response('OK', { status: 200 });
+    console.error('[POST /api/deposit/paymenku/webhook]', err);
+    // ✅ FIX: Return 200 bukan 500 — Paymenku tidak perlu retry saat server error
+    return NextResponse.json({ ok: true, message: 'Server error logged' });
   }
-}
-
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get('id')?.trim();
-
-  if (!id) {
-    return NextResponse.json({ error: 'Parameter "id" wajib diisi.' }, { status: 400 });
-  }
-
-  // ✅ FIX: Validasi format id
-  if (!/^\d+$/.test(id)) {
-    return NextResponse.json({ error: 'Format id tidak valid.' }, { status: 400 });
-  }
-
-  const { data: order } = await db
-    .from('orders')
-    .select('otp_code, status, updated_at')
-    .eq('activation_id', id)
-    .single();
-
-  if (!order?.otp_code) {
-    return NextResponse.json({ status: 'waiting' });
-  }
-
-  return NextResponse.json({
-    status    : 'ok',
-    smsCode   : order.otp_code,
-    receivedAt: order.updated_at,
-  });
 }
