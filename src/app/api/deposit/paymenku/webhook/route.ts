@@ -33,7 +33,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: false, message: 'Invalid signature' }, { status: 200 });
       }
     } else {
-      console.warn('[paymenku/webhook] ⚠️ PAYMENKU_WEBHOOK_SECRET belum di-set!');
+      // Paymenku tidak support webhook signature — tidak perlu di-set
     }
 
     const body = JSON.parse(rawBody);
