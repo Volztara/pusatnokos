@@ -39,8 +39,8 @@ export function checkRateLimit(key: string, options: RateLimitOptions): RateLimi
 
 // Preset configs
 export const RATE_LIMITS = {
-  order     : { max: 10, window: 60 * 60 * 1000 },   // 10 order/jam
-  orderFast : { max: 3,  window: 60 * 1000 },         // 3 order/menit (anti-spam)
+  order     : { max: 20, window: 60 * 60 * 1000 },   // 20 order/jam
+  orderFast : { max: 5,  window: 60 * 1000 },         // 5 order/menit (anti-spam)
   deposit   : { max: 5,  window: 60 * 60 * 1000 },   // 5 deposit request/jam
   login     : { max: 5,  window: 15 * 60 * 1000 },   // 5 login attempt/15 menit
 };
