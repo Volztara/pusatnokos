@@ -4697,7 +4697,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
   // Handle crypto invoice creation
   const handleCryptoDeposit = async () => {
     const amt = parseInt(cryptoAmount);
-    if (!amt || amt < 50000) { showToast('Minimum deposit is Rp 50,000'); return; }
+    if (!amt || amt < 20000) { showToast('Minimum deposit is Rp 20,000'); return; }
     if (!user?.email) return;
 
     setCryptoLoading(true);
@@ -4746,6 +4746,9 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
   const [autoLoading,  setAutoLoading]  = useState(false);
   const [autoAmount,   setAutoAmount]   = useState('');
   const [payUrl,       setPayUrl]       = useState<string | null>(null);
+  const [autoTrxId,    setAutoTrxId]    = useState<string | null>(null);
+  const [autoStatus,   setAutoStatus]   = useState<'idle' | 'waiting' | 'paid'>('idle');
+  const autoPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const PAYMENKU_CHANNELS = [
     { code: 'qris',       name: 'QRIS',    fee: 'Rp 200 + 0.7%',  feeFlat: 200, feePct: 0.007, type: 'qr'      },
@@ -4769,12 +4772,51 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
       });
       const data = await res.json();
       if (!res.ok || !data.payUrl) { showToast(data.error ?? 'Gagal membuat transaksi.'); return; }
-      // Simpan payUrl ke state — tampilkan tombol agar user klik sendiri (iOS/mobile safe)
       setPayUrl(data.payUrl);
+      setAutoTrxId(data.trxId ?? data.referenceId ?? null);
+      setAutoStatus('waiting');
       fetchMyRequests();
+
+      // Poll status deposit setiap 5 detik, stop otomatis setelah 15 menit
+      if (autoPollRef.current) clearInterval(autoPollRef.current);
+      const pollStart   = Date.now();
+      const MAX_POLL_MS = 15 * 60 * 1000; // 15 menit
+      autoPollRef.current = setInterval(async () => {
+        // Stop polling setelah 15 menit
+        if (Date.now() - pollStart > MAX_POLL_MS) {
+          clearInterval(autoPollRef.current!);
+          return;
+        }
+        try {
+          const r    = await fetch('/api/user/deposit-history', { headers: authHeaders() });
+          const list = await r.json();
+          if (!Array.isArray(list)) return;
+          // Cek by trxId ATAU referenceId (fallback)
+          const found = list.find((d: any) =>
+            d.status === 'approved' && (
+              (data.trxId       && d.note?.includes(`trx:${data.trxId}`)) ||
+              (data.referenceId && d.note?.includes(`ref:${data.referenceId}`))
+            )
+          );
+          if (found) {
+            clearInterval(autoPollRef.current!);
+            setAutoStatus('paid');
+            showToast('✅ Pembayaran berhasil! Saldo telah ditambahkan.');
+            fetch('/api/user/balance', { headers: authHeaders() })
+              .then(r => r.json())
+              .then(d => { if (typeof d.balance === 'number') setBalance(d.balance); })
+              .catch(() => {});
+          }
+        } catch {}
+      }, 5000);
     } catch { showToast('Terjadi kesalahan jaringan.'); }
     finally { setAutoLoading(false); }
   };
+
+  // Cleanup poll saat unmount
+  useEffect(() => {
+    return () => { if (autoPollRef.current) clearInterval(autoPollRef.current); };
+  }, []);
 
   // Fetch riwayat deposit user
   const fetchMyRequests = async () => {
@@ -4954,23 +4996,46 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
           })()}
 
           {payUrl ? (
-            /* Setelah transaksi dibuat — tampilkan tombol link yang aman di iOS */
             <div className="space-y-4 text-center py-2">
-              <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-7 h-7 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <h3 className="font-black text-slate-900 dark:text-white">Transaksi Dibuat!</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Klik tombol di bawah untuk menyelesaikan pembayaran.</p>
-              </div>
-              <a href={payUrl} target="_blank" rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl transition-colors text-base">
-                <Zap className="w-5 h-5" /> Lanjut ke Pembayaran
-              </a>
-              <button onClick={() => { setPayUrl(null); setAutoAmount(''); setDepositMode('history'); }}
-                className="w-full py-3 bg-slate-100 dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 transition-colors text-sm">
-                View Deposit History
-              </button>
+              {autoStatus === 'paid' ? (
+                <>
+                  <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-7 h-7 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-slate-900 dark:text-white">Pembayaran Berhasil!</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Saldo sudah masuk ke akun kamu.</p>
+                  </div>
+                  <button onClick={() => { setPayUrl(null); setAutoAmount(''); setAutoStatus('idle'); setAutoTrxId(null); setDepositMode('select'); }}
+                    className="w-full py-3 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-colors text-sm">
+                    Kembali ke Dashboard
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-7 h-7 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-slate-900 dark:text-white">Transaksi Dibuat!</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Klik tombol di bawah untuk menyelesaikan pembayaran.</p>
+                  </div>
+                  <a href={payUrl} target="_blank" rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-2 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl transition-colors text-base">
+                    <Zap className="w-5 h-5" /> Lanjut ke Pembayaran
+                  </a>
+                  <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl p-3 flex items-center gap-2">
+                    <RefreshCw className="w-4 h-4 text-indigo-500 animate-spin shrink-0" />
+                    <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold text-left">
+                      Halaman ini otomatis update setelah pembayaran berhasil. Tidak perlu refresh manual.
+                    </p>
+                  </div>
+                  <button onClick={() => { setPayUrl(null); setAutoAmount(''); setAutoStatus('idle'); setAutoTrxId(null); if (autoPollRef.current) clearInterval(autoPollRef.current); setDepositMode('history'); }}
+                    className="w-full py-3 bg-slate-100 dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-200 transition-colors text-sm">
+                    Lihat Riwayat Deposit
+                  </button>
+                </>
+              )}
             </div>
           ) : (
             <>
@@ -5183,7 +5248,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                 <div className="flex items-center justify-between mb-3">
                   <label className="block text-sm font-bold text-slate-800 dark:text-slate-200">Deposit Amount (IDR)</label>
                   <span className="text-xs font-bold text-orange-500 bg-orange-50 dark:bg-orange-900/20 px-2.5 py-1 rounded-lg border border-orange-200 dark:border-orange-800/30">
-                    Min. Rp 50,000
+                    Min. Rp 20.000
                   </span>
                 </div>
                 <div className="relative">
@@ -5191,26 +5256,26 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                   <input
                     type="text" inputMode="numeric" value={cryptoAmount}
                     onChange={e => setCryptoAmount(e.target.value.replace(/\D/g, ''))}
-                    placeholder="50000"
+                    placeholder="20000"
                     className="w-full px-14 py-4 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-orange-500/50 dark:text-white"
                   />
                 </div>
                 {/* Live USD preview */}
-                {cryptoAmount && parseInt(cryptoAmount) >= 50000 && (
+                {cryptoAmount && parseInt(cryptoAmount) >= 20000 && (
                   <div className="mt-2 text-xs font-bold text-slate-400 text-right">
                     ≈ ${(parseInt(cryptoAmount) / 16000).toFixed(2)} USD
                   </div>
                 )}
-                {cryptoAmount && parseInt(cryptoAmount) > 0 && parseInt(cryptoAmount) < 50000 && (
+                {cryptoAmount && parseInt(cryptoAmount) > 0 && parseInt(cryptoAmount) < 20000 && (
                   <div className="mt-2 text-xs font-bold text-red-500">
-                    ⚠ Minimum deposit is Rp 50,000
+                    ⚠ Minimum deposit is Rp 20,000
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {[50000, 100000, 200000, 500000, 1000000].map(q => (
+                  {[20000, 50000, 100000, 200000, 500000, 1000000].map(q => (
                     <button key={q} onClick={() => setCryptoAmount(String(q))}
                       className={"px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors " + (cryptoAmount === String(q) ? 'bg-orange-500 text-white border-orange-500' : 'bg-white dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.09] hover:border-orange-300')}>
-                      {(q/1000).toFixed(0)}rb
+                      {q >= 1000000 ? '1jt' : `${(q/1000).toFixed(0)}rb`}
                     </button>
                   ))}
                 </div>
