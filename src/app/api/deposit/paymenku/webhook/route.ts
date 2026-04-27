@@ -10,21 +10,17 @@ const db = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const PAYMENKU_KEY     = process.env.PAYMENKU_API_KEY ?? '';
-// ✅ FIX: Secret khusus untuk verifikasi webhook Paymenku
-// Set di .env: PAYMENKU_WEBHOOK_SECRET=xxx (ambil dari dashboard Paymenku)
-const WEBHOOK_SECRET   = process.env.PAYMENKU_WEBHOOK_SECRET ?? '';
+const PAYMENKU_KEY   = process.env.PAYMENKU_API_KEY ?? '';
+const WEBHOOK_SECRET = process.env.PAYMENKU_WEBHOOK_SECRET ?? '';
 
 export async function POST(req: Request) {
   try {
     const rawBody = await req.text();
 
-    // ✅ FIX: Verifikasi signature Paymenku SEBELUM proses apapun
-    // Tanpa ini, siapapun bisa kirim fake webhook dan credit saldo gratis!
+    // ✅ Verifikasi signature Paymenku SEBELUM proses apapun
     if (WEBHOOK_SECRET) {
-      // Paymenku mengirim signature di header X-Paymenku-Signature atau X-Signature
-      const receivedSig = 
-        req.headers.get('x-paymenku-signature') ?? 
+      const receivedSig =
+        req.headers.get('x-paymenku-signature') ??
         req.headers.get('x-signature') ?? '';
 
       const expectedSig = crypto
@@ -34,13 +30,10 @@ export async function POST(req: Request) {
 
       if (receivedSig !== expectedSig) {
         console.warn('[paymenku/webhook] Invalid signature — kemungkinan request palsu!');
-        // Return 200 agar Paymenku tidak retry, tapi tidak proses
         return NextResponse.json({ ok: false, message: 'Invalid signature' }, { status: 200 });
       }
     } else {
-      // ⚠️ WEBHOOK_SECRET belum di-set — log warning tapi tetap proses
-      // Segera set PAYMENKU_WEBHOOK_SECRET di .env production!
-      console.warn('[paymenku/webhook] ⚠️ PAYMENKU_WEBHOOK_SECRET belum di-set! Webhook tidak terverifikasi.');
+      console.warn('[paymenku/webhook] ⚠️ PAYMENKU_WEBHOOK_SECRET belum di-set!');
     }
 
     const body = JSON.parse(rawBody);
@@ -48,7 +41,6 @@ export async function POST(req: Request) {
 
     const { event, trx_id, reference_id, status, amount_received } = body;
 
-    // ✅ Validasi field wajib
     if (!trx_id || !status) {
       console.warn('[paymenku/webhook] Body tidak valid:', body);
       return NextResponse.json({ ok: true });
@@ -83,7 +75,7 @@ export async function POST(req: Request) {
       .from('deposit_requests')
       .update({ status: 'approved', admin_note: `Otomatis via Paymenku. TrxID: ${trx_id}` })
       .eq('id', depositReq.id)
-      .eq('status', 'pending_payment') // hanya proses sekali
+      .eq('status', 'pending_payment')
       .select('id');
 
     if (!claimed || claimed.length === 0) {
@@ -102,10 +94,16 @@ export async function POST(req: Request) {
 
     if (!profile?.email) {
       console.error('[paymenku/webhook] profil user tidak ditemukan:', depositReq.user_id);
-      return NextResponse.json({ ok: true });
+      // ✅ FIX: Rollback status supaya admin bisa approve manual
+      await db
+        .from('deposit_requests')
+        .update({ status: 'pending_payment', admin_note: 'RPC gagal — profil tidak ditemukan, perlu manual' })
+        .eq('id', depositReq.id);
+      // ✅ FIX: Return 200 bukan 500 — jangan bikin Paymenku retry
+      return NextResponse.json({ ok: true, message: 'Profile not found, marked for manual review' });
     }
 
-    // ✅ Credit saldo via RPC atomic
+    // Credit saldo via RPC atomic
     const { error: rpcErr } = await db.rpc('update_balance', {
       p_email : profile.email,
       p_amount: finalAmount,
@@ -113,12 +111,14 @@ export async function POST(req: Request) {
 
     if (rpcErr) {
       console.error('[paymenku/webhook] RPC update_balance gagal:', rpcErr);
-      // ⚠️ Rollback deposit status supaya bisa diproses ulang
+      // ✅ FIX: Rollback ke pending_payment supaya admin bisa approve manual
       await db
         .from('deposit_requests')
         .update({ status: 'pending_payment', admin_note: 'RPC gagal, perlu retry' })
         .eq('id', depositReq.id);
-      return NextResponse.json({ ok: false }, { status: 500 });
+      // ✅ FIX: Return 200 bukan 500 — Paymenku tidak perlu retry
+      // Admin akan approve manual via admin panel
+      return NextResponse.json({ ok: true, message: 'RPC failed, marked for manual review' });
     }
 
     // Catat mutasi
@@ -126,7 +126,7 @@ export async function POST(req: Request) {
       user_id    : depositReq.user_id,
       type       : 'in',
       amount     : finalAmount,
-      description: `Deposit Otomatis via Paymenku (${reference_id})`,
+      description: `Deposit Otomatis via Paymenku (${reference_id ?? trx_id})`,
     });
 
     console.log(`[paymenku/webhook] ✅ Saldo user ${depositReq.user_id} bertambah Rp ${finalAmount}`);
@@ -134,6 +134,7 @@ export async function POST(req: Request) {
 
   } catch (err) {
     console.error('[POST /api/deposit/paymenku/webhook]', err);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    // ✅ FIX: Return 200 bukan 500 — Paymenku tidak perlu retry saat server error
+    return NextResponse.json({ ok: true, message: 'Server error logged' });
   }
 }
