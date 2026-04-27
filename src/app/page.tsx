@@ -2514,6 +2514,11 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
     const newBal = type === 'add' ? balance + amount : Math.max(0, balance - amount);
     setBalance(newBal);
     if (!user?.email) return;
+
+    // ✅ subtract tidak perlu call API — saldo sudah dipotong atomic di /api/order
+    // Hanya update local state untuk UI responsif
+    if (type === 'subtract') return;
+
     try {
       const res = await fetch('/api/user/balance', {
         method : 'PATCH',
@@ -2524,22 +2529,13 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       if (res.ok) return; // sukses
 
       if (res.status === 409 || (res.status === 400 && type === 'add')) {
-        // 409 = double refund, 400 + add = server sudah proses via webhook
-        // Jangan rollback — sync saldo dari DB untuk memastikan angka benar
+        // 409 = double refund — sync saldo dari DB
         console.info('[balance] Refund sudah diproses server:', activationId);
         setTimeout(() => refreshBalance(), 600);
         return;
       }
 
-      if (res.status === 400 && type === 'subtract') {
-        // Beli nomor gagal → rollback saldo lokal
-        setBalance(prevBal);
-        showToast('Transaksi gagal diproses. Coba lagi.');
-        return;
-      }
-
       if (res.status === 401) {
-        // Token expired → gunakan onLogout yang sudah tersedia
         setBalance(prevBal);
         showToast('Sesi berakhir. Silakan login kembali.');
         setTimeout(() => onLogout(), 1500);
