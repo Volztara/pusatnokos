@@ -2668,7 +2668,9 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
     // SSE: terima notifikasi OTP real-time dari webhook
     let es: EventSource | null = null;
     try {
-      es = new EventSource('/api/webhook/stream');
+      // Jangan connect kalau token belum ada
+      if (!_sessionToken) { return; }
+      es = new EventSource(`/api/webhook/stream?_token=${encodeURIComponent(_sessionToken ?? '')}`);
       es.onmessage = (e) => {
         try {
           const event = JSON.parse(e.data);
