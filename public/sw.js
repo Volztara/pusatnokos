@@ -25,7 +25,12 @@ self.addEventListener('activate', event => {
 
 // Fetch — network first, fallback ke cache
 self.addEventListener('fetch', event => {
-  // Skip API calls & external requests
+  const url = new URL(event.request.url);
+
+  // Skip semua request ke domain external (icon.horse, flagcdn, google favicons, dll)
+  if (url.origin !== self.location.origin) return;
+
+  // Skip API calls & non-GET
   if (
     event.request.url.includes('/api/') ||
     event.request.url.includes('supabase') ||
@@ -36,11 +41,17 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        // Hanya cache response yang valid
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() => caches.match(event.request).then(cached => {
+        // Kalau tidak ada di cache, return response kosong daripada crash
+        return cached || new Response('', { status: 408, statusText: 'Offline' });
+      }))
   );
 });
 
@@ -50,11 +61,11 @@ self.addEventListener('push', event => {
   const data = event.data.json();
   event.waitUntil(
     self.registration.showNotification(data.title ?? 'Pusat Nokos', {
-      body   : data.body ?? '',
-      icon   : '/icons/icon-192x192.png',
-      badge  : '/icons/icon-72x72.png',
+      body: data.body ?? '',
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-72x72.png',
       vibrate: [200, 100, 200],
-      data   : { url: data.url ?? '/' },
+      data: { url: data.url ?? '/' },
     })
   );
 });
