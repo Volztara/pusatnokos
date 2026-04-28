@@ -100,10 +100,13 @@ const genToken = (): string => {
 let _sessionToken: string | null = null;
 let _csrfToken: string | null = null;
 
-const setSecureSession = (userData: UserData, accessToken?: string) => {
+let _refreshToken: string | null = null;
+
+const setSecureSession = (userData: UserData, accessToken?: string, refreshToken?: string) => {
   _sessionToken = accessToken ?? genToken(); // pakai Supabase JWT jika tersedia
+  _refreshToken = refreshToken ?? null;
   _csrfToken = genToken();
-  const payload = { ...userData, _savedAt: Date.now(), _st: _sessionToken, _at: accessToken ?? '' };
+  const payload = { ...userData, _savedAt: Date.now(), _st: _sessionToken, _at: accessToken ?? '', _rt: refreshToken ?? '' };
   // sessionStorage: auto-hapus saat browser/tab ditutup (lebih aman dari localStorage)
   try {
     // Bersihkan session lama sebelum set baru agar tidak quota exceeded
@@ -118,6 +121,7 @@ const setSecureSession = (userData: UserData, accessToken?: string) => {
 
 const clearSecureSession = () => {
   _sessionToken = null;
+  _refreshToken = null;
   _csrfToken = null;
   try { sessionStorage.removeItem('nokos_s'); } catch { }
   try { localStorage.removeItem('nokos_session'); } catch { } // hapus lama juga
@@ -187,6 +191,7 @@ const restoreSecureSession = (): (UserData & { _savedAt: number }) | null => {
           return null;
         }
         _sessionToken = parsed._at;
+        _refreshToken = (parsed as any)._rt ?? null;
         _csrfToken = genToken();
         return parsed;
       }
@@ -216,6 +221,48 @@ const authHeaders = (extra?: Record<string, string>): Record<string, string> => 
   ...((_csrfToken) ? { 'X-CSRF-Token': _csrfToken } : {}),
   ...extra,
 });
+
+// Auto-refresh token Supabase kalau expired (401)
+const refreshAccessToken = async (): Promise<boolean> => {
+  if (!_refreshToken) return false;
+  try {
+    const res = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: _refreshToken }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (data.access_token) {
+      _sessionToken = data.access_token;
+      if (data.refresh_token) _refreshToken = data.refresh_token;
+      // Update sessionStorage dengan token baru
+      try {
+        const s = sessionStorage.getItem('nokos_s');
+        if (s) {
+          const parsed = JSON.parse(s);
+          parsed._at = data.access_token;
+          if (data.refresh_token) parsed._rt = data.refresh_token;
+          sessionStorage.setItem('nokos_s', JSON.stringify(parsed));
+        }
+      } catch { }
+      return true;
+    }
+  } catch { }
+  return false;
+};
+
+// Wrapper fetch yang auto-retry sekali jika dapat 401 (token expired)
+const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+  const res = await fetch(url, { ...options, headers: { ...authHeaders(), ...(options.headers as Record<string, string> ?? {}) } });
+  if (res.status === 401) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      return fetch(url, { ...options, headers: { ...authHeaders(), ...(options.headers as Record<string, string> ?? {}) } });
+    }
+  }
+  return res;
+};
 
 // Fallback kosong — data live dari API, tidak pakai harga hardcoded
 const ALL_SERVICES: Service[] = [];
@@ -1233,10 +1280,10 @@ export default function App() {
     setCurrentView(view);
   };
 
-  const handleLogin = (userData: UserData, accessToken?: string) => {
+  const handleLogin = (userData: UserData, accessToken?: string, refreshToken?: string) => {
     setUser(userData);
-    // Simpan session + access_token ke sessionStorage sekaligus
-    setSecureSession(userData, accessToken);
+    // Simpan session + access_token + refresh_token ke sessionStorage sekaligus
+    setSecureSession(userData, accessToken, refreshToken);
     showToast("Login successful, welcome " + userData.name + "!");
     navigate('dashboard');
   };
@@ -1949,7 +1996,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
 interface AuthViewProps {
   type: string;
   onNavigate: (view: string) => void;
-  onAuth: (user: UserData, accessToken?: string) => void;
+  onAuth: (user: UserData, accessToken?: string, refreshToken?: string) => void;
   showToast: (msg: string) => void;
   isDarkMode: boolean;
 }
@@ -2128,7 +2175,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
         return;
       }
       clearAttempts(); // reset rate limit setelah login berhasil
-      onAuth({ name: data.user.name, email: data.user.email }, data.access_token);
+      onAuth({ name: data.user.name, email: data.user.email }, data.access_token, data.refresh_token);
       showToast(`Selamat datang kembali, ${data.user.name}!`);
     } catch { setError('Terjadi kesalahan jaringan.'); }
     finally { setIsLoading(false); }
@@ -2139,7 +2186,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
     e.preventDefault();
     setError('');
     if (!name) { setError('Nama wajib diisi.'); return; }
-    if (password.length < 8) { setError('Password minimal 8 karakter.'); return; }
+    if (password.length < 6) { setError('Password minimal 6 karakter.'); return; }
     if (password !== confirmPass) { setError('Passwords do not match.'); return; }
     if (!turnstileToken) { setError('Harap selesaikan verifikasi CAPTCHA.'); return; }
     setIsLoading(true);
@@ -2170,7 +2217,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Kode salah.'); return; }
-      onAuth({ name: data.user.name, email: data.user.email }, data.access_token);
+      onAuth({ name: data.user.name, email: data.user.email }, data.access_token, data.refresh_token);
       showToast(`Akun berhasil dibuat, selamat datang ${data.user.name}!`);
     } catch { setError('Terjadi kesalahan jaringan.'); }
     finally { setIsLoading(false); }
@@ -2201,7 +2248,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
     e.preventDefault();
     setError('');
     if (otpCode.length !== 6) { setError('Kode harus 6 digit.'); return; }
-    if (password.length < 8) { setError('Password minimal 8 karakter.'); return; }
+    if (password.length < 6) { setError('Password minimal 6 karakter.'); return; }
     if (password !== confirmPass) { setError('Passwords do not match.'); return; }
     setIsLoading(true);
     try {
@@ -2318,7 +2365,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Password</label>
               <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
-                <input id="reg-password" name="password" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="Min. 8 characters" aria-label="New password" />
+                <input id="reg-password" name="password" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="Min. 6 characters" aria-label="New password" />
                 <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}</button>
               </div>
             </div>
@@ -2379,7 +2426,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">New Password</label>
               <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
-                <input id="reg-password" name="password" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="Min. 8 characters" aria-label="New password" />
+                <input id="reg-password" name="password" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="Min. 6 characters" aria-label="New password" />
                 <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}</button>
               </div>
             </div>
@@ -6107,10 +6154,8 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
     if (newPass !== confirmPass) { setPassError('Passwords do not match.'); return; }
     setPassLoading(true);
     try {
-      const r = await fetch('/api/user/change-password', {
+      const r = await authFetch('/api/user/change-password', {
         method: 'POST',
-        headers: authHeaders({ 'X-User-Email': user?.email ?? '' }),
-        // headers backup 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user?.email, oldPassword: oldPass, newPassword: newPass }),
       });
       const d = await r.json();
