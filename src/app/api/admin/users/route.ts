@@ -9,11 +9,11 @@ const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPAB
 // GET — daftar semua user dengan stats
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const page   = Math.max(1, parseInt(searchParams.get('page')  ?? '1'));
-  const limit  = Math.min(50, parseInt(searchParams.get('limit') ?? '20'));
+  const page = Math.max(1, parseInt(searchParams.get('page') ?? '1'));
+  const limit = Math.min(50, parseInt(searchParams.get('limit') ?? '20'));
   const search = searchParams.get('search') ?? '';
 
-  let query = db.from('profiles').select('*', { count: 'exact' }).order('created_at', { ascending: false }).range((page-1)*limit, page*limit-1);
+  let query = db.from('profiles').select('*', { count: 'exact' }).order('created_at', { ascending: false }).range((page - 1) * limit, page * limit - 1);
   if (search) query = query.ilike('email', `%${search}%`);
 
   const { data: users, count } = await query;
@@ -23,37 +23,29 @@ export async function GET(req: Request) {
 
   const { data: allOrders } = await db
     .from('orders')
-    .select('user_id, price, status, refunded') // ✅ FIX: tambah kolom refunded
+    .select('user_id, price, status')
     .in('user_id', userIds);
 
-  // Hitung orderCount & totalSpend per user di memori (tanpa loop async)
+  // Hitung stats per user di memori (1 pass per user, tidak ada loop async)
   const enriched = (users ?? []).map((u: any) => {
     const userOrders = (allOrders ?? []).filter((o: any) => o.user_id === u.id);
 
-    // ✅ FIX: orderCount hanya hitung status 'success' (sebelumnya hitung semua kecuali 'cancelled')
-    const orderCount = userOrders
-      .filter((o: any) => o.status === 'success')
-      .length;
+    // Order sukses = yang benar-benar selesai dan tidak direfund
+    const successOrders = userOrders.filter((o: any) => o.status === 'success');
 
-    // totalSpend tetap hanya success (tidak berubah)
-    const totalSpend = userOrders
-      .filter((o: any) => o.status === 'success')
-      .reduce((s: number, o: any) => s + (o.price ?? 0), 0);
+    // orderCount = jumlah order sukses
+    const orderCount = successOrders.length;
 
-    // ✅ BARU: jumlah order yang sudah direfund
-    const refundCount = userOrders
-      .filter((o: any) => o.refunded === true)
-      .length;
+    // totalSpend = total uang yang benar-benar dihabiskan (sukses, tidak direfund)
+    // Ini yang ditampilkan di tabel Pengguna
+    const totalSpend = successOrders.reduce((s: number, o: any) => s + (o.price ?? 0), 0);
 
-    // ✅ BARU: total nominal yang sudah direfund
-    const totalRefund = userOrders
-      .filter((o: any) => o.refunded === true)
-      .reduce((s: number, o: any) => s + (o.price ?? 0), 0);
+    // cancel/expired = untuk info saja, bukan indikator kecurigaan
+    const cancelCount = userOrders.filter((o: any) =>
+      o.status === 'cancelled' || o.status === 'expired'
+    ).length;
 
-    // ✅ BARU: flag apakah user mencurigakan (refund > 1 order)
-    const isSuspicious = refundCount > 1;
-
-    return { ...u, orderCount, totalSpend, refundCount, totalRefund, isSuspicious };
+    return { ...u, orderCount, totalSpend, cancelCount };
   });
 
   return NextResponse.json({ users: enriched, total: count ?? 0 });
@@ -68,7 +60,7 @@ export async function PATCH(req: Request) {
     await db.from('profiles').update({ is_blacklisted: value }).eq('id', userId);
     try {
       await db.from('admin_logs').insert({ action: value ? 'blacklist_user' : 'unblacklist_user', target_id: userId, details: `User ${value ? 'diblokir' : 'dibuka blokir'}` });
-    } catch {}
+    } catch { }
     return NextResponse.json({ success: true });
   }
 
@@ -85,23 +77,23 @@ export async function PATCH(req: Request) {
     if (diff !== 0) {
       try {
         await db.from('mutations').insert({
-          user_id    : userId,
-          type       : diff > 0 ? 'in' : 'out',
-          amount     : Math.abs(diff),
+          user_id: userId,
+          type: diff > 0 ? 'in' : 'out',
+          amount: Math.abs(diff),
           description: diff > 0
             ? `Penambahan saldo oleh admin (set ke ${value.toLocaleString('id-ID')})`
             : `Pengurangan saldo oleh admin (set ke ${value.toLocaleString('id-ID')})`,
         });
-      } catch {}
+      } catch { }
     }
 
     try {
       await db.from('admin_logs').insert({
-        action   : 'set_balance',
+        action: 'set_balance',
         target_id: userId,
-        details  : `Saldo diubah dari ${oldBalance} → ${value} (selisih: ${diff >= 0 ? '+' : ''}${diff})`,
+        details: `Saldo diubah dari ${oldBalance} → ${value} (selisih: ${diff >= 0 ? '+' : ''}${diff})`,
       });
-    } catch {}
+    } catch { }
     return NextResponse.json({ success: true });
   }
 

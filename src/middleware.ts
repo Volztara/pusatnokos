@@ -2,15 +2,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const SECRET         = process.env.ADMIN_TOKEN_SECRET ?? process.env.ADMIN_PASSWORD ?? 'fallback-secret';
-const TOKEN_TTL      = 24 * 60 * 60 * 1000;
-const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET ?? '';
+const SECRET = process.env.ADMIN_TOKEN_SECRET ?? process.env.ADMIN_PASSWORD ?? 'fallback-secret';
+const TOKEN_TTL = 24 * 60 * 60 * 1000;
+const WEBHOOK_SECRET = process.env.HEROSMS_WEBHOOK_SECRET ?? '';
 
 // ── Rate Limiting Store ───────────────────────────────────────────────
 const rateStore = new Map<string, { count: number; resetAt: number }>();
 
 function checkRate(key: string, limit: number, windowMs: number): boolean {
-  const now   = Date.now();
+  const now = Date.now();
   const entry = rateStore.get(key);
   if (!entry || now > entry.resetAt) {
     rateStore.set(key, { count: 1, resetAt: now + windowMs });
@@ -23,11 +23,11 @@ function checkRate(key: string, limit: number, windowMs: number): boolean {
 
 // ✅ Dual rate limit — per IP + per user
 function checkRateDual(
-  ip       : string,
-  userId   : string,
-  ipLimit  : number,
+  ip: string,
+  userId: string,
+  ipLimit: number,
   userLimit: number,
-  windowMs : number
+  windowMs: number
 ): { allowed: boolean; reason?: string } {
   if (!checkRate(`ip:${ip}`, ipLimit, windowMs)) {
     return { allowed: false, reason: 'Terlalu banyak request dari jaringan ini.' };
@@ -140,7 +140,7 @@ export async function middleware(req: NextRequest) {
     }
 
     const requestHeaders = new Headers(req.headers);
-    requestHeaders.set('X-Verified-User-Id',    userInfo.id);
+    requestHeaders.set('X-Verified-User-Id', userInfo.id);
     requestHeaders.set('X-Verified-User-Email', userInfo.email);
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
@@ -184,7 +184,7 @@ export async function middleware(req: NextRequest) {
     }
 
     const requestHeaders = new Headers(req.headers);
-    requestHeaders.set('X-Verified-User-Id',    userInfo.id);
+    requestHeaders.set('X-Verified-User-Id', userInfo.id);
     requestHeaders.set('X-Verified-User-Email', userInfo.email);
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
@@ -196,7 +196,7 @@ export async function middleware(req: NextRequest) {
     }
     if (WEBHOOK_SECRET) {
       const { searchParams } = req.nextUrl;
-      const secretParam  = searchParams.get('secret') ?? '';
+      const secretParam = searchParams.get('secret') ?? '';
       const secretHeader = req.headers.get('x-webhook-secret') ?? '';
       if (secretParam !== WEBHOOK_SECRET && secretHeader !== WEBHOOK_SECRET) {
         console.warn(`[middleware] Webhook unauthorized from IP: ${ip}`);
@@ -226,12 +226,23 @@ export async function middleware(req: NextRequest) {
     }
 
     const requestHeaders = new Headers(req.headers);
-    requestHeaders.set('X-Verified-User-Id',    userInfo.id);
+    requestHeaders.set('X-Verified-User-Id', userInfo.id);
     requestHeaders.set('X-Verified-User-Email', userInfo.email);
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // ══ 7. Semua route lain ═══════════════════════════════════════════════
+  // ══ 7. Public API — tambah rate limit basic ═════════════════════════
+  if (
+    pathname === '/api/services' ||
+    pathname === '/api/countries-rank'
+  ) {
+    if (!checkRate(`public:${ip}`, 30, 60_000)) {
+      return NextResponse.json({ error: 'Terlalu banyak request.' }, { status: 429 });
+    }
+    return NextResponse.next();
+  }
+
+  // ══ 8. Semua route lain ═══════════════════════════════════════════════
   return NextResponse.next();
 }
 
@@ -252,5 +263,7 @@ export const config = {
     '/api/deposit/paymenku/webhook',
     '/api/deposit/crypto',
     '/api/deposit/crypto/webhook',
+    '/api/services',
+    '/api/countries-rank',
   ],
 };

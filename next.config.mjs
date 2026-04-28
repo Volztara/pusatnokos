@@ -15,21 +15,21 @@ const nextConfig = {
       { key: 'X-XSS-Protection', value: '1; mode=block' },
       ...(isProd
         ? [
-            {
-              key: 'Content-Security-Policy',
-              value: [
-                "default-src 'self'",
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
-                "style-src 'self' 'unsafe-inline'",
-                "img-src 'self' data: blob: https:",
-                "font-src 'self' data:",
-                "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com https://api.sms-man.com https://api.grizzlysms.com https://5sim.net https://api.anthropic.com https://www.google.com https://cdn.simpleicons.org",
-                "frame-src https://challenges.cloudflare.com",
-                "form-action 'self' mailto:",
-                "base-uri 'self'",
-              ].join('; '),
-            },
-          ]
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob: https:",
+              "font-src 'self' data:",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com https://www.google.com https://cdn.simpleicons.org",
+              "frame-src https://challenges.cloudflare.com",
+              "form-action 'self' mailto:",
+              "base-uri 'self'",
+            ].join('; '),
+          },
+        ]
         : []),
     ];
 

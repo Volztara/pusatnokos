@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 import { createClient } from '@supabase/supabase-js';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
+import { checkRateLimit, checkRateLimitAsync, RATE_LIMITS } from '@/lib/rateLimit';
 
-const API_KEY  = process.env.HEROSMS_API_KEY ?? '';
+const API_KEY = process.env.HEROSMS_API_KEY ?? '';
 const BASE_URL = 'https://hero-sms.com/stubs/handler_api.php';
 
 const db = createClient(
@@ -15,10 +15,10 @@ const db = createClient(
 
 // ─── KONFIGURASI MARKUP — baca dari DB ────────────────────────────────
 const DEFAULT_CONFIG = {
-  idrRate   : 17135.75,
-  markupPct : 0.25,
-  minProfit : 200,
-  roundTo   : 100,
+  idrRate: 17135.75,
+  markupPct: 0.25,
+  minProfit: 200,
+  roundTo: 100,
 };
 
 async function getMarkupConfig() {
@@ -29,13 +29,13 @@ async function getMarkupConfig() {
 }
 
 function applyMarkup(
-  costUSD  : number,
-  idrRate  : number,
+  costUSD: number,
+  idrRate: number,
   markupPct: number,
   minProfit: number,
-  roundTo  : number
+  roundTo: number
 ): number {
-  const modal  = costUSD * idrRate;
+  const modal = costUSD * idrRate;
   const profit = Math.max(modal * markupPct, minProfit);
   return Math.ceil((modal + profit) / roundTo) * roundTo;
 }
@@ -43,12 +43,12 @@ function applyMarkup(
 export async function POST(request: Request) {
   try {
     // ✅ Ambil email dari header terverifikasi middleware — tidak bisa dipalsukan
-    const verifiedEmail  = request.headers.get('X-Verified-User-Email')?.trim().toLowerCase() ?? '';
+    const verifiedEmail = request.headers.get('X-Verified-User-Email')?.trim().toLowerCase() ?? '';
     const verifiedUserId = request.headers.get('X-Verified-User-Id')?.trim() ?? '';
 
-    const body     = await request.json();
-    const service  = (body.service  ?? '').trim();
-    const country  = (body.country  ?? '6').trim();
+    const body = await request.json();
+    const service = (body.service ?? '').trim();
+    const country = (body.country ?? '6').trim();
     const operator = (body.operator ?? '0').trim();
 
     if (!service) {
@@ -68,10 +68,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const rlHour = checkRateLimit(`order_hour_${verifiedUserId}`, RATE_LIMITS.order);
+    const rlHour = await checkRateLimitAsync(`order_hour_${verifiedUserId}`, RATE_LIMITS.order);
     if (!rlHour.allowed) {
       return NextResponse.json(
-        { error: 'Batas order per jam tercapai (10x). Coba lagi nanti.' },
+        { error: 'Batas order per jam tercapai. Coba lagi nanti.' },
         { status: 429 }
       );
     }
@@ -123,8 +123,8 @@ export async function POST(request: Request) {
     if (priceIDR > 0) {
       const { data: deductResult } = await db.rpc('deduct_balance_for_order', {
         p_user_id: verifiedUserId,
-        p_amount : priceIDR,
-        p_desc   : `Beli ${service} (pending)`,
+        p_amount: priceIDR,
+        p_desc: `Beli ${service} (pending)`,
       });
 
       if (!deductResult?.success) {
@@ -147,9 +147,9 @@ export async function POST(request: Request) {
       if (priceIDR > 0) {
         await db.rpc('update_balance', { p_email: verifiedEmail, p_amount: priceIDR });
         await db.from('mutations').insert({
-          user_id    : verifiedUserId,
-          type       : 'in',
-          amount     : priceIDR,
+          user_id: verifiedUserId,
+          type: 'in',
+          amount: priceIDR,
           description: `Refund otomatis — gagal koneksi ke provider`,
         });
       }
@@ -162,13 +162,13 @@ export async function POST(request: Request) {
       if (verifiedUserId && activationId) {
         try {
           await db.from('orders').insert({
-            user_id      : verifiedUserId,
+            user_id: verifiedUserId,
             activation_id: activationId,
             phone,
-            price        : priceIDR,
-            service_name : service,
-            status       : 'waiting',
-            refunded     : false,
+            price: priceIDR,
+            service_name: service,
+            status: 'waiting',
+            refunded: false,
           });
         } catch (e) {
           console.error('[order POST] Gagal insert order ke DB:', e);
@@ -182,23 +182,23 @@ export async function POST(request: Request) {
     if (priceIDR > 0) {
       await db.rpc('update_balance', { p_email: verifiedEmail, p_amount: priceIDR });
       await db.from('mutations').insert({
-        user_id    : verifiedUserId,
-        type       : 'in',
-        amount     : priceIDR,
+        user_id: verifiedUserId,
+        type: 'in',
+        amount: priceIDR,
         description: `Refund otomatis — ${orderText}`,
       });
     }
 
     const ERROR_MAP: Record<string, string> = {
-      NO_NUMBERS      : 'Number stock is unavailable for this service. Try another country.',
-      NO_BALANCE      : 'Service temporarily unavailable. Please contact support.',
-      WRONG_SERVICE   : 'Invalid service. Please try again.',
-      WRONG_COUNTRY   : 'Invalid country. Please try again.',
-      BAD_ACTION      : 'Invalid request. Please try again.',
-      BAD_KEY         : 'Service temporarily unavailable. Please contact support.',
-      ERROR_SQL       : 'Server error. Please try again later.',
-      BANNED          : 'Service temporarily unavailable. Please contact support.',
-      REPEATED_NUMBER : 'This number has already been used for this service.',
+      NO_NUMBERS: 'Number stock is unavailable for this service. Try another country.',
+      NO_BALANCE: 'Service temporarily unavailable. Please contact support.',
+      WRONG_SERVICE: 'Invalid service. Please try again.',
+      WRONG_COUNTRY: 'Invalid country. Please try again.',
+      BAD_ACTION: 'Invalid request. Please try again.',
+      BAD_KEY: 'Service temporarily unavailable. Please contact support.',
+      ERROR_SQL: 'Server error. Please try again later.',
+      BANNED: 'Service temporarily unavailable. Please contact support.',
+      REPEATED_NUMBER: 'This number has already been used for this service.',
     };
 
     console.error(`[POST /api/order] upstream error: ${orderText}`);
@@ -219,20 +219,20 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Parameter "id" is required.' }, { status: 400 });
     }
 
-    const res  = await fetch(
+    const res = await fetch(
       `${BASE_URL}?api_key=${API_KEY}&action=getStatus&id=${id}`,
       { cache: 'no-store' }
     );
     const text = (await res.text()).trim();
 
-    if (text === 'STATUS_WAIT_CODE')   return NextResponse.json({ status: 'waiting' });
+    if (text === 'STATUS_WAIT_CODE') return NextResponse.json({ status: 'waiting' });
     if (text === 'STATUS_WAIT_RESEND') return NextResponse.json({ status: 'wait_resend' });
-    if (text === 'STATUS_CANCEL')      return NextResponse.json({ status: 'cancel' });
+    if (text === 'STATUS_CANCEL') return NextResponse.json({ status: 'cancel' });
 
     if (text.startsWith('STATUS_OK:')) {
       const fullText = text.slice('STATUS_OK:'.length);
       const numMatch = fullText.match(/\b(\d{4,10})\b/);
-      const otpCode  = numMatch ? numMatch[1] : fullText;
+      const otpCode = numMatch ? numMatch[1] : fullText;
       return NextResponse.json({ status: 'ok', otpCode });
     }
 
@@ -246,8 +246,8 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const body   = await request.json();
-    const id     = (body.id     ?? '').toString().trim();
+    const body = await request.json();
+    const id = (body.id ?? '').toString().trim();
     const action = (body.action ?? '').trim();
 
     if (!id || !action) {
@@ -260,13 +260,13 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Invalid "action". Use "cancel", "done", or "resend".' }, { status: 400 });
     }
 
-    const url  = `${BASE_URL}?api_key=${API_KEY}&action=setStatus&id=${id}&status=${statusCode}`;
-    const res  = await fetch(url, { cache: 'no-store' });
+    const url = `${BASE_URL}?api_key=${API_KEY}&action=setStatus&id=${id}&status=${statusCode}`;
+    const res = await fetch(url, { cache: 'no-store' });
     const text = (await res.text()).trim();
 
     const SUCCESS_TOKENS: Record<string, string[]> = {
       resend: ['ACCESS_RETRY_GET', 'STATUS_WAIT_RESEND'],
-      done  : ['ACCESS_ACTIVATION', 'ACTIVATION_STATUS_CHANGED'],
+      done: ['ACCESS_ACTIVATION', 'ACTIVATION_STATUS_CHANGED'],
       cancel: ['ACCESS_CANCEL', 'ACTIVATION_STATUS_CHANGED', 'ACCESS_ALREADY_USED'],
     };
 
@@ -297,23 +297,45 @@ export async function PATCH(request: Request) {
               .select('id');
 
             if (updated && updated.length > 0) {
-              const { data: profile } = await db
-                .from('profiles').select('email').eq('id', order.user_id).single();
+              // Atomic update berhasil — sekarang refund saldo
+              // Kalau update_balance gagal di sini, order sudah refunded=true tapi saldo belum balik
+              // → log CRITICAL agar bisa diinvestigasi & diperbaiki manual
+              try {
+                const { data: profile } = await db
+                  .from('profiles').select('email').eq('id', order.user_id).single();
 
-              if (profile?.email) {
-                await db.rpc('update_balance', { p_email: profile.email, p_amount: order.price });
+                if (!profile?.email) throw new Error('Profile tidak ditemukan');
+
+                const { error: rpcErr } = await db.rpc('update_balance', {
+                  p_email: profile.email,
+                  p_amount: order.price,
+                });
+
+                if (rpcErr) throw new Error(`update_balance gagal: ${rpcErr.message}`);
+
+                await db.from('mutations').insert({
+                  user_id: order.user_id,
+                  type: 'in',
+                  amount: order.price,
+                  description: `Refund pembatalan order #${order.id}`,
+                });
+
+                console.log(`[cancel] Refunded ${order.price} to user ${order.user_id} (order #${order.id})`);
+              } catch (refundErr) {
+                // CRITICAL: order sudah cancelled & refunded=true di DB tapi saldo belum kembali
+                // Perlu penanganan manual — catat ke tabel khusus agar tidak terlewat
+                console.error(`[cancel] CRITICAL — refund gagal untuk order #${order.id}, user ${order.user_id}, amount ${order.price}:`, refundErr);
+                try {
+                  await db.from('admin_logs').insert({
+                    action: 'refund_failed',
+                    target_id: String(order.id),
+                    details: `CRITICAL: Refund Rp ${order.price} gagal untuk user ${order.user_id} (order #${order.id}). Perlu manual refund.`,
+                  });
+                } catch { }
               }
-
-              await db.from('mutations').insert({
-                user_id    : order.user_id,
-                type       : 'in',
-                amount     : order.price,
-                description: `Refund pembatalan order #${order.id}`,
-              });
-
-              console.log(`[cancel] Refunded ${order.price} to user ${order.user_id} (order #${order.id})`);
             } else {
-              console.log(`[cancel] Skip — order #${order?.id} status: ${order?.status}, refunded: ${order?.refunded}`);
+              // Atomic update gagal → sudah direfund duluan (admin/cron) → aman, skip
+              console.log(`[cancel] Skip double refund — order #${order?.id} sudah diproses`);
             }
           }
         } catch (e) {
@@ -323,7 +345,7 @@ export async function PATCH(request: Request) {
 
       const MESSAGE: Record<string, string> = {
         resend: 'OTP resend request sent successfully.',
-        done  : 'Order confirmed as completed.',
+        done: 'Order confirmed as completed.',
         cancel: 'Order cancelled. Balance will be refunded.',
       };
       return NextResponse.json({ success: true, message: MESSAGE[action] });

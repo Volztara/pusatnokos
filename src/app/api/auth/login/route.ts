@@ -13,40 +13,69 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// ── Server-side rate limiting per email (lapisan kedua setelah middleware IP) ──
-const emailAttempts = new Map<string, { count: number; firstAt: number }>();
-const MAX_ATTEMPTS  = 5;
-const WINDOW_MS     = 15 * 60 * 1000; // 15 menit
+const MAX_ATTEMPTS = 5;
+const WINDOW_MS = 15 * 60 * 1000; // 15 menit
 
-function checkEmailRate(email: string): { allowed: boolean; unlockIn?: string } {
-  const now   = Date.now();
-  const key   = email.toLowerCase().trim();
-  const entry = emailAttempts.get(key);
-  if (!entry || now - entry.firstAt > WINDOW_MS) {
-    emailAttempts.set(key, { count: 1, firstAt: now });
+// ✅ Rate limit per email via Supabase — cross-instance, tidak bisa bypass
+async function checkEmailRate(email: string): Promise<{ allowed: boolean; unlockIn?: string }> {
+  try {
+    const key = `login:${email.toLowerCase().trim()}`;
+    const now = Date.now();
+    const resetAt = new Date(now + WINDOW_MS).toISOString();
+
+    const { data: existing } = await supabaseAdmin
+      .from('rate_limits')
+      .select('count, reset_at')
+      .eq('key', key)
+      .single();
+
+    if (!existing || new Date(existing.reset_at) < new Date()) {
+      // Entry tidak ada atau expired — buat baru
+      await supabaseAdmin.from('rate_limits').upsert(
+        { key, count: 1, reset_at: resetAt },
+        { onConflict: 'key' }
+      );
+      return { allowed: true };
+    }
+
+    if (existing.count >= MAX_ATTEMPTS) {
+      const sec = Math.ceil((new Date(existing.reset_at).getTime() - now) / 1000);
+      return {
+        allowed: false,
+        unlockIn: sec > 60 ? `${Math.ceil(sec / 60)} menit` : `${sec} detik`,
+      };
+    }
+
+    // Increment via RPC atomic
+    await supabaseAdmin.rpc('increment_rate_limit', {
+      p_key: key,
+      p_max_count: MAX_ATTEMPTS,
+      p_reset_at: existing.reset_at,
+    });
+
+    return { allowed: true };
+  } catch {
+    // Fallback: allow jika Supabase error — jangan block semua user
     return { allowed: true };
   }
-  if (entry.count >= MAX_ATTEMPTS) {
-    const sec = Math.ceil((WINDOW_MS - (now - entry.firstAt)) / 1000);
-    return { allowed: false, unlockIn: sec > 60 ? `${Math.ceil(sec / 60)} menit` : `${sec} detik` };
-  }
-  entry.count++;
-  return { allowed: true };
 }
 
-function recordEmailSuccess(email: string) {
-  emailAttempts.delete(email.toLowerCase().trim());
+async function clearEmailRate(email: string) {
+  try {
+    const key = `login:${email.toLowerCase().trim()}`;
+    await supabaseAdmin.from('rate_limits').upsert(
+      { key, count: 0, reset_at: new Date(Date.now() + WINDOW_MS).toISOString() },
+      { onConflict: 'key' }
+    );
+  } catch { }
 }
 
 async function verifyTurnstile(token: string): Promise<boolean> {
   try {
     const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-      method : 'POST',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body   : JSON.stringify({
-        secret  : process.env.TURNSTILE_SECRET_KEY,
-        response: token,
-      }),
+      body: JSON.stringify({ secret: process.env.TURNSTILE_SECRET_KEY, response: token }),
     });
     const data = await res.json();
     return data.success === true;
@@ -61,8 +90,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email dan password wajib diisi.' }, { status: 400 });
     }
 
-    // ── Rate limit per email (server-side) ──
-    const rl = checkEmailRate(email);
+    // ✅ Rate limit per email via Supabase (cross-instance)
+    const rl = await checkEmailRate(email);
     if (!rl.allowed) {
       return NextResponse.json(
         { error: `Terlalu banyak percobaan gagal. Coba lagi dalam ${rl.unlockIn}.` },
@@ -70,16 +99,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // ── Verifikasi Turnstile ──
     if (!turnstileToken || !(await verifyTurnstile(turnstileToken))) {
       return NextResponse.json({ error: 'Verifikasi CAPTCHA gagal. Coba lagi.' }, { status: 400 });
     }
 
-    // ── Login via Supabase Auth ──
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      // Jangan hapus attempt — biarkan counter naik
       const msg = error.message.includes('Invalid login')
         ? 'Email atau password salah.'
         : error.message.includes('Email not confirmed')
@@ -88,7 +114,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: msg }, { status: 401 });
     }
 
-    // ── Ambil profile + cek blacklist ──
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('name, email, balance, is_blacklisted')
@@ -96,26 +121,21 @@ export async function POST(request: Request) {
       .single();
 
     if (profile?.is_blacklisted) {
-      return NextResponse.json(
-        { error: 'Akun kamu telah diblokir. Hubungi admin.' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'Akun kamu telah diblokir. Hubungi admin.' }, { status: 403 });
     }
 
-    // ── Login berhasil: reset rate limit ──
-    recordEmailSuccess(email);
+    // ✅ Login berhasil — reset rate limit
+    await clearEmailRate(email);
 
-    // ── Return access_token agar client bisa autentikasi request berikutnya ──
     return NextResponse.json({
       success: true,
-      // access_token dikirim ke client untuk dipakai sebagai Bearer token
-      access_token : data.session?.access_token,
+      access_token: data.session?.access_token,
       refresh_token: data.session?.refresh_token,
-      expires_in   : data.session?.expires_in,
+      expires_in: data.session?.expires_in,
       user: {
-        id     : data.user.id,
-        name   : profile?.name    ?? email.split('@')[0],
-        email  : profile?.email   ?? email,
+        id: data.user.id,
+        name: profile?.name ?? email.split('@')[0],
+        email: profile?.email ?? email,
         balance: profile?.balance ?? 0,
       },
     });

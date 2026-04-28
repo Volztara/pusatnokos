@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import NextImage from 'next/image';
-import { 
-  Smartphone, MessageCircle, Send, ShoppingBag, Camera, Search, Menu, X, 
-  Zap, ShieldCheck, Clock, Code, ChevronRight, User, Wallet, LogOut, 
+import {
+  Smartphone, MessageCircle, Send, ShoppingBag, Camera, Search, Menu, X,
+  Zap, ShieldCheck, Clock, Code, ChevronRight, User, Wallet, LogOut,
   Mail, Lock, Eye, EyeOff, CheckCircle, RefreshCw, AlertCircle, ShoppingCart,
-  CreditCard, History, Settings, QrCode, Copy, Check, ChevronDown, Filter, 
+  CreditCard, History, Settings, QrCode, Copy, Check, ChevronDown, Filter,
   ArrowRight, CheckCircle2, PlayCircle, Minimize2, Bell, MessageSquare,
   Globe, ShieldAlert, Star, ArrowUpDown, Receipt, Moon, Sun, Server, Users, Gift, Share2, RotateCcw, Upload,
   BarChart2, TrendingUp, Package, Activity
@@ -16,8 +16,8 @@ import {
 // TYPES & INTERFACES
 // ==========================================
 interface UserData {
-  name   : string;
-  email  : string;
+  name: string;
+  email: string;
   balance?: number;
 }
 
@@ -81,9 +81,9 @@ interface NavItem {
 // ==========================================
 // CONSTANTS
 // ==========================================
-const CS_WA        = '6287862306726';
-const CS_TELEGRAM  = '@PusatNokosCS';
-const SESSION_TTL  = 3 * 24 * 60 * 60 * 1000; // 3 hari dalam ms
+const CS_WA = '6287862306726';
+const CS_TELEGRAM = '@PusatNokosCS';
+const SESSION_TTL = 3 * 24 * 60 * 60 * 1000; // 3 hari dalam ms
 
 // ── Security helpers ─────────────────────────────────────────────────
 // Generate token kriptografis (32 hex chars)
@@ -102,7 +102,7 @@ let _csrfToken: string | null = null;
 
 const setSecureSession = (userData: UserData, accessToken?: string) => {
   _sessionToken = accessToken ?? genToken(); // pakai Supabase JWT jika tersedia
-  _csrfToken    = genToken();
+  _csrfToken = genToken();
   const payload = { ...userData, _savedAt: Date.now(), _st: _sessionToken, _at: accessToken ?? '' };
   // sessionStorage: auto-hapus saat browser/tab ditutup (lebih aman dari localStorage)
   try {
@@ -111,16 +111,16 @@ const setSecureSession = (userData: UserData, accessToken?: string) => {
     sessionStorage.setItem('nokos_s', JSON.stringify(payload));
   } catch (e) {
     if (e instanceof DOMException && e.name === 'QuotaExceededError') {
-      try { sessionStorage.clear(); sessionStorage.setItem('nokos_s', JSON.stringify(payload)); } catch {}
+      try { sessionStorage.clear(); sessionStorage.setItem('nokos_s', JSON.stringify(payload)); } catch { }
     }
   }
 };
 
 const clearSecureSession = () => {
   _sessionToken = null;
-  _csrfToken    = null;
-  try { sessionStorage.removeItem('nokos_s'); } catch {}
-  try { localStorage.removeItem('nokos_session'); } catch {} // hapus lama juga
+  _csrfToken = null;
+  try { sessionStorage.removeItem('nokos_s'); } catch { }
+  try { localStorage.removeItem('nokos_session'); } catch { } // hapus lama juga
 };
 
 // Bersihkan localStorage dari keys lama agar tidak QuotaExceededError
@@ -158,7 +158,7 @@ const cleanupStorage = () => {
       }
       allKeys.forEach(k => localStorage.removeItem(k));
     }
-  } catch {}
+  } catch { }
 };
 
 // Wrapper setItem yang bersihkan storage jika quota exceeded
@@ -168,7 +168,7 @@ const safeLocalSet = (key: string, value: string) => {
   } catch (e) {
     if (e instanceof DOMException && e.name === 'QuotaExceededError') {
       cleanupStorage();
-      try { localStorage.setItem(key, value); } catch {} // retry sekali
+      try { localStorage.setItem(key, value); } catch { } // retry sekali
     }
   }
 };
@@ -187,7 +187,7 @@ const restoreSecureSession = (): (UserData & { _savedAt: number }) | null => {
           return null;
         }
         _sessionToken = parsed._at;
-        _csrfToken    = genToken();
+        _csrfToken = genToken();
         return parsed;
       }
       sessionStorage.removeItem('nokos_s');
@@ -203,7 +203,7 @@ const restoreSecureSession = (): (UserData & { _savedAt: number }) | null => {
       }
       localStorage.removeItem('nokos_session');
     }
-  } catch {}
+  } catch { }
   return null;
 };
 
@@ -213,7 +213,7 @@ const authHeaders = (extra?: Record<string, string>): Record<string, string> => 
   'Content-Type': 'application/json',
   // Authorization: Bearer <supabase_access_token> — divalidasi server via supabase.auth.getUser()
   ...((_sessionToken) ? { 'Authorization': `Bearer ${_sessionToken}` } : {}),
-  ...((_csrfToken)    ? { 'X-CSRF-Token': _csrfToken }                : {}),
+  ...((_csrfToken) ? { 'X-CSRF-Token': _csrfToken } : {}),
   ...extra,
 });
 
@@ -230,17 +230,17 @@ const PAYMENT_METHODS: PaymentMethod[] = [
 ];
 
 const COUNTRIES: Country[] = [
-  { id: '6',   name: '🇮🇩 Indonesia (+62)' },
-  { id: '7',   name: '🇲🇾 Malaysia (+60)' },
-  { id: '12',  name: '🇺🇸 United States (+1)' },
-  { id: '16',  name: '🇬🇧 United Kingdom (+44)' },
-  { id: '52',  name: '🇹🇭 Thailand (+66)' },
-  { id: '10',  name: '🇻🇳 Vietnam (+84)' },
-  { id: '4',   name: '🇵🇭 Philippines (+63)' },
-  { id: '0',   name: '🇷🇺 Russia (+7)' },
-  { id: '22',  name: '🇮🇳 India (+91)' },
-  { id: '43',  name: '🇩🇪 Germany (+49)' },
-  { id: '73',  name: '🇧🇷 Brazil (+55)' },
+  { id: '6', name: '🇮🇩 Indonesia (+62)' },
+  { id: '7', name: '🇲🇾 Malaysia (+60)' },
+  { id: '12', name: '🇺🇸 United States (+1)' },
+  { id: '16', name: '🇬🇧 United Kingdom (+44)' },
+  { id: '52', name: '🇹🇭 Thailand (+66)' },
+  { id: '10', name: '🇻🇳 Vietnam (+84)' },
+  { id: '4', name: '🇵🇭 Philippines (+63)' },
+  { id: '0', name: '🇷🇺 Russia (+7)' },
+  { id: '22', name: '🇮🇳 India (+91)' },
+  { id: '43', name: '🇩🇪 Germany (+49)' },
+  { id: '73', name: '🇧🇷 Brazil (+55)' },
   { id: '135', name: '🇸🇬 Singapore (+65)' },
 ];
 
@@ -285,192 +285,192 @@ type Lang = 'id' | 'en' | 'zh';
 const T: Record<Lang, Record<string, string>> = {
   id: {
     // Nav
-    dashboard:'Dashboard', buy:'Beli Nomor', topup:'Deposit Saldo',
-    history:'Riwayat Transaksi', mutasi:'Mutasi Saldo', profile:'Pengaturan Akun',
+    dashboard: 'Dashboard', buy: 'Beli Nomor', topup: 'Deposit Saldo',
+    history: 'Riwayat Transaksi', mutasi: 'Mutasi Saldo', profile: 'Pengaturan Akun',
     // Header
-    logout:'Keluar', topupBtn:'+ Topup', notifications:'Notifikasi',
-    clearAll:'Hapus semua', noNotif:'Belum ada notifikasi', yourBalance:'Saldo Anda',
+    logout: 'Keluar', topupBtn: '+ Topup', notifications: 'Notifikasi',
+    clearAll: 'Hapus semua', noNotif: 'Belum ada notifikasi', yourBalance: 'Saldo Anda',
     // Buy page
-    buyTitle:'Beli Nomor OTP', buySubtitle:'Pilih layanan aplikasi. Harga & stok diperbarui secara real-time.',
-    serverCountry:'Negara Server', search:'Pencarian', sort:'Urutkan',
-    serviceCol:'Layanan App', stockCol:'Stok Server', priceCol:'Harga / OTP', actionCol:'Aksi',
-    buyBtn:'Beli Nomor', modeBundle:'⚡ Mode Bundle', cancelBundle:'✕ Batal Bundle',
-    searchPlaceholder:'Cari layanan...', recommended:'Rekomendasi',
+    buyTitle: 'Beli Nomor OTP', buySubtitle: 'Pilih layanan aplikasi. Harga & stok diperbarui secara real-time.',
+    serverCountry: 'Negara Server', search: 'Pencarian', sort: 'Urutkan',
+    serviceCol: 'Layanan App', stockCol: 'Stok Server', priceCol: 'Harga / OTP', actionCol: 'Aksi',
+    buyBtn: 'Beli Nomor', modeBundle: '⚡ Mode Bundle', cancelBundle: '✕ Batal Bundle',
+    searchPlaceholder: 'Cari layanan...', recommended: 'Rekomendasi',
     // Active orders
-    activeOrders:'Pesanan Aktif', scrollTop:'Atas',
-    phoneReceived:'Nomor HP Diterima', otpCode:'Kode Verifikasi (OTP)',
-    waitingOTP:'Menunggu SMS Masuk...', viewAllSMS:'Lihat Semua SMS',
-    resend:'Resend', sms:'SMS', cancel:'Batal',
+    activeOrders: 'Pesanan Aktif', scrollTop: 'Atas',
+    phoneReceived: 'Nomor HP Diterima', otpCode: 'Kode Verifikasi (OTP)',
+    waitingOTP: 'Menunggu SMS Masuk...', viewAllSMS: 'Lihat Semua SMS',
+    resend: 'Resend', sms: 'SMS', cancel: 'Batal',
     // Dashboard
-    totalBalance:'Total Saldo', totalOrder:'Total Order', successOrder:'Order Sukses',
-    activeOrder:'Sedang Aktif', successRate:'Sukses Rate',
-    financeSummary:'Ringkasan Keuangan', totalDeposit:'Total Deposit',
-    totalSpend:'Total Belanja', remainBalance:'Sisa Saldo',
-    recentTx:'Transaksi Terakhir', viewAll:'Lihat semua →',
-    quickActions:'Aksi Cepat',
+    totalBalance: 'Total Saldo', totalOrder: 'Total Order', successOrder: 'Order Sukses',
+    activeOrder: 'Sedang Aktif', successRate: 'Sukses Rate',
+    financeSummary: 'Ringkasan Keuangan', totalDeposit: 'Total Deposit',
+    totalSpend: 'Total Belanja', remainBalance: 'Sisa Saldo',
+    recentTx: 'Transaksi Terakhir', viewAll: 'Lihat semua →',
+    quickActions: 'Aksi Cepat',
     // Deposit
-    depositTitle:'Deposit Saldo', depositNew:'+ Deposit Baru', depositHistory:'📋 Riwayat',
-    autoDeposit:'Deposit Otomatis', manualDeposit:'Transfer Manual',
-    nominalDeposit:'Nominal Deposit', paymentMethod:'Metode Pembayaran',
-    balanceIn:'Saldo masuk', totalPay:'Total Bayar', payNow:'Bayar Sekarang',
-    processing:'Memproses...', back:'← Back',
+    depositTitle: 'Deposit Saldo', depositNew: '+ Deposit Baru', depositHistory: '📋 Riwayat',
+    autoDeposit: 'Deposit Otomatis', manualDeposit: 'Transfer Manual',
+    nominalDeposit: 'Nominal Deposit', paymentMethod: 'Metode Pembayaran',
+    balanceIn: 'Saldo masuk', totalPay: 'Total Bayar', payNow: 'Bayar Sekarang',
+    processing: 'Memproses...', back: '← Back',
     // History
-    historyTitle:'Riwayat Transaksi',
+    historyTitle: 'Riwayat Transaksi',
     // Mutasi
-    mutasiTitle:'Buku Mutasi Saldo', mutasiSubtitle:'Catatan rinci pemasukan dan pengeluaran saldo Anda.',
-    timeDesc:'Waktu & Deskripsi', nominal:'Nominal',
+    mutasiTitle: 'Buku Mutasi Saldo', mutasiSubtitle: 'Catatan rinci pemasukan dan pengeluaran saldo Anda.',
+    timeDesc: 'Waktu & Deskripsi', nominal: 'Nominal',
     // Profile
-    fullName:'Full Name', updateProfile:'Perbarui Profil',
-    changePassword:'Ganti Password', currentPass:'Password Saat Ini',
-    newPass:'Password Baru', confirmPass:'Confirm Password Baru',
-    joinedAt:'Bergabung Sejak', totalOrders:'Total Order', totalPurchase:'Total Pembelian',
-    savePassword:'Simpan Password Baru', saving:'Menyimpan...',
+    fullName: 'Full Name', updateProfile: 'Perbarui Profil',
+    changePassword: 'Ganti Password', currentPass: 'Password Saat Ini',
+    newPass: 'Password Baru', confirmPass: 'Confirm Password Baru',
+    joinedAt: 'Bergabung Sejak', totalOrders: 'Total Order', totalPurchase: 'Total Pembelian',
+    savePassword: 'Simpan Password Baru', saving: 'Menyimpan...',
     // Dashboard greeting
-    greeting:'Halo', welcomeMsg:'Selamat datang di Pusat Nokos',
+    greeting: 'Halo', welcomeMsg: 'Selamat datang di Pusat Nokos',
     // Profile misc
-    accountInfo:'Informasi Akun', passStrWeak:'Lemah', passStrMed:'Sedang', passStrStrong:'Kuat', passStrVeryStrong:'Sangat Kuat',
-    passMismatch:'Password tidak cocok.', changePassTitle:'Ganti Password',
+    accountInfo: 'Informasi Akun', passStrWeak: 'Lemah', passStrMed: 'Sedang', passStrStrong: 'Kuat', passStrVeryStrong: 'Sangat Kuat',
+    passMismatch: 'Password tidak cocok.', changePassTitle: 'Ganti Password',
     // History filters
-    filterAll:'Semua', filterSuccess:'✅ Berhasil', filterWaiting:'⏳ Menunggu',
-    filterCancelled:'❌ Batal', filterExpired:'🕐 Kadaluarsa',
+    filterAll: 'Semua', filterSuccess: '✅ Berhasil', filterWaiting: '⏳ Menunggu',
+    filterCancelled: '❌ Batal', filterExpired: '🕐 Kadaluarsa',
     // Mutasi filters
-    mutasiAll:'Semua', mutasiIn:'Masuk (+)', mutasiOut:'Keluar (-)',
+    mutasiAll: 'Semua', mutasiIn: 'Masuk (+)', mutasiOut: 'Keluar (-)',
     // Load more
-    loadMore:'Muat lebih banyak', noMoreData:'Tidak ada data lagi',
-    noData:'Tidak ada data',
+    loadMore: 'Muat lebih banyak', noMoreData: 'Tidak ada data lagi',
+    noData: 'Tidak ada data',
     // Extra
-    legalDocs:'Dokumen Legal', outOfStock:'Habis', perOTP:'per OTP',
-    allSMS:'Semua SMS Masuk', cancelBtn:'BATAL', waitingBtn:'MENUNGGU',
-    successBtn:'BERHASIL', expiredBtn:'KADALUARSA', pickCol:'Pilih',
-    appDetailCol:'Detail Aplikasi & Waktu', phoneOtpCol:'Nomor HP & Kode OTP',
-    statusCol:'Status', otomatis:'OTOMATIS', categoryAll:'Semua', categoryOthers:'Lainnya',
-    depositAutoDesc:'Berbagai metode pembayaran tersedia. Saldo masuk otomatis setelah bayar.',
-    depositManualDesc:'Transfer ke rekening/QRIS admin, upload bukti, admin approve dalam 1x24 jam.',
-    sortPriceAsc:'Harga Terendah',
-    legalTerms:'Syarat & Ketentuan', legalPrivacy:'Kebijakan Privasi', legalRefund:'Kebijakan Refund', legalDeposit:'Kebijakan Deposit', legalAntiAbuse:'Anti Penyalahgunaan', legalDisclaimer:'Disclaimer', logoutBtn:'Keluar Akun', cancelBtn2:'Batal', confirmBtn:'Ya, Lanjutkan', sortPriceDesc:'Harga Tertinggi', sortStockMost:'Stok Terbanyak',
-    selectCountry:'Pilih Negara', searchCountry:'Cari negara...', depositStatusPending:'Menunggu', depositStatusApproved:'Disetujui', depositStatusRejected:'Ditolak',
+    legalDocs: 'Dokumen Legal', outOfStock: 'Habis', perOTP: 'per OTP',
+    allSMS: 'Semua SMS Masuk', cancelBtn: 'BATAL', waitingBtn: 'MENUNGGU',
+    successBtn: 'BERHASIL', expiredBtn: 'KADALUARSA', pickCol: 'Pilih',
+    appDetailCol: 'Detail Aplikasi & Waktu', phoneOtpCol: 'Nomor HP & Kode OTP',
+    statusCol: 'Status', otomatis: 'OTOMATIS', categoryAll: 'Semua', categoryOthers: 'Lainnya',
+    depositAutoDesc: 'Berbagai metode pembayaran tersedia. Saldo masuk otomatis setelah bayar.',
+    depositManualDesc: 'Transfer ke rekening/QRIS admin, upload bukti, admin approve dalam 1x24 jam.',
+    sortPriceAsc: 'Harga Terendah',
+    legalTerms: 'Syarat & Ketentuan', legalPrivacy: 'Kebijakan Privasi', legalRefund: 'Kebijakan Refund', legalDeposit: 'Kebijakan Deposit', legalAntiAbuse: 'Anti Penyalahgunaan', legalDisclaimer: 'Disclaimer', logoutBtn: 'Keluar Akun', cancelBtn2: 'Batal', confirmBtn: 'Ya, Lanjutkan', sortPriceDesc: 'Harga Tertinggi', sortStockMost: 'Stok Terbanyak',
+    selectCountry: 'Pilih Negara', searchCountry: 'Cari negara...', depositStatusPending: 'Menunggu', depositStatusApproved: 'Disetujui', depositStatusRejected: 'Ditolak',
   },
   en: {
     // Nav
-    dashboard:'Dashboard', buy:'Buy Number', topup:'Deposit',
-    history:'Transaction History', mutasi:'Balance History', profile:'Account Settings',
+    dashboard: 'Dashboard', buy: 'Buy Number', topup: 'Deposit',
+    history: 'Transaction History', mutasi: 'Balance History', profile: 'Account Settings',
     // Header
-    logout:'Logout', topupBtn:'+ Top Up', notifications:'Notifications',
-    clearAll:'Clear all', noNotif:'No notifications yet', yourBalance:'Your Balance',
+    logout: 'Logout', topupBtn: '+ Top Up', notifications: 'Notifications',
+    clearAll: 'Clear all', noNotif: 'No notifications yet', yourBalance: 'Your Balance',
     // Buy page
-    buyTitle:'Buy OTP Number', buySubtitle:'Select app service. Prices & stock updated real-time.',
-    serverCountry:'Server Country', search:'Search', sort:'Sort',
-    serviceCol:'App Service', stockCol:'Server Stock', priceCol:'Price / OTP', actionCol:'Action',
-    buyBtn:'Buy Number', modeBundle:'⚡ Bundle Mode', cancelBundle:'✕ Cancel Bundle',
-    searchPlaceholder:'Search service...', recommended:'Recommended',
+    buyTitle: 'Buy OTP Number', buySubtitle: 'Select app service. Prices & stock updated real-time.',
+    serverCountry: 'Server Country', search: 'Search', sort: 'Sort',
+    serviceCol: 'App Service', stockCol: 'Server Stock', priceCol: 'Price / OTP', actionCol: 'Action',
+    buyBtn: 'Buy Number', modeBundle: '⚡ Bundle Mode', cancelBundle: '✕ Cancel Bundle',
+    searchPlaceholder: 'Search service...', recommended: 'Recommended',
     // Active orders
-    activeOrders:'Active Orders', scrollTop:'Top',
-    phoneReceived:'Phone Number Received', otpCode:'Verification Code (OTP)',
-    waitingOTP:'Waiting for SMS...', viewAllSMS:'View All SMS',
-    resend:'Resend', sms:'SMS', cancel:'Cancel',
+    activeOrders: 'Active Orders', scrollTop: 'Top',
+    phoneReceived: 'Phone Number Received', otpCode: 'Verification Code (OTP)',
+    waitingOTP: 'Waiting for SMS...', viewAllSMS: 'View All SMS',
+    resend: 'Resend', sms: 'SMS', cancel: 'Cancel',
     // Dashboard
-    totalBalance:'Total Balance', totalOrder:'Total Orders', successOrder:'Successful',
-    activeOrder:'Active', successRate:'Success Rate',
-    financeSummary:'Financial Summary', totalDeposit:'Total Deposit',
-    totalSpend:'Total Spent', remainBalance:'Remaining Balance',
-    recentTx:'Recent Transactions', viewAll:'View all →',
-    quickActions:'Quick Actions',
+    totalBalance: 'Total Balance', totalOrder: 'Total Orders', successOrder: 'Successful',
+    activeOrder: 'Active', successRate: 'Success Rate',
+    financeSummary: 'Financial Summary', totalDeposit: 'Total Deposit',
+    totalSpend: 'Total Spent', remainBalance: 'Remaining Balance',
+    recentTx: 'Recent Transactions', viewAll: 'View all →',
+    quickActions: 'Quick Actions',
     // Deposit
-    depositTitle:'Deposit Balance', depositNew:'+ New Deposit', depositHistory:'📋 History',
-    autoDeposit:'Auto Deposit', manualDeposit:'Manual Transfer',
-    nominalDeposit:'Deposit Amount', paymentMethod:'Payment Method',
-    balanceIn:'Balance in', totalPay:'Total Pay', payNow:'Pay Now',
-    processing:'Processing...', back:'← Back',
+    depositTitle: 'Deposit Balance', depositNew: '+ New Deposit', depositHistory: '📋 History',
+    autoDeposit: 'Auto Deposit', manualDeposit: 'Manual Transfer',
+    nominalDeposit: 'Deposit Amount', paymentMethod: 'Payment Method',
+    balanceIn: 'Balance in', totalPay: 'Total Pay', payNow: 'Pay Now',
+    processing: 'Processing...', back: '← Back',
     // History
-    historyTitle:'Transaction History',
+    historyTitle: 'Transaction History',
     // Mutasi
-    mutasiTitle:'Balance Book', mutasiSubtitle:'Detailed record of your balance in and out.',
-    timeDesc:'Time & Description', nominal:'Amount',
+    mutasiTitle: 'Balance Book', mutasiSubtitle: 'Detailed record of your balance in and out.',
+    timeDesc: 'Time & Description', nominal: 'Amount',
     // Profile
-    fullName:'Full Name', updateProfile:'Update Profile',
-    changePassword:'Change Password', currentPass:'Current Password',
-    newPass:'New Password', confirmPass:'Confirm New Password',
-    joinedAt:'Joined Since', totalOrders:'Total Orders', totalPurchase:'Total Purchase',
-    savePassword:'Save New Password', saving:'Saving...',
-    greeting:'Hello', welcomeMsg:'Welcome to Pusat Nokos',
-    accountInfo:'Account Information', passStrWeak:'Weak', passStrMed:'Medium', passStrStrong:'Strong', passStrVeryStrong:'Very Strong',
-    passMismatch:'Passwords do not match.', changePassTitle:'Change Password',
-    filterAll:'All', filterSuccess:'✅ Success', filterWaiting:'⏳ Waiting',
-    filterCancelled:'❌ Cancelled', filterExpired:'🕐 Expired',
-    mutasiAll:'All', mutasiIn:'Income (+)', mutasiOut:'Expense (-)',
-    loadMore:'Load more', noMoreData:'No more data', noData:'No data',
+    fullName: 'Full Name', updateProfile: 'Update Profile',
+    changePassword: 'Change Password', currentPass: 'Current Password',
+    newPass: 'New Password', confirmPass: 'Confirm New Password',
+    joinedAt: 'Joined Since', totalOrders: 'Total Orders', totalPurchase: 'Total Purchase',
+    savePassword: 'Save New Password', saving: 'Saving...',
+    greeting: 'Hello', welcomeMsg: 'Welcome to Pusat Nokos',
+    accountInfo: 'Account Information', passStrWeak: 'Weak', passStrMed: 'Medium', passStrStrong: 'Strong', passStrVeryStrong: 'Very Strong',
+    passMismatch: 'Passwords do not match.', changePassTitle: 'Change Password',
+    filterAll: 'All', filterSuccess: '✅ Success', filterWaiting: '⏳ Waiting',
+    filterCancelled: '❌ Cancelled', filterExpired: '🕐 Expired',
+    mutasiAll: 'All', mutasiIn: 'Income (+)', mutasiOut: 'Expense (-)',
+    loadMore: 'Load more', noMoreData: 'No more data', noData: 'No data',
     // Extra
-    legalDocs:'Legal Documents', outOfStock:'Out of Stock', perOTP:'per OTP',
-    allSMS:'All SMS', cancelBtn:'CANCELLED', waitingBtn:'WAITING',
-    successBtn:'SUCCESS', expiredBtn:'EXPIRED', pickCol:'Pick',
-    appDetailCol:'App Detail & Time', phoneOtpCol:'Phone & OTP Code',
-    statusCol:'Status', otomatis:'INSTANT', categoryAll:'All', categoryOthers:'Others',
-    depositAutoDesc:'Various payment methods available. Balance credited automatically after payment.',
-    depositManualDesc:'Transfer to admin account, upload proof, admin approves within 24 hours.',
-    sortPriceAsc:'Lowest Price',
-    legalTerms:'Terms of Service', legalPrivacy:'Privacy Policy', legalRefund:'Refund Policy', legalDeposit:'Deposit Policy', legalAntiAbuse:'Anti-Abuse Policy', legalDisclaimer:'Disclaimer', logoutBtn:'Sign Out', cancelBtn2:'Cancel', confirmBtn:'Yes, Continue', sortPriceDesc:'Highest Price', sortStockMost:'Most Stock',
-    selectCountry:'Select Country', searchCountry:'Search country...', depositStatusPending:'Pending', depositStatusApproved:'Approved', depositStatusRejected:'Rejected',
+    legalDocs: 'Legal Documents', outOfStock: 'Out of Stock', perOTP: 'per OTP',
+    allSMS: 'All SMS', cancelBtn: 'CANCELLED', waitingBtn: 'WAITING',
+    successBtn: 'SUCCESS', expiredBtn: 'EXPIRED', pickCol: 'Pick',
+    appDetailCol: 'App Detail & Time', phoneOtpCol: 'Phone & OTP Code',
+    statusCol: 'Status', otomatis: 'INSTANT', categoryAll: 'All', categoryOthers: 'Others',
+    depositAutoDesc: 'Various payment methods available. Balance credited automatically after payment.',
+    depositManualDesc: 'Transfer to admin account, upload proof, admin approves within 24 hours.',
+    sortPriceAsc: 'Lowest Price',
+    legalTerms: 'Terms of Service', legalPrivacy: 'Privacy Policy', legalRefund: 'Refund Policy', legalDeposit: 'Deposit Policy', legalAntiAbuse: 'Anti-Abuse Policy', legalDisclaimer: 'Disclaimer', logoutBtn: 'Sign Out', cancelBtn2: 'Cancel', confirmBtn: 'Yes, Continue', sortPriceDesc: 'Highest Price', sortStockMost: 'Most Stock',
+    selectCountry: 'Select Country', searchCountry: 'Search country...', depositStatusPending: 'Pending', depositStatusApproved: 'Approved', depositStatusRejected: 'Rejected',
   },
   zh: {
     // Nav
-    dashboard:'仪表盘', buy:'购买号码', topup:'充值',
-    history:'交易记录', mutasi:'余额记录', profile:'账户设置',
+    dashboard: '仪表盘', buy: '购买号码', topup: '充值',
+    history: '交易记录', mutasi: '余额记录', profile: '账户设置',
     // Header
-    logout:'退出', topupBtn:'+ 充值', notifications:'通知',
-    clearAll:'清除全部', noNotif:'暂无通知', yourBalance:'您的余额',
+    logout: '退出', topupBtn: '+ 充值', notifications: '通知',
+    clearAll: '清除全部', noNotif: '暂无通知', yourBalance: '您的余额',
     // Buy page
-    buyTitle:'购买OTP号码', buySubtitle:'选择应用服务。价格和库存实时更新。',
-    serverCountry:'服务器国家', search:'搜索', sort:'排序',
-    serviceCol:'应用服务', stockCol:'服务器库存', priceCol:'价格 / OTP', actionCol:'操作',
-    buyBtn:'购买号码', modeBundle:'⚡ 套餐模式', cancelBundle:'✕ 取消套餐',
-    searchPlaceholder:'搜索服务...', recommended:'推荐',
+    buyTitle: '购买OTP号码', buySubtitle: '选择应用服务。价格和库存实时更新。',
+    serverCountry: '服务器国家', search: '搜索', sort: '排序',
+    serviceCol: '应用服务', stockCol: '服务器库存', priceCol: '价格 / OTP', actionCol: '操作',
+    buyBtn: '购买号码', modeBundle: '⚡ 套餐模式', cancelBundle: '✕ 取消套餐',
+    searchPlaceholder: '搜索服务...', recommended: '推荐',
     // Active orders
-    activeOrders:'活跃订单', scrollTop:'顶部',
-    phoneReceived:'已接收号码', otpCode:'验证码 (OTP)',
-    waitingOTP:'等待短信...', viewAllSMS:'查看全部短信',
-    resend:'重发', sms:'短信', cancel:'取消',
+    activeOrders: '活跃订单', scrollTop: '顶部',
+    phoneReceived: '已接收号码', otpCode: '验证码 (OTP)',
+    waitingOTP: '等待短信...', viewAllSMS: '查看全部短信',
+    resend: '重发', sms: '短信', cancel: '取消',
     // Dashboard
-    totalBalance:'总余额', totalOrder:'总订单', successOrder:'成功',
-    activeOrder:'活跃', successRate:'成功率',
-    financeSummary:'财务摘要', totalDeposit:'总充值',
-    totalSpend:'总消费', remainBalance:'剩余余额',
-    recentTx:'最近交易', viewAll:'查看全部 →',
-    quickActions:'快捷操作',
+    totalBalance: '总余额', totalOrder: '总订单', successOrder: '成功',
+    activeOrder: '活跃', successRate: '成功率',
+    financeSummary: '财务摘要', totalDeposit: '总充值',
+    totalSpend: '总消费', remainBalance: '剩余余额',
+    recentTx: '最近交易', viewAll: '查看全部 →',
+    quickActions: '快捷操作',
     // Deposit
-    depositTitle:'充值余额', depositNew:'+ 新充值', depositHistory:'📋 记录',
-    autoDeposit:'自动充值', manualDeposit:'手动转账',
-    nominalDeposit:'充值金额', paymentMethod:'支付方式',
-    balanceIn:'入账余额', totalPay:'总支付', payNow:'立即支付',
-    processing:'处理中...', back:'← 返回',
+    depositTitle: '充值余额', depositNew: '+ 新充值', depositHistory: '📋 记录',
+    autoDeposit: '自动充值', manualDeposit: '手动转账',
+    nominalDeposit: '充值金额', paymentMethod: '支付方式',
+    balanceIn: '入账余额', totalPay: '总支付', payNow: '立即支付',
+    processing: '处理中...', back: '← 返回',
     // History
-    historyTitle:'交易记录',
+    historyTitle: '交易记录',
     // Mutasi
-    mutasiTitle:'余额账本', mutasiSubtitle:'详细记录您的余额收支。',
-    timeDesc:'时间与描述', nominal:'金额',
+    mutasiTitle: '余额账本', mutasiSubtitle: '详细记录您的余额收支。',
+    timeDesc: '时间与描述', nominal: '金额',
     // Profile
-    fullName:'全名', updateProfile:'更新资料',
-    changePassword:'修改密码', currentPass:'当前密码',
-    newPass:'新密码', confirmPass:'确认新密码',
-    joinedAt:'加入时间', totalOrders:'总订单', totalPurchase:'总消费',
-    savePassword:'保存新密码', saving:'保存中...',
-    greeting:'你好', welcomeMsg:'欢迎来到 Pusat Nokos',
-    accountInfo:'账户信息', passStrWeak:'弱', passStrMed:'中', passStrStrong:'强', passStrVeryStrong:'非常强',
-    passMismatch:'密码不匹配。', changePassTitle:'修改密码',
-    filterAll:'全部', filterSuccess:'✅ 成功', filterWaiting:'⏳ 等待中',
-    filterCancelled:'❌ 已取消', filterExpired:'🕐 已过期',
-    mutasiAll:'全部', mutasiIn:'入账 (+)', mutasiOut:'支出 (-)',
-    loadMore:'加载更多', noMoreData:'没有更多数据', noData:'暂无数据',
+    fullName: '全名', updateProfile: '更新资料',
+    changePassword: '修改密码', currentPass: '当前密码',
+    newPass: '新密码', confirmPass: '确认新密码',
+    joinedAt: '加入时间', totalOrders: '总订单', totalPurchase: '总消费',
+    savePassword: '保存新密码', saving: '保存中...',
+    greeting: '你好', welcomeMsg: '欢迎来到 Pusat Nokos',
+    accountInfo: '账户信息', passStrWeak: '弱', passStrMed: '中', passStrStrong: '强', passStrVeryStrong: '非常强',
+    passMismatch: '密码不匹配。', changePassTitle: '修改密码',
+    filterAll: '全部', filterSuccess: '✅ 成功', filterWaiting: '⏳ 等待中',
+    filterCancelled: '❌ 已取消', filterExpired: '🕐 已过期',
+    mutasiAll: '全部', mutasiIn: '入账 (+)', mutasiOut: '支出 (-)',
+    loadMore: '加载更多', noMoreData: '没有更多数据', noData: '暂无数据',
     // Extra
-    legalDocs:'法律文件', outOfStock:'缺货', perOTP:'每次OTP',
-    allSMS:'所有短信', cancelBtn:'已取消', waitingBtn:'等待中',
-    successBtn:'成功', expiredBtn:'已过期', pickCol:'选择',
-    appDetailCol:'应用详情 & 时间', phoneOtpCol:'手机号 & OTP',
-    statusCol:'状态', otomatis:'即时', categoryAll:'全部', categoryOthers:'其他',
-    depositAutoDesc:'多种支付方式可选。支付后余额自动到账。',
-    depositManualDesc:'转账至管理员账户，上传凭证，管理员在24小时内审核。',
-    sortPriceAsc:'最低价格',
-    legalTerms:'服务条款', legalPrivacy:'隐私政策', legalRefund:'退款政策', legalDeposit:'充值政策', legalAntiAbuse:'反滥用政策', legalDisclaimer:'免责声明', logoutBtn:'退出登录', cancelBtn2:'取消', confirmBtn:'是的，继续', sortPriceDesc:'最高价格', sortStockMost:'库存最多',
-    selectCountry:'选择国家', searchCountry:'搜索国家...', depositStatusPending:'待处理', depositStatusApproved:'已批准', depositStatusRejected:'已拒绝',
+    legalDocs: '法律文件', outOfStock: '缺货', perOTP: '每次OTP',
+    allSMS: '所有短信', cancelBtn: '已取消', waitingBtn: '等待中',
+    successBtn: '成功', expiredBtn: '已过期', pickCol: '选择',
+    appDetailCol: '应用详情 & 时间', phoneOtpCol: '手机号 & OTP',
+    statusCol: '状态', otomatis: '即时', categoryAll: '全部', categoryOthers: '其他',
+    depositAutoDesc: '多种支付方式可选。支付后余额自动到账。',
+    depositManualDesc: '转账至管理员账户，上传凭证，管理员在24小时内审核。',
+    sortPriceAsc: '最低价格',
+    legalTerms: '服务条款', legalPrivacy: '隐私政策', legalRefund: '退款政策', legalDeposit: '充值政策', legalAntiAbuse: '反滥用政策', legalDisclaimer: '免责声明', logoutBtn: '退出登录', cancelBtn2: '取消', confirmBtn: '是的，继续', sortPriceDesc: '最高价格', sortStockMost: '库存最多',
+    selectCountry: '选择国家', searchCountry: '搜索国家...', depositStatusPending: '待处理', depositStatusApproved: '已批准', depositStatusRejected: '已拒绝',
   },
 };
 
@@ -492,7 +492,7 @@ function useInView(threshold = 0.15) {
     // Fallback: jika setelah 1.2 detik masih belum visible, paksa visible
     const t = window.setTimeout(() => { if (!fired) { fired = true; setInView(true); } }, 1200);
     return () => { io.disconnect(); window.clearTimeout(t); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return { ref, inView };
 }
@@ -525,11 +525,11 @@ function ConfirmModal({ message, onConfirm, onCancel }: {
   message: string; onConfirm: () => void; onCancel: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center px-4" style={{background:'rgba(0,0,0,0.5)'}}>
+    <div className="fixed inset-0 z-[300] flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.5)' }}>
       <div className="bg-white dark:bg-[#0a0d16] rounded-2xl shadow-2xl border border-slate-200 dark:border-white/[0.09] p-6 max-w-sm w-full">
         <div className="flex items-start gap-3 mb-5">
           <div className="bg-amber-50 dark:bg-amber-900/20 p-2 rounded-xl shrink-0">
-            <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400"/>
+            <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
           </div>
           <p className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-relaxed">{message}</p>
         </div>
@@ -555,277 +555,278 @@ function ConfirmModal({ message, onConfirm, onCancel }: {
 // Google Favicon API: no CORS, no auth, works dari localhost & production.
 // ==========================================
 type LogoCfg =
-  | { type: 'si';  slug: string; color: string; bg: string }   // simpleicons CDN
-  | { type: 'fav'; domain: string; bg: string };               // Google Favicon CDN
+  | { type: 'si'; slug: string; color: string; bg: string }
+  | { type: 'fav'; domain: string; bg: string }
+  | { type: 'initial'; bg: string; color: string };
 
 const SERVICE_LOGO_MAP: [string[], LogoCfg][] = [
   // ── Chat ──────────────────────────────────────────────────────────────
-  [['whatsapp'],             { type:'si',  slug:'whatsapp',      color:'25D366', bg:'#dcfce7' }],
-  [['telegram'],             { type:'si',  slug:'telegram',      color:'26A5E4', bg:'#dbeafe' }],
-  [['line'],                 { type:'si',  slug:'line',          color:'00C300', bg:'#dcfce7' }],
-  [['signal'],               { type:'si',  slug:'signal',        color:'3A76F0', bg:'#dbeafe' }],
-  [['discord'],              { type:'si',  slug:'discord',       color:'5865F2', bg:'#ede9fe' }],
-  [['wechat'],               { type:'si',  slug:'wechat',        color:'07C160', bg:'#dcfce7' }],
-  [['viber'],                { type:'si',  slug:'viber',         color:'7360F2', bg:'#ede9fe' }],
-  [['skype'],                { type:'si',  slug:'skype',         color:'00AFF0', bg:'#dbeafe' }],
-  [['kakao'],                { type:'fav', domain:'kakao.com',               bg:'#fef9c3' }],
-  [['imo'],                  { type:'fav', domain:'imo.im',                  bg:'#dbeafe' }],
-  [['zalo'],                 { type:'fav', domain:'zalo.me',                 bg:'#dbeafe' }],
-  [['bigo'],                 { type:'fav', domain:'bigo.tv',                 bg:'#dcfce7' }],
-  [['michat'],               { type:'fav', domain:'michat.mobi',             bg:'#fee2e2' }],
-  [['icq'],                  { type:'fav', domain:'icq.com',                 bg:'#dcfce7' }],
+  [['whatsapp'], { type: 'si', slug: 'whatsapp', color: '25D366', bg: '#dcfce7' }],
+  [['telegram'], { type: 'si', slug: 'telegram', color: '26A5E4', bg: '#dbeafe' }],
+  [['line'], { type: 'si', slug: 'line', color: '00C300', bg: '#dcfce7' }],
+  [['signal'], { type: 'si', slug: 'signal', color: '3A76F0', bg: '#dbeafe' }],
+  [['discord'], { type: 'si', slug: 'discord', color: '5865F2', bg: '#ede9fe' }],
+  [['wechat'], { type: 'si', slug: 'wechat', color: '07C160', bg: '#dcfce7' }],
+  [['viber'], { type: 'si', slug: 'viber', color: '7360F2', bg: '#ede9fe' }],
+  [['skype'], { type: 'si', slug: 'skype', color: '00AFF0', bg: '#dbeafe' }],
+  [['kakao'], { type: 'fav', domain: 'kakao.com', bg: '#fef9c3' }],
+  [['imo'], { type: 'fav', domain: 'imo.im', bg: '#dbeafe' }],
+  [['zalo'], { type: 'fav', domain: 'zalo.me', bg: '#dbeafe' }],
+  [['bigo'], { type: 'fav', domain: 'bigo.tv', bg: '#dcfce7' }],
+  [['michat'], { type: 'fav', domain: 'michat.mobi', bg: '#fee2e2' }],
+  [['icq'], { type: 'fav', domain: 'icq.com', bg: '#dcfce7' }],
   // ── Social ────────────────────────────────────────────────────────────
-  [['instagram'],            { type:'si',  slug:'instagram',     color:'E1306C', bg:'#fce7f3' }],
-  [['tiktok'],               { type:'si',  slug:'tiktok',        color:'010101', bg:'#f1f5f9' }],
-  [['facebook'],             { type:'si',  slug:'facebook',      color:'1877F2', bg:'#dbeafe' }],
-  [['twitter','x.com'],      { type:'si',  slug:'x',             color:'000000', bg:'#f1f5f9' }],
-  [['linkedin','linked in'], { type:'fav', domain:'linkedin.com',                bg:'#dbeafe' }],
-  [['snapchat'],             { type:'si',  slug:'snapchat',      color:'FFFC00', bg:'#fef9c3' }],
-  [['pinterest'],            { type:'si',  slug:'pinterest',     color:'E60023', bg:'#fee2e2' }],
-  [['reddit'],               { type:'si',  slug:'reddit',        color:'FF4500', bg:'#fee2e2' }],
-  [['youtube'],              { type:'si',  slug:'youtube',       color:'FF0000', bg:'#fee2e2' }],
-  [['twitch'],               { type:'si',  slug:'twitch',        color:'9146FF', bg:'#ede9fe' }],
-  [['vk','vkontakte'],       { type:'si',  slug:'vk',            color:'4A76A8', bg:'#dbeafe' }],
-  [['tumblr'],               { type:'si',  slug:'tumblr',        color:'34526F', bg:'#dbeafe' }],
-  [['quora'],                { type:'fav', domain:'quora.com',               bg:'#fee2e2' }],
-  [['clubhouse'],            { type:'fav', domain:'joinclubhouse.com',       bg:'#fef9c3' }],
-  [['odnoklassniki'],        { type:'fav', domain:'ok.ru',                   bg:'#fef3c7' }],
-  [['behance'],              { type:'si',  slug:'behance',       color:'1769FF', bg:'#dbeafe' }],
+  [['instagram'], { type: 'si', slug: 'instagram', color: 'E1306C', bg: '#fce7f3' }],
+  [['tiktok'], { type: 'si', slug: 'tiktok', color: '010101', bg: '#f1f5f9' }],
+  [['facebook'], { type: 'si', slug: 'facebook', color: '1877F2', bg: '#dbeafe' }],
+  [['twitter', 'x.com'], { type: 'si', slug: 'x', color: '000000', bg: '#f1f5f9' }],
+  [['linkedin', 'linked in'], { type: 'fav', domain: 'linkedin.com', bg: '#dbeafe' }],
+  [['snapchat'], { type: 'si', slug: 'snapchat', color: 'FFFC00', bg: '#fef9c3' }],
+  [['pinterest'], { type: 'si', slug: 'pinterest', color: 'E60023', bg: '#fee2e2' }],
+  [['reddit'], { type: 'si', slug: 'reddit', color: 'FF4500', bg: '#fee2e2' }],
+  [['youtube'], { type: 'si', slug: 'youtube', color: 'FF0000', bg: '#fee2e2' }],
+  [['twitch'], { type: 'si', slug: 'twitch', color: '9146FF', bg: '#ede9fe' }],
+  [['vk', 'vkontakte'], { type: 'si', slug: 'vk', color: '4A76A8', bg: '#dbeafe' }],
+  [['tumblr'], { type: 'si', slug: 'tumblr', color: '34526F', bg: '#dbeafe' }],
+  [['quora'], { type: 'fav', domain: 'quora.com', bg: '#fee2e2' }],
+  [['clubhouse'], { type: 'fav', domain: 'joinclubhouse.com', bg: '#fef9c3' }],
+  [['odnoklassniki'], { type: 'fav', domain: 'ok.ru', bg: '#fef3c7' }],
+  [['behance'], { type: 'si', slug: 'behance', color: '1769FF', bg: '#dbeafe' }],
   // ── E-Commerce ────────────────────────────────────────────────────────
-  [['shopee'],               { type:'si',  slug:'shopee',        color:'EE4D2D', bg:'#fee2e2' }],
-  [['amazon','amazon.com'],  { type:'fav', domain:'amazon.com',                   bg:'#fef3c7' }],
-  [['ebay'],                 { type:'si',  slug:'ebay',          color:'E53238', bg:'#fee2e2' }],
-  [['aliexpress'],           { type:'fav', domain:'aliexpress.com',          bg:'#fee2e2' }],
-  [['tokopedia'],            { type:'fav', domain:'tokopedia.com',           bg:'#dcfce7' }],
-  [['lazada'],               { type:'fav', domain:'lazada.co.id',            bg:'#dbeafe' }],
-  [['temu'],                 { type:'fav', domain:'temu.com',                bg:'#fee2e2' }],
-  [['wildberries'],          { type:'fav', domain:'wildberries.ru',          bg:'#fce7f3' }],
-  [['bukalapak'],            { type:'fav', domain:'bukalapak.com',           bg:'#fee2e2' }],
-  [['blibli'],               { type:'fav', domain:'blibli.com',              bg:'#dbeafe' }],
-  [['meesho'],               { type:'fav', domain:'meesho.com',              bg:'#ede9fe' }],
-  [['flipkart'],             { type:'fav', domain:'flipkart.com',            bg:'#dbeafe' }],
-  [['ozon'],                 { type:'fav', domain:'ozon.ru',                 bg:'#dbeafe' }],
-  [['avito'],                { type:'fav', domain:'avito.ru',                bg:'#dcfce7' }],
-  [['coupang'],              { type:'fav', domain:'coupang.com',             bg:'#fee2e2' }],
-  [['daraz'],                { type:'fav', domain:'daraz.pk',                bg:'#fee2e2' }],
-  [['mercadolibre','mercado libre'],{ type:'fav', domain:'mercadolibre.com', bg:'#fef9c3' }],
-  [['poshmark'],             { type:'fav', domain:'poshmark.com',            bg:'#fee2e2' }],
-  [['jd.com'],               { type:'fav', domain:'jd.com',                  bg:'#fee2e2' }],
+  [['shopee'], { type: 'si', slug: 'shopee', color: 'EE4D2D', bg: '#fee2e2' }],
+  [['amazon', 'amazon.com'], { type: 'fav', domain: 'amazon.com', bg: '#fef3c7' }],
+  [['ebay'], { type: 'si', slug: 'ebay', color: 'E53238', bg: '#fee2e2' }],
+  [['aliexpress'], { type: 'fav', domain: 'aliexpress.com', bg: '#fee2e2' }],
+  [['tokopedia'], { type: 'fav', domain: 'tokopedia.com', bg: '#dcfce7' }],
+  [['lazada'], { type: 'fav', domain: 'lazada.co.id', bg: '#dbeafe' }],
+  [['temu'], { type: 'fav', domain: 'temu.com', bg: '#fee2e2' }],
+  [['wildberries'], { type: 'fav', domain: 'wildberries.ru', bg: '#fce7f3' }],
+  [['bukalapak'], { type: 'fav', domain: 'bukalapak.com', bg: '#fee2e2' }],
+  [['blibli'], { type: 'fav', domain: 'blibli.com', bg: '#dbeafe' }],
+  [['meesho'], { type: 'fav', domain: 'meesho.com', bg: '#ede9fe' }],
+  [['flipkart'], { type: 'fav', domain: 'flipkart.com', bg: '#dbeafe' }],
+  [['ozon'], { type: 'fav', domain: 'ozon.ru', bg: '#dbeafe' }],
+  [['avito'], { type: 'fav', domain: 'avito.ru', bg: '#dcfce7' }],
+  [['coupang'], { type: 'fav', domain: 'coupang.com', bg: '#fee2e2' }],
+  [['daraz'], { type: 'fav', domain: 'daraz.pk', bg: '#fee2e2' }],
+  [['mercadolibre', 'mercado libre'], { type: 'fav', domain: 'mercadolibre.com', bg: '#fef9c3' }],
+  [['poshmark'], { type: 'fav', domain: 'poshmark.com', bg: '#fee2e2' }],
+  [['jd.com'], { type: 'fav', domain: 'jd.com', bg: '#fee2e2' }],
   // ── Transport ─────────────────────────────────────────────────────────
-  [['gojek'],                { type:'si',  slug:'gojek',         color:'00AA13', bg:'#dcfce7' }],
-  [['grab'],                 { type:'si',  slug:'grab',          color:'00B14F', bg:'#dcfce7' }],
-  [['uber'],                 { type:'si',  slug:'uber',          color:'000000', bg:'#f1f5f9' }],
-  [['lyft'],                 { type:'si',  slug:'lyft',          color:'FF00BF', bg:'#fce7f3' }],
-  [['indriver'],             { type:'fav', domain:'indrive.com',              bg:'#dcfce7' }],
-  [['maxim'],                { type:'fav', domain:'taximaxim.com',            bg:'#fef9c3' }],
-  [['didi'],                 { type:'fav', domain:'didiglobal.com',           bg:'#fee2e2' }],
-  [['lalamove'],             { type:'fav', domain:'lalamove.com',             bg:'#fee2e2' }],
-  [['borzo'],                { type:'fav', domain:'borzo.com',                bg:'#fce7f3' }],
-  [['doordash'],             { type:'fav', domain:'doordash.com',             bg:'#fee2e2' }],
-  [['rappi'],                { type:'fav', domain:'rappi.com',                bg:'#fee2e2' }],
+  [['gojek'], { type: 'si', slug: 'gojek', color: '00AA13', bg: '#dcfce7' }],
+  [['grab'], { type: 'si', slug: 'grab', color: '00B14F', bg: '#dcfce7' }],
+  [['uber'], { type: 'si', slug: 'uber', color: '000000', bg: '#f1f5f9' }],
+  [['lyft'], { type: 'si', slug: 'lyft', color: 'FF00BF', bg: '#fce7f3' }],
+  [['indriver'], { type: 'fav', domain: 'indrive.com', bg: '#dcfce7' }],
+  [['maxim'], { type: 'fav', domain: 'taximaxim.com', bg: '#fef9c3' }],
+  [['didi'], { type: 'fav', domain: 'didiglobal.com', bg: '#fee2e2' }],
+  [['lalamove'], { type: 'fav', domain: 'lalamove.com', bg: '#fee2e2' }],
+  [['borzo'], { type: 'fav', domain: 'borzo.com', bg: '#fce7f3' }],
+  [['doordash'], { type: 'fav', domain: 'doordash.com', bg: '#fee2e2' }],
+  [['rappi'], { type: 'fav', domain: 'rappi.com', bg: '#fee2e2' }],
   // ── Finance / Crypto ──────────────────────────────────────────────────
-  [['paypal'],               { type:'si',  slug:'paypal',        color:'003087', bg:'#dbeafe' }],
-  [['binance'],              { type:'si',  slug:'binance',        color:'F3BA2F', bg:'#fef9c3' }],
-  [['coinbase','coin base'], { type:'si',  slug:'coinbase',       color:'0052FF', bg:'#dbeafe' }],
-  [['okx'],                  { type:'si',  slug:'okx',            color:'000000', bg:'#f1f5f9' }],
-  [['dana'],                 { type:'fav', domain:'dana.id',                  bg:'#dbeafe' }],
-  [['ovo','ovo id'],         { type:'fav', domain:'ovo.id',                   bg:'#ede9fe' }],
-  [['gopay'],                { type:'fav', domain:'gopay.co.id',              bg:'#dcfce7' }],
-  [['linkaja','link aja'],   { type:'fav', domain:'linkaja.id',               bg:'#fee2e2' }],
-  [['shopeepay'],            { type:'fav', domain:'shopee.co.id',             bg:'#fee2e2' }],
-  [['bybit'],                { type:'fav', domain:'bybit.com',                bg:'#fef9c3' }],
-  [['cashapp'],              { type:'fav', domain:'cash.app',                 bg:'#dcfce7' }],
-  [['revolut'],              { type:'fav', domain:'revolut.com',              bg:'#f1f5f9' }],
-  [['paytm'],                { type:'fav', domain:'paytm.com',                bg:'#dbeafe' }],
-  [['bkash'],                { type:'fav', domain:'bkash.com',                bg:'#fce7f3' }],
-  [['phonepe'],              { type:'fav', domain:'phonepe.com',              bg:'#ede9fe' }],
-  [['metamask'],             { type:'fav', domain:'metamask.io',              bg:'#fef3c7' }],
+  [['paypal'], { type: 'si', slug: 'paypal', color: '003087', bg: '#dbeafe' }],
+  [['binance'], { type: 'si', slug: 'binance', color: 'F3BA2F', bg: '#fef9c3' }],
+  [['coinbase', 'coin base'], { type: 'si', slug: 'coinbase', color: '0052FF', bg: '#dbeafe' }],
+  [['okx'], { type: 'si', slug: 'okx', color: '000000', bg: '#f1f5f9' }],
+  [['dana'], { type: 'fav', domain: 'dana.id', bg: '#dbeafe' }],
+  [['ovo', 'ovo id'], { type: 'fav', domain: 'ovo.id', bg: '#ede9fe' }],
+  [['gopay'], { type: 'fav', domain: 'gopay.co.id', bg: '#dcfce7' }],
+  [['linkaja', 'link aja'], { type: 'fav', domain: 'linkaja.id', bg: '#fee2e2' }],
+  [['shopeepay'], { type: 'fav', domain: 'shopee.co.id', bg: '#fee2e2' }],
+  [['bybit'], { type: 'fav', domain: 'bybit.com', bg: '#fef9c3' }],
+  [['cashapp'], { type: 'fav', domain: 'cash.app', bg: '#dcfce7' }],
+  [['revolut'], { type: 'fav', domain: 'revolut.com', bg: '#f1f5f9' }],
+  [['paytm'], { type: 'fav', domain: 'paytm.com', bg: '#dbeafe' }],
+  [['bkash'], { type: 'fav', domain: 'bkash.com', bg: '#fce7f3' }],
+  [['phonepe'], { type: 'fav', domain: 'phonepe.com', bg: '#ede9fe' }],
+  [['metamask'], { type: 'fav', domain: 'metamask.io', bg: '#fef3c7' }],
   // ── Tech / Mail ───────────────────────────────────────────────────────
-  [['google','gmail'],       { type:'si',  slug:'google',        color:'EA4335', bg:'#fee2e2' }],
-  [['microsoft','outlook','ms365','office 365'], { type:'fav', domain:'microsoft.com', bg:'#dbeafe' }],
-  [['apple','icloud'],       { type:'si',  slug:'apple',         color:'000000', bg:'#f1f5f9' }],
-  [['yahoo','yahoo mail'],   { type:'fav', domain:'yahoo.com',                    bg:'#ede9fe' }],
-  [['proton'],               { type:'fav', domain:'proton.me',                bg:'#ede9fe' }],
-  [['yandex'],               { type:'fav', domain:'yandex.com',               bg:'#fee2e2' }],
-  [['mail.ru'],              { type:'fav', domain:'mail.ru',                  bg:'#dbeafe' }],
+  [['google', 'gmail'], { type: 'si', slug: 'google', color: 'EA4335', bg: '#fee2e2' }],
+  [['microsoft', 'outlook', 'ms365', 'office 365'], { type: 'fav', domain: 'microsoft.com', bg: '#dbeafe' }],
+  [['apple', 'icloud'], { type: 'si', slug: 'apple', color: '000000', bg: '#f1f5f9' }],
+  [['yahoo', 'yahoo mail'], { type: 'fav', domain: 'yahoo.com', bg: '#ede9fe' }],
+  [['proton'], { type: 'fav', domain: 'proton.me', bg: '#ede9fe' }],
+  [['yandex'], { type: 'fav', domain: 'yandex.com', bg: '#fee2e2' }],
+  [['mail.ru'], { type: 'fav', domain: 'mail.ru', bg: '#dbeafe' }],
   // ── Streaming ─────────────────────────────────────────────────────────
-  [['netflix'],              { type:'si',  slug:'netflix',       color:'E50914', bg:'#fee2e2' }],
-  [['spotify'],              { type:'si',  slug:'spotify',       color:'1DB954', bg:'#dcfce7' }],
-  [['disney'],               { type:'fav', domain:'disneyplus.com',           bg:'#dbeafe' }],
-  [['hbo'],                  { type:'fav', domain:'hbomax.com',               bg:'#ede9fe' }],
-  [['prime video','primevideo'],{ type:'fav', domain:'primevideo.com',        bg:'#dbeafe' }],
-  [['hulu'],                 { type:'fav', domain:'hulu.com',                 bg:'#dcfce7' }],
-  [['peacock'],              { type:'fav', domain:'peacocktv.com',            bg:'#f1f5f9' }],
-  [['crunchyroll'],          { type:'fav', domain:'crunchyroll.com',          bg:'#fee2e2' }],
-  [['iqiyi'],                { type:'fav', domain:'iqiyi.com',                bg:'#dcfce7' }],
-  [['wetv'],                 { type:'fav', domain:'wetv.vip',                 bg:'#fee2e2' }],
-  [['viu'],                  { type:'fav', domain:'viu.com',                  bg:'#fef9c3' }],
+  [['netflix'], { type: 'si', slug: 'netflix', color: 'E50914', bg: '#fee2e2' }],
+  [['spotify'], { type: 'si', slug: 'spotify', color: '1DB954', bg: '#dcfce7' }],
+  [['disney'], { type: 'fav', domain: 'disneyplus.com', bg: '#dbeafe' }],
+  [['hbo'], { type: 'fav', domain: 'hbomax.com', bg: '#ede9fe' }],
+  [['prime video', 'primevideo'], { type: 'fav', domain: 'primevideo.com', bg: '#dbeafe' }],
+  [['hulu'], { type: 'fav', domain: 'hulu.com', bg: '#dcfce7' }],
+  [['peacock'], { type: 'fav', domain: 'peacocktv.com', bg: '#f1f5f9' }],
+  [['crunchyroll'], { type: 'fav', domain: 'crunchyroll.com', bg: '#fee2e2' }],
+  [['iqiyi'], { type: 'fav', domain: 'iqiyi.com', bg: '#dcfce7' }],
+  [['wetv'], { type: 'fav', domain: 'wetv.vip', bg: '#fee2e2' }],
+  [['viu'], { type: 'fav', domain: 'viu.com', bg: '#fef9c3' }],
   // ── Gaming ────────────────────────────────────────────────────────────
-  [['steam'],                { type:'si',  slug:'steam',         color:'000000', bg:'#e2e8f0' }],
-  [['roblox'],               { type:'si',  slug:'roblox',        color:'E02525', bg:'#fee2e2' }],
-  [['epic'],                 { type:'si',  slug:'epicgames',     color:'313131', bg:'#f1f5f9' }],
-  [['playstation'],          { type:'si',  slug:'playstation',   color:'003087', bg:'#dbeafe' }],
-  [['xbox'],                 { type:'si',  slug:'xbox',          color:'107C10', bg:'#dcfce7' }],
-  [['minecraft'],            { type:'fav', domain:'minecraft.net',             bg:'#dcfce7' }],
-  [['fortnite'],             { type:'fav', domain:'fortnite.com',              bg:'#dbeafe' }],
-  [['valorant'],             { type:'fav', domain:'playvalorant.com',          bg:'#fee2e2' }],
-  [['pubg'],                 { type:'fav', domain:'pubg.com',                  bg:'#fef3c7' }],
-  [['free fire','freefire'], { type:'fav', domain:'ff.garena.com',             bg:'#fee2e2' }],
-  [['mobile legend','mlbb'], { type:'fav', domain:'mobilelegends.net',         bg:'#fee2e2' }],
-  [['clash'],                { type:'fav', domain:'supercell.com',             bg:'#fef9c3' }],
+  [['steam'], { type: 'si', slug: 'steam', color: '000000', bg: '#e2e8f0' }],
+  [['roblox'], { type: 'si', slug: 'roblox', color: 'E02525', bg: '#fee2e2' }],
+  [['epic'], { type: 'si', slug: 'epicgames', color: '313131', bg: '#f1f5f9' }],
+  [['playstation'], { type: 'si', slug: 'playstation', color: '003087', bg: '#dbeafe' }],
+  [['xbox'], { type: 'si', slug: 'xbox', color: '107C10', bg: '#dcfce7' }],
+  [['minecraft'], { type: 'fav', domain: 'minecraft.net', bg: '#dcfce7' }],
+  [['fortnite'], { type: 'fav', domain: 'fortnite.com', bg: '#dbeafe' }],
+  [['valorant'], { type: 'fav', domain: 'playvalorant.com', bg: '#fee2e2' }],
+  [['pubg'], { type: 'fav', domain: 'pubg.com', bg: '#fef3c7' }],
+  [['free fire', 'freefire'], { type: 'fav', domain: 'ff.garena.com', bg: '#fee2e2' }],
+  [['mobile legend', 'mlbb'], { type: 'fav', domain: 'mobilelegends.net', bg: '#fee2e2' }],
+  [['clash'], { type: 'fav', domain: 'supercell.com', bg: '#fef9c3' }],
   // ── Dating ────────────────────────────────────────────────────────────
-  [['tinder'],               { type:'si',  slug:'tinder',        color:'FF6B6B', bg:'#fee2e2' }],
-  [['bumble','bumble dating'],{ type:'fav', domain:'bumble.com',                 bg:'#fef9c3' }],
-  [['badoo'],                { type:'fav', domain:'badoo.com',                 bg:'#fce7f3' }],
-  [['hinge','hinge dating'], { type:'fav', domain:'hinge.co',                  bg:'#fee2e2' }],
+  [['tinder'], { type: 'si', slug: 'tinder', color: 'FF6B6B', bg: '#fee2e2' }],
+  [['bumble', 'bumble dating'], { type: 'fav', domain: 'bumble.com', bg: '#fef9c3' }],
+  [['badoo'], { type: 'fav', domain: 'badoo.com', bg: '#fce7f3' }],
+  [['hinge', 'hinge dating'], { type: 'fav', domain: 'hinge.co', bg: '#fee2e2' }],
   // ── Travel ────────────────────────────────────────────────────────────
-  [['airbnb'],               { type:'si',  slug:'airbnb',        color:'FF5A5F', bg:'#fee2e2' }],
-  [['booking'],              { type:'fav', domain:'booking.com',               bg:'#dbeafe' }],
-  [['traveloka'],            { type:'fav', domain:'traveloka.com',             bg:'#dbeafe' }],
-  [['agoda'],                { type:'fav', domain:'agoda.com',                 bg:'#fee2e2' }],
-  [['tiket'],                { type:'fav', domain:'tiket.com',                 bg:'#dbeafe' }],
-  [['expedia'],              { type:'fav', domain:'expedia.com',               bg:'#dbeafe' }],
-  [['pegipegi'],             { type:'fav', domain:'pegipegi.com',              bg:'#fee2e2' }],
+  [['airbnb'], { type: 'si', slug: 'airbnb', color: 'FF5A5F', bg: '#fee2e2' }],
+  [['booking'], { type: 'fav', domain: 'booking.com', bg: '#dbeafe' }],
+  [['traveloka'], { type: 'fav', domain: 'traveloka.com', bg: '#dbeafe' }],
+  [['agoda'], { type: 'fav', domain: 'agoda.com', bg: '#fee2e2' }],
+  [['tiket'], { type: 'fav', domain: 'tiket.com', bg: '#dbeafe' }],
+  [['expedia'], { type: 'fav', domain: 'expedia.com', bg: '#dbeafe' }],
+  [['pegipegi'], { type: 'fav', domain: 'pegipegi.com', bg: '#fee2e2' }],
   // ── Lainnya ───────────────────────────────────────────────────────────
-  [['irctc'],                { type:'fav', domain:'irctc.co.in',               bg:'#fee2e2' }],
-  [['shopify'],              { type:'si',  slug:'shopify',       color:'96BF48', bg:'#dcfce7' }],
+  [['irctc'], { type: 'initial', bg: '#fee2e2', color: '#b91c1c' }],
+  [['shopify'], { type: 'si', slug: 'shopify', color: '96BF48', bg: '#dcfce7' }],
   // ── Chat Tambahan ─────────────────────────────────────────────────────
-  [['threads'],              { type:'si',  slug:'threads',       color:'000000', bg:'#f1f5f9' }],
-  [['bereal'],               { type:'fav', domain:'bereal.com',                bg:'#f1f5f9' }],
-  [['kik'],                  { type:'fav', domain:'kik.com',                   bg:'#dcfce7' }],
-  [['textfree','textnow'],   { type:'fav', domain:'textnow.com',               bg:'#dcfce7' }],
-  [['truecaller'],           { type:'fav', domain:'truecaller.com',            bg:'#dbeafe' }],
-  [['textplus'],             { type:'fav', domain:'textplus.com',              bg:'#dbeafe' }],
-  [['whatsapp business'],    { type:'si',  slug:'whatsapp',      color:'25D366', bg:'#dcfce7' }],
-  [['naver'],                { type:'fav', domain:'naver.com',                 bg:'#dcfce7' }],
-  [['kakaotalk'],            { type:'fav', domain:'kakao.com',                 bg:'#fef9c3' }],
+  [['threads'], { type: 'si', slug: 'threads', color: '000000', bg: '#f1f5f9' }],
+  [['bereal'], { type: 'fav', domain: 'bereal.com', bg: '#f1f5f9' }],
+  [['kik'], { type: 'fav', domain: 'kik.com', bg: '#dcfce7' }],
+  [['textfree', 'textnow'], { type: 'fav', domain: 'textnow.com', bg: '#dcfce7' }],
+  [['truecaller'], { type: 'fav', domain: 'truecaller.com', bg: '#dbeafe' }],
+  [['textplus'], { type: 'fav', domain: 'textplus.com', bg: '#dbeafe' }],
+  [['whatsapp business'], { type: 'si', slug: 'whatsapp', color: '25D366', bg: '#dcfce7' }],
+  [['naver'], { type: 'fav', domain: 'naver.com', bg: '#dcfce7' }],
+  [['kakaotalk'], { type: 'fav', domain: 'kakao.com', bg: '#fef9c3' }],
   // ── Social Tambahan ───────────────────────────────────────────────────
-  [['vimeo'],                { type:'si',  slug:'vimeo',         color:'1AB7EA', bg:'#dbeafe' }],
-  [['flickr'],               { type:'si',  slug:'flickr',        color:'FF0084', bg:'#fce7f3' }],
-  [['mastodon'],             { type:'si',  slug:'mastodon',      color:'6364FF', bg:'#ede9fe' }],
-  [['mewe'],                 { type:'fav', domain:'mewe.com',                  bg:'#dbeafe' }],
-  [['truth social'],         { type:'fav', domain:'truthsocial.com',           bg:'#dbeafe' }],
-  [['mix'],                  { type:'fav', domain:'mix.com',                   bg:'#fee2e2' }],
-  [['parler'],               { type:'fav', domain:'parler.com',                bg:'#fee2e2' }],
+  [['vimeo'], { type: 'si', slug: 'vimeo', color: '1AB7EA', bg: '#dbeafe' }],
+  [['flickr'], { type: 'si', slug: 'flickr', color: 'FF0084', bg: '#fce7f3' }],
+  [['mastodon'], { type: 'si', slug: 'mastodon', color: '6364FF', bg: '#ede9fe' }],
+  [['mewe'], { type: 'fav', domain: 'mewe.com', bg: '#dbeafe' }],
+  [['truth social'], { type: 'fav', domain: 'truthsocial.com', bg: '#dbeafe' }],
+  [['mix'], { type: 'fav', domain: 'mix.com', bg: '#fee2e2' }],
+  [['parler'], { type: 'fav', domain: 'parler.com', bg: '#fee2e2' }],
   // ── Food Delivery ─────────────────────────────────────────────────────
-  [['gofood'],               { type:'fav', domain:'gofood.co.id',              bg:'#fee2e2' }],
-  [['grabfood'],             { type:'fav', domain:'grab.com',                  bg:'#dcfce7' }],
-  [['shopeefood'],           { type:'fav', domain:'shopee.co.id',              bg:'#fee2e2' }],
-  [['foodpanda','pandamart'],{ type:'fav', domain:'foodpanda.com',             bg:'#fce7f3' }],
-  [['ubereats','uber eats'], { type:'fav', domain:'ubereats.com',              bg:'#f1f5f9' }],
-  [['swiggy'],               { type:'fav', domain:'swiggy.com',                bg:'#fef3c7' }],
-  [['zomato'],               { type:'fav', domain:'zomato.com',                bg:'#fee2e2' }],
-  [['glovo','glovoapp'],     { type:'fav', domain:'glovoapp.com',              bg:'#fef9c3' }],
-  [['ifood'],                { type:'fav', domain:'ifood.com.br',              bg:'#fee2e2' }],
+  [['gofood'], { type: 'fav', domain: 'gofood.co.id', bg: '#fee2e2' }],
+  [['grabfood'], { type: 'fav', domain: 'grab.com', bg: '#dcfce7' }],
+  [['shopeefood'], { type: 'fav', domain: 'shopee.co.id', bg: '#fee2e2' }],
+  [['foodpanda', 'pandamart'], { type: 'fav', domain: 'foodpanda.com', bg: '#fce7f3' }],
+  [['ubereats', 'uber eats'], { type: 'fav', domain: 'ubereats.com', bg: '#f1f5f9' }],
+  [['swiggy'], { type: 'fav', domain: 'swiggy.com', bg: '#fef3c7' }],
+  [['zomato'], { type: 'fav', domain: 'zomato.com', bg: '#fee2e2' }],
+  [['glovo', 'glovoapp'], { type: 'fav', domain: 'glovoapp.com', bg: '#fef9c3' }],
+  [['ifood'], { type: 'fav', domain: 'ifood.com.br', bg: '#fee2e2' }],
   // ── Transport Tambahan ────────────────────────────────────────────────
-  [['bolt'],                 { type:'fav', domain:'bolt.eu',                   bg:'#dcfce7' }],
-  [['bluebird'],             { type:'fav', domain:'bluebirdgroup.com',         bg:'#dbeafe' }],
-  [['ola'],                  { type:'fav', domain:'olacabs.com',               bg:'#fef9c3' }],
-  [['pathao'],               { type:'fav', domain:'pathao.com',                bg:'#fee2e2' }],
-  [['tada'],                 { type:'fav', domain:'tada.global',               bg:'#dbeafe' }],
-  [['yandex taxi'],          { type:'fav', domain:'taxi.yandex.ru',            bg:'#fef9c3' }],
+  [['bolt'], { type: 'fav', domain: 'bolt.eu', bg: '#dcfce7' }],
+  [['bluebird'], { type: 'fav', domain: 'bluebirdgroup.com', bg: '#dbeafe' }],
+  [['ola'], { type: 'fav', domain: 'olacabs.com', bg: '#fef9c3' }],
+  [['pathao'], { type: 'fav', domain: 'pathao.com', bg: '#fee2e2' }],
+  [['tada'], { type: 'fav', domain: 'tada.global', bg: '#dbeafe' }],
+  [['yandex taxi'], { type: 'fav', domain: 'taxi.yandex.ru', bg: '#fef9c3' }],
   // ── E-Commerce Tambahan ───────────────────────────────────────────────
-  [['carousell'],            { type:'fav', domain:'carousell.com',             bg:'#fee2e2' }],
-  [['etsy'],                 { type:'si',  slug:'etsy',          color:'F16521', bg:'#fef3c7' }],
-  [['wish'],                 { type:'fav', domain:'wish.com',                  bg:'#dbeafe' }],
-  [['taobao'],               { type:'fav', domain:'taobao.com',                bg:'#fee2e2' }],
-  [['jumia'],                { type:'fav', domain:'jumia.com',                 bg:'#fee2e2' }],
-  [['noon'],                 { type:'fav', domain:'noon.com',                  bg:'#fef9c3' }],
-  [['vinted'],               { type:'fav', domain:'vinted.com',                bg:'#dcfce7' }],
-  [['depop'],                { type:'fav', domain:'depop.com',                 bg:'#fee2e2' }],
-  [['rakuten'],              { type:'fav', domain:'rakuten.com',                  bg:'#fee2e2' }],
-  [['zalora'],               { type:'fav', domain:'zalora.com',                bg:'#f1f5f9' }],
-  [['jd id'],                { type:'fav', domain:'jd.id',                     bg:'#fee2e2' }],
-  [['harbolnas','harbo'],    { type:'fav', domain:'harbolnas.com',             bg:'#fee2e2' }],
+  [['carousell'], { type: 'fav', domain: 'carousell.com', bg: '#fee2e2' }],
+  [['etsy'], { type: 'si', slug: 'etsy', color: 'F16521', bg: '#fef3c7' }],
+  [['wish'], { type: 'fav', domain: 'wish.com', bg: '#dbeafe' }],
+  [['taobao'], { type: 'fav', domain: 'taobao.com', bg: '#fee2e2' }],
+  [['jumia'], { type: 'fav', domain: 'jumia.com', bg: '#fee2e2' }],
+  [['noon'], { type: 'fav', domain: 'noon.com', bg: '#fef9c3' }],
+  [['vinted'], { type: 'fav', domain: 'vinted.com', bg: '#dcfce7' }],
+  [['depop'], { type: 'fav', domain: 'depop.com', bg: '#fee2e2' }],
+  [['rakuten'], { type: 'fav', domain: 'rakuten.com', bg: '#fee2e2' }],
+  [['zalora'], { type: 'fav', domain: 'zalora.com', bg: '#f1f5f9' }],
+  [['jd id'], { type: 'fav', domain: 'jd.id', bg: '#fee2e2' }],
+  [['harbolnas', 'harbo'], { type: 'fav', domain: 'harbolnas.com', bg: '#fee2e2' }],
   // ── Finance Tambahan ──────────────────────────────────────────────────
-  [['wise','transferwise'],  { type:'fav', domain:'wise.com',                     bg:'#dcfce7' }],
-  [['alipay'],               { type:'fav', domain:'alipay.com',                bg:'#dbeafe' }],
-  [['webmoney'],             { type:'fav', domain:'webmoney.ru',               bg:'#dbeafe' }],
-  [['qiwi'],                 { type:'fav', domain:'qiwi.com',                  bg:'#fee2e2' }],
-  [['perfectmoney'],         { type:'fav', domain:'perfectmoney.com',          bg:'#fef9c3' }],
-  [['skrill'],               { type:'fav', domain:'skrill.com',                bg:'#ede9fe' }],
-  [['neteller'],             { type:'fav', domain:'neteller.com',              bg:'#fee2e2' }],
-  [['paxful'],               { type:'fav', domain:'paxful.com',                bg:'#fef9c3' }],
-  [['crypto.com','cryptocom','crypto'],{ type:'fav', domain:'crypto.com',      bg:'#dbeafe' }],
-  [['kucoin'],               { type:'fav', domain:'kucoin.com',                bg:'#dcfce7' }],
-  [['huobi'],                { type:'fav', domain:'huobi.com',                 bg:'#fef3c7' }],
-  [['gate.io'],              { type:'fav', domain:'gate.io',                   bg:'#fee2e2' }],
-  [['bitfinex'],             { type:'fav', domain:'bitfinex.com',              bg:'#dcfce7' }],
-  [['kraken'],               { type:'fav', domain:'kraken.com',                bg:'#ede9fe' }],
-  [['freecash'],             { type:'fav', domain:'freecash.com',              bg:'#dcfce7' }],
-  [['akulaku'],              { type:'fav', domain:'akulaku.com',               bg:'#fef9c3' }],
-  [['kredivo'],              { type:'fav', domain:'kredivo.com',               bg:'#dbeafe' }],
+  [['wise', 'transferwise'], { type: 'fav', domain: 'wise.com', bg: '#dcfce7' }],
+  [['alipay'], { type: 'fav', domain: 'alipay.com', bg: '#dbeafe' }],
+  [['webmoney'], { type: 'fav', domain: 'webmoney.ru', bg: '#dbeafe' }],
+  [['qiwi'], { type: 'fav', domain: 'qiwi.com', bg: '#fee2e2' }],
+  [['perfectmoney'], { type: 'fav', domain: 'perfectmoney.com', bg: '#fef9c3' }],
+  [['skrill'], { type: 'fav', domain: 'skrill.com', bg: '#ede9fe' }],
+  [['neteller'], { type: 'fav', domain: 'neteller.com', bg: '#fee2e2' }],
+  [['paxful'], { type: 'fav', domain: 'paxful.com', bg: '#fef9c3' }],
+  [['crypto.com', 'cryptocom', 'crypto'], { type: 'fav', domain: 'crypto.com', bg: '#dbeafe' }],
+  [['kucoin'], { type: 'fav', domain: 'kucoin.com', bg: '#dcfce7' }],
+  [['huobi'], { type: 'fav', domain: 'huobi.com', bg: '#fef3c7' }],
+  [['gate.io'], { type: 'fav', domain: 'gate.io', bg: '#fee2e2' }],
+  [['bitfinex'], { type: 'fav', domain: 'bitfinex.com', bg: '#dcfce7' }],
+  [['kraken'], { type: 'fav', domain: 'kraken.com', bg: '#ede9fe' }],
+  [['freecash'], { type: 'fav', domain: 'freecash.com', bg: '#dcfce7' }],
+  [['akulaku'], { type: 'fav', domain: 'akulaku.com', bg: '#fef9c3' }],
+  [['kredivo'], { type: 'fav', domain: 'kredivo.com', bg: '#dbeafe' }],
   // ── Gaming Tambahan ───────────────────────────────────────────────────
-  [['garena'],               { type:'fav', domain:'garena.com',                bg:'#fee2e2' }],
-  [['genshin','mihoyo'],     { type:'fav', domain:'mihoyo.com',               bg:'#dbeafe' }],
-  [['honor of kings','hok'], { type:'fav', domain:'honorofkings.com',         bg:'#fef9c3' }],
-  [['league of legends','lol'],{ type:'fav', domain:'leagueoflegends.com',    bg:'#dbeafe' }],
-  [['dota'],                 { type:'fav', domain:'dota2.com',                 bg:'#fee2e2' }],
-  [['brawl stars'],          { type:'fav', domain:'supercell.com',             bg:'#fef9c3' }],
-  [['call of duty','cod'],   { type:'fav', domain:'callofduty.com',            bg:'#f1f5f9' }],
-  [['stumble guys'],         { type:'fav', domain:'stumbleguys.com',           bg:'#ede9fe' }],
-  [['among us'],             { type:'fav', domain:'innersloth.com',            bg:'#ede9fe' }],
-  [['lifeafter'],            { type:'fav', domain:'lifeafter.163.com',         bg:'#fee2e2' }],
-  [['ragnarok'],             { type:'fav', domain:'ragnarokonline.com',        bg:'#dbeafe' }],
-  [['point blank','pb'],     { type:'fav', domain:'pointblank.co.id',          bg:'#fee2e2' }],
-  [['arena of valor','aov'], { type:'fav', domain:'arenaofvalor.com',          bg:'#fef9c3' }],
-  [['chess.com'],            { type:'fav', domain:'chess.com',                 bg:'#dcfce7' }],
-  [['8ball','8 ball pool'],  { type:'fav', domain:'miniclip.com',              bg:'#dbeafe' }],
+  [['garena'], { type: 'fav', domain: 'garena.com', bg: '#fee2e2' }],
+  [['genshin', 'mihoyo'], { type: 'fav', domain: 'mihoyo.com', bg: '#dbeafe' }],
+  [['honor of kings', 'hok'], { type: 'fav', domain: 'honorofkings.com', bg: '#fef9c3' }],
+  [['league of legends', 'lol'], { type: 'fav', domain: 'leagueoflegends.com', bg: '#dbeafe' }],
+  [['dota'], { type: 'fav', domain: 'dota2.com', bg: '#fee2e2' }],
+  [['brawl stars'], { type: 'fav', domain: 'supercell.com', bg: '#fef9c3' }],
+  [['call of duty', 'cod'], { type: 'fav', domain: 'callofduty.com', bg: '#f1f5f9' }],
+  [['stumble guys'], { type: 'fav', domain: 'stumbleguys.com', bg: '#ede9fe' }],
+  [['among us'], { type: 'fav', domain: 'innersloth.com', bg: '#ede9fe' }],
+  [['lifeafter'], { type: 'fav', domain: 'lifeafter.163.com', bg: '#fee2e2' }],
+  [['ragnarok'], { type: 'fav', domain: 'ragnarokonline.com', bg: '#dbeafe' }],
+  [['point blank', 'pb'], { type: 'fav', domain: 'pointblank.co.id', bg: '#fee2e2' }],
+  [['arena of valor', 'aov'], { type: 'fav', domain: 'arenaofvalor.com', bg: '#fef9c3' }],
+  [['chess.com'], { type: 'fav', domain: 'chess.com', bg: '#dcfce7' }],
+  [['8ball', '8 ball pool'], { type: 'fav', domain: 'miniclip.com', bg: '#dbeafe' }],
   // ── Freelance / Bisnis ────────────────────────────────────────────────
-  [['fiverr'],               { type:'si',  slug:'fiverr',        color:'1DBF73', bg:'#dcfce7' }],
-  [['upwork'],               { type:'si',  slug:'upwork',        color:'6FDA44', bg:'#dcfce7' }],
-  [['freelancer'],           { type:'fav', domain:'freelancer.com',            bg:'#dbeafe' }],
-  [['99designs'],            { type:'fav', domain:'99designs.com',             bg:'#ede9fe' }],
-  [['toptal'],               { type:'fav', domain:'toptal.com',                bg:'#dbeafe' }],
-  [['taskrabbit'],           { type:'fav', domain:'taskrabbit.com',            bg:'#fee2e2' }],
+  [['fiverr'], { type: 'si', slug: 'fiverr', color: '1DBF73', bg: '#dcfce7' }],
+  [['upwork'], { type: 'si', slug: 'upwork', color: '6FDA44', bg: '#dcfce7' }],
+  [['freelancer'], { type: 'fav', domain: 'freelancer.com', bg: '#dbeafe' }],
+  [['99designs'], { type: 'fav', domain: '99designs.com', bg: '#ede9fe' }],
+  [['toptal'], { type: 'fav', domain: 'toptal.com', bg: '#dbeafe' }],
+  [['taskrabbit'], { type: 'fav', domain: 'taskrabbit.com', bg: '#fee2e2' }],
   // ── Pendidikan ────────────────────────────────────────────────────────
-  [['coursera'],             { type:'fav', domain:'coursera.org',              bg:'#dbeafe' }],
-  [['udemy'],                { type:'fav', domain:'udemy.com',                 bg:'#ede9fe' }],
-  [['duolingo'],             { type:'fav', domain:'duolingo.com',              bg:'#dcfce7' }],
-  [['ruangguru'],            { type:'fav', domain:'ruangguru.com',             bg:'#dbeafe' }],
-  [['zenius'],               { type:'fav', domain:'zenius.net',                bg:'#ede9fe' }],
+  [['coursera'], { type: 'fav', domain: 'coursera.org', bg: '#dbeafe' }],
+  [['udemy'], { type: 'fav', domain: 'udemy.com', bg: '#ede9fe' }],
+  [['duolingo'], { type: 'fav', domain: 'duolingo.com', bg: '#dcfce7' }],
+  [['ruangguru'], { type: 'fav', domain: 'ruangguru.com', bg: '#dbeafe' }],
+  [['zenius'], { type: 'fav', domain: 'zenius.net', bg: '#ede9fe' }],
   // ── Kesehatan ─────────────────────────────────────────────────────────
-  [['halodoc'],              { type:'fav', domain:'halodoc.com',               bg:'#dcfce7' }],
-  [['alodokter'],            { type:'fav', domain:'alodokter.com',             bg:'#dbeafe' }],
-  [['good doctor'],          { type:'fav', domain:'gooddoctor.co.id',          bg:'#dcfce7' }],
+  [['halodoc'], { type: 'fav', domain: 'halodoc.com', bg: '#dcfce7' }],
+  [['alodokter'], { type: 'fav', domain: 'alodokter.com', bg: '#dbeafe' }],
+  [['good doctor'], { type: 'fav', domain: 'gooddoctor.co.id', bg: '#dcfce7' }],
   // ── Dating Tambahan ───────────────────────────────────────────────────
-  [['justdating','just dating'],    { type:'fav', domain:'justdating.com',     bg:'#fce7f3' }],
-  [['asiandating','asian dating'],  { type:'fav', domain:'asiandating.com',    bg:'#fce7f3' }],
-  [['lovoo'],                { type:'fav', domain:'lovoo.com',                 bg:'#fee2e2' }],
-  [['meetic'],               { type:'fav', domain:'meetic.com',                bg:'#fee2e2' }],
-  [['match'],                { type:'fav', domain:'match.com',                 bg:'#fee2e2' }],
-  [['okcupid'],              { type:'fav', domain:'okcupid.com',               bg:'#dbeafe' }],
-  [['grindr'],               { type:'fav', domain:'grindr.com',                bg:'#fef9c3' }],
-  [['zoosk'],                { type:'fav', domain:'zoosk.com',                 bg:'#dbeafe' }],
-  [['happn'],                { type:'fav', domain:'happn.com',                 bg:'#fee2e2' }],
-  [['mamba'],                { type:'fav', domain:'mamba.ru',                  bg:'#fce7f3' }],
+  [['justdating', 'just dating'], { type: 'initial', bg: '#fce7f3', color: '#be185d' }],
+  [['asiandating', 'asian dating'], { type: 'fav', domain: 'asiandating.com', bg: '#fce7f3' }],
+  [['lovoo'], { type: 'fav', domain: 'lovoo.com', bg: '#fee2e2' }],
+  [['meetic'], { type: 'fav', domain: 'meetic.com', bg: '#fee2e2' }],
+  [['match'], { type: 'fav', domain: 'match.com', bg: '#fee2e2' }],
+  [['okcupid'], { type: 'fav', domain: 'okcupid.com', bg: '#dbeafe' }],
+  [['grindr'], { type: 'fav', domain: 'grindr.com', bg: '#fef9c3' }],
+  [['zoosk'], { type: 'fav', domain: 'zoosk.com', bg: '#dbeafe' }],
+  [['happn'], { type: 'fav', domain: 'happn.com', bg: '#fee2e2' }],
+  [['mamba'], { type: 'fav', domain: 'mamba.ru', bg: '#fce7f3' }],
   // ── AI / Tech Tambahan ────────────────────────────────────────────────
-  [['claude','anthropic'],   { type:'fav', domain:'claude.ai',                 bg:'#fef3c7' }],
-  [['chatgpt','openai'],     { type:'fav', domain:'openai.com',                bg:'#dcfce7' }],
-  [['gemini','bard'],        { type:'fav', domain:'gemini.google.com',         bg:'#dbeafe' }],
-  [['github'],               { type:'si',  slug:'github',        color:'181717', bg:'#f1f5f9' }],
-  [['gitlab'],               { type:'si',  slug:'gitlab',        color:'FC6D26', bg:'#fef3c7' }],
-  [['dropbox'],              { type:'si',  slug:'dropbox',       color:'0061FF', bg:'#dbeafe' }],
-  [['notion'],               { type:'si',  slug:'notion',        color:'000000', bg:'#f1f5f9' }],
-  [['slack'],                { type:'si',  slug:'slack',         color:'4A154B', bg:'#ede9fe' }],
-  [['zoom'],                 { type:'si',  slug:'zoom',          color:'2D8CFF', bg:'#dbeafe' }],
-  [['figma'],                { type:'si',  slug:'figma',         color:'F24E1E', bg:'#fee2e2' }],
-  [['canva'],                { type:'fav', domain:'canva.com',                 bg:'#dbeafe' }],
-  [['adobe'],                { type:'fav', domain:'adobe.com',                   bg:'#fee2e2' }],
-  [['wordpress'],            { type:'si',  slug:'wordpress',     color:'21759B', bg:'#dbeafe' }],
-  [['icloud'],               { type:'fav', domain:'icloud.com',                bg:'#f1f5f9' }],
-  [['onedrive'],             { type:'fav', domain:'onedrive.com',              bg:'#dbeafe' }],
-  [['googledrive','google drive'],{ type:'fav', domain:'drive.google.com',    bg:'#fee2e2' }],
+  [['claude', 'anthropic'], { type: 'fav', domain: 'claude.ai', bg: '#fef3c7' }],
+  [['chatgpt', 'openai'], { type: 'fav', domain: 'openai.com', bg: '#dcfce7' }],
+  [['gemini', 'bard'], { type: 'fav', domain: 'gemini.google.com', bg: '#dbeafe' }],
+  [['github'], { type: 'si', slug: 'github', color: '181717', bg: '#f1f5f9' }],
+  [['gitlab'], { type: 'si', slug: 'gitlab', color: 'FC6D26', bg: '#fef3c7' }],
+  [['dropbox'], { type: 'si', slug: 'dropbox', color: '0061FF', bg: '#dbeafe' }],
+  [['notion'], { type: 'si', slug: 'notion', color: '000000', bg: '#f1f5f9' }],
+  [['slack'], { type: 'si', slug: 'slack', color: '4A154B', bg: '#ede9fe' }],
+  [['zoom'], { type: 'si', slug: 'zoom', color: '2D8CFF', bg: '#dbeafe' }],
+  [['figma'], { type: 'si', slug: 'figma', color: 'F24E1E', bg: '#fee2e2' }],
+  [['canva'], { type: 'fav', domain: 'canva.com', bg: '#dbeafe' }],
+  [['adobe'], { type: 'fav', domain: 'adobe.com', bg: '#fee2e2' }],
+  [['wordpress'], { type: 'si', slug: 'wordpress', color: '21759B', bg: '#dbeafe' }],
+  [['icloud'], { type: 'fav', domain: 'icloud.com', bg: '#f1f5f9' }],
+  [['onedrive'], { type: 'fav', domain: 'onedrive.com', bg: '#dbeafe' }],
+  [['googledrive', 'google drive'], { type: 'fav', domain: 'drive.google.com', bg: '#fee2e2' }],
   // ── Telco / Operator ──────────────────────────────────────────────────
-  [['telkomsel','tsel'],     { type:'fav', domain:'telkomsel.com',             bg:'#fee2e2' }],
-  [['indosat','im3','ooredoo'],{ type:'fav', domain:'indosatooredoo.com',      bg:'#fef9c3' }],
-  [['xl','axiata'],          { type:'fav', domain:'xl.co.id',                  bg:'#dbeafe' }],
-  [['smartfren'],            { type:'fav', domain:'smartfren.com',             bg:'#fee2e2' }],
-  [['three','tri'],          { type:'fav', domain:'three.co.id',               bg:'#fef9c3' }],
-  [['airtel'],               { type:'fav', domain:'airtel.in',                 bg:'#fee2e2' }],
-  [['jio'],                  { type:'fav', domain:'jio.com',                   bg:'#dbeafe' }],
-  [['maxis'],                { type:'fav', domain:'maxis.com.my',              bg:'#dbeafe' }],
-  [['celcom'],               { type:'fav', domain:'celcom.com.my',             bg:'#dbeafe' }],
+  [['telkomsel', 'tsel'], { type: 'fav', domain: 'telkomsel.com', bg: '#fee2e2' }],
+  [['indosat', 'im3', 'ooredoo'], { type: 'fav', domain: 'indosatooredoo.com', bg: '#fef9c3' }],
+  [['xl', 'axiata'], { type: 'fav', domain: 'xl.co.id', bg: '#dbeafe' }],
+  [['smartfren'], { type: 'fav', domain: 'smartfren.com', bg: '#fee2e2' }],
+  [['three', 'tri'], { type: 'fav', domain: 'three.co.id', bg: '#fef9c3' }],
+  [['airtel'], { type: 'fav', domain: 'airtel.in', bg: '#fee2e2' }],
+  [['jio'], { type: 'fav', domain: 'jio.com', bg: '#dbeafe' }],
+  [['maxis'], { type: 'fav', domain: 'maxis.com.my', bg: '#dbeafe' }],
+  [['celcom'], { type: 'fav', domain: 'celcom.com.my', bg: '#dbeafe' }],
 ];
 
 
@@ -910,6 +911,15 @@ function getServiceIconByName(name: string): React.ReactNode {
             initial={initial}
             color={`#${cfg.color}`}
           />
+        );
+      }
+
+      if (cfg.type === 'initial') {
+        return (
+          <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-base font-black"
+            style={{ background: cfg.bg, color: cfg.color }}>
+            {initial}
+          </div>
         );
       }
 
@@ -1033,12 +1043,12 @@ export default function App() {
   const [lang, setLang] = useState<Lang>(() => (typeof window !== 'undefined' ? (localStorage.getItem('lang') as Lang) ?? 'en' : 'en'));
   const [services, setServices] = useState<Service[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
-  const [serviceError,    setServiceError]    = useState(false);
+  const [serviceError, setServiceError] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<string>('6');
   const [countries, setCountries] = useState<Country[]>([
-    { id: '6',  name: '🇮🇩 Indonesia' },
+    { id: '6', name: '🇮🇩 Indonesia' },
     { id: '12', name: '🇺🇸 USA' },
-    { id: '7',  name: '🇲🇾 Malaysia' },
+    { id: '7', name: '🇲🇾 Malaysia' },
     { id: '52', name: '🇹🇭 Thailand' },
     { id: '22', name: '🇮🇳 India' },
     { id: '16', name: '🇬🇧 England' },
@@ -1059,7 +1069,7 @@ export default function App() {
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(regs => {
           regs.forEach(reg => reg.unregister());
-        }).catch(() => {});
+        }).catch(() => { });
         // Juga hapus semua SW controller
         if (navigator.serviceWorker.controller) {
           navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
@@ -1068,7 +1078,7 @@ export default function App() {
       if ('caches' in window) {
         caches.keys().then(keys => {
           keys.forEach(key => caches.delete(key));
-        }).catch(() => {});
+        }).catch(() => { });
       }
     };
     killSW();
@@ -1131,16 +1141,16 @@ export default function App() {
 
   const getCategory = (name: string): string => {
     const n = name.toLowerCase();
-    if (['whatsapp','telegram','line','signal','wechat','viber','zalo','discord','kakao','imessage','skype','icq','imo','bigo','michat','zalo'].some(k => n.includes(k))) return 'Chat';
-    if (['shopee','tokopedia','lazada','bukalapak','amazon','ebay','blibli','temu','aliexpress','jd.com','coupang','daraz','flipkart','meesho','mercado','poshmark','ozon','wildberries','avito'].some(k => n.includes(k))) return 'E-Commerce';
-    if (['gojek','grab','maxim','uber','indriver','lyft','didi','borzo','lalamove','doordash','gofood','grabfood','shopeefood','ifood','rappi'].some(k => n.includes(k))) return 'Transport';
-    if (['instagram','tiktok','facebook','twitter','snapchat','pinterest','linkedin','reddit','vkontakte','odnoklassniki','tumblr','clubhouse','mewe','quora','truthsocial','x.com','behance'].some(k => n.includes(k))) return 'Social';
-    if (['google','gmail','apple','microsoft','outlook','yahoo','mail.ru','yandex','rambler','proton'].some(k => n.includes(k))) return 'Tech';
-    if (['netflix','spotify','disney','hbo','prime video','hulu','twitch','youtube','crunchyroll','peacock','paramount','funimation','wetv','iqiyi','viu'].some(k => n.includes(k))) return 'Streaming';
-    if (['roblox','steam','xbox','playstation','epic','mobile legend','free fire','pubg','minecraft','fortnite','league of legends','valorant','dota','clash','brawl','stumble','honor of kings','call of duty'].some(k => n.includes(k))) return 'Gaming';
-    if (['paypal','ovo','dana','gopay','shopeepay','linkaja','binance','coinbase','crypto','bybit','okx','trust wallet','metamask','cashapp','revolut','paytm','bkash','nagad','phonepe'].some(k => n.includes(k))) return 'Finance';
-    if (['tinder','bumble','badoo','hinge','lovoo','dating'].some(k => n.includes(k))) return 'Dating';
-    if (['airbnb','booking','expedia','agoda','traveloka','tiket','pegipegi'].some(k => n.includes(k))) return 'Travel';
+    if (['whatsapp', 'telegram', 'line', 'signal', 'wechat', 'viber', 'zalo', 'discord', 'kakao', 'imessage', 'skype', 'icq', 'imo', 'bigo', 'michat', 'zalo'].some(k => n.includes(k))) return 'Chat';
+    if (['shopee', 'tokopedia', 'lazada', 'bukalapak', 'amazon', 'ebay', 'blibli', 'temu', 'aliexpress', 'jd.com', 'coupang', 'daraz', 'flipkart', 'meesho', 'mercado', 'poshmark', 'ozon', 'wildberries', 'avito'].some(k => n.includes(k))) return 'E-Commerce';
+    if (['gojek', 'grab', 'maxim', 'uber', 'indriver', 'lyft', 'didi', 'borzo', 'lalamove', 'doordash', 'gofood', 'grabfood', 'shopeefood', 'ifood', 'rappi'].some(k => n.includes(k))) return 'Transport';
+    if (['instagram', 'tiktok', 'facebook', 'twitter', 'snapchat', 'pinterest', 'linkedin', 'reddit', 'vkontakte', 'odnoklassniki', 'tumblr', 'clubhouse', 'mewe', 'quora', 'truthsocial', 'x.com', 'behance'].some(k => n.includes(k))) return 'Social';
+    if (['google', 'gmail', 'apple', 'microsoft', 'outlook', 'yahoo', 'mail.ru', 'yandex', 'rambler', 'proton'].some(k => n.includes(k))) return 'Tech';
+    if (['netflix', 'spotify', 'disney', 'hbo', 'prime video', 'hulu', 'twitch', 'youtube', 'crunchyroll', 'peacock', 'paramount', 'funimation', 'wetv', 'iqiyi', 'viu'].some(k => n.includes(k))) return 'Streaming';
+    if (['roblox', 'steam', 'xbox', 'playstation', 'epic', 'mobile legend', 'free fire', 'pubg', 'minecraft', 'fortnite', 'league of legends', 'valorant', 'dota', 'clash', 'brawl', 'stumble', 'honor of kings', 'call of duty'].some(k => n.includes(k))) return 'Gaming';
+    if (['paypal', 'ovo', 'dana', 'gopay', 'shopeepay', 'linkaja', 'binance', 'coinbase', 'crypto', 'bybit', 'okx', 'trust wallet', 'metamask', 'cashapp', 'revolut', 'paytm', 'bkash', 'nagad', 'phonepe'].some(k => n.includes(k))) return 'Finance';
+    if (['tinder', 'bumble', 'badoo', 'hinge', 'lovoo', 'dating'].some(k => n.includes(k))) return 'Dating';
+    if (['airbnb', 'booking', 'expedia', 'agoda', 'traveloka', 'tiket', 'pegipegi'].some(k => n.includes(k))) return 'Travel';
     return 'Lainnya';
   };
 
@@ -1162,70 +1172,80 @@ export default function App() {
     fetchCountries();
   }, []);
 
-  // Fetch services setiap kali selectedCountry berubah
-  useEffect(() => {
-    const fetchServices = async () => {
-      setLoadingServices(true);
-      try {
-        const res = await fetch(`/api/services?country=${selectedCountry}&operator=0`);
-        if (!res.ok) throw new Error('API error');
-        const data: { code: string; name: string; price: number; basePrice?: number; count: number; outOfStock?: boolean }[] = await res.json();
+  // Fetch services — dipisah ke useCallback agar bisa dipanggil ulang (auto-refresh)
+  const fetchServices = useCallback(async () => {
+    setLoadingServices(true);
+    try {
+      const res = await fetch(`/api/services?country=${selectedCountry}&operator=0`);
+      if (!res.ok) throw new Error('API error');
+      const data: { code: string; name: string; price: number; basePrice?: number; count: number; outOfStock?: boolean }[] = await res.json();
 
-        const IDR_RATE = 17135.75;
-        const mapped: Service[] = data.map((item, idx) => {
-          const basePrice = item.basePrice ?? Math.round((item.price / 1.25));
-          const profit = item.price - basePrice;
-          return {
-            id: idx + 1,
-            code: item.code,
-            name: item.name,
-            category: getCategory(item.name),
-            price: item.price,
-            basePrice,
-            profit,
-            stock: item.count,
-            outOfStock: item.outOfStock ?? false,
-            icon: getServiceIcon(item.code, item.name),
-          };
-        });
+      const mapped: Service[] = data.map((item, idx) => {
+        const basePrice = item.basePrice ?? Math.round((item.price / 1.25));
+        const profit = item.price - basePrice;
+        return {
+          id: idx + 1,
+          code: item.code,
+          name: item.name,
+          category: getCategory(item.name),
+          price: item.price,
+          basePrice,
+          profit,
+          stock: item.count,
+          outOfStock: item.outOfStock ?? false,
+          icon: getServiceIcon(item.code, item.name),
+        };
+      });
 
-        setServices(mapped.length > 0 ? mapped : []);
-      } catch {
-        setServices([]);
-        setServiceError(true);
-      } finally {
-        setLoadingServices(false);
-      }
-    };
-    fetchServices();
+      setServices(mapped.length > 0 ? mapped : []);
+      setServiceError(false);
+    } catch {
+      setServices([]);
+      setServiceError(true);
+    } finally {
+      setLoadingServices(false);
+    }
   }, [selectedCountry]);
+
+  // Jalankan saat pertama load & setiap ganti negara
+  useEffect(() => {
+    fetchServices();
+  }, [fetchServices]);
+
+  // Auto-refresh harga setiap 5 menit — supaya perubahan markup admin
+  // langsung terlihat tanpa user perlu reload halaman
+  useEffect(() => {
+    const FIVE_MIN = 5 * 60 * 1000;
+    const t = setInterval(fetchServices, FIVE_MIN);
+    return () => clearInterval(t);
+  }, [fetchServices]);
 
   // Gabung: data live + fallback ALL_SERVICES jika API gagal
   const activeServices = services.length > 0 ? services : ALL_SERVICES;
 
-  const showToast = useCallback((msg: string) => { 
-    setToastMsg(msg); 
-    setTimeout(() => setToastMsg(null), 3000); 
+  const showToast = useCallback((msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
   }, []);
 
-  const navigate = (view: string) => { 
-    window.scrollTo({ top: 0, behavior: 'smooth' }); 
-    setCurrentView(view); 
+  const navigate = (view: string) => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setCurrentView(view);
   };
 
-  const handleLogin = (userData: UserData, accessToken?: string) => { 
+  const handleLogin = (userData: UserData, accessToken?: string) => {
     setUser(userData);
     // Simpan session + access_token ke sessionStorage sekaligus
     setSecureSession(userData, accessToken);
-    showToast("Login successful, welcome " + userData.name + "!"); 
-    navigate('dashboard'); 
+    showToast("Login successful, welcome " + userData.name + "!");
+    navigate('dashboard');
   };
 
-  const handleLogout = () => { 
+  const handleLogout = () => {
     setUser(null);
     clearSecureSession();
-    showToast("You have been signed out successfully."); 
-    navigate('landing'); 
+    showToast("You have been signed out successfully.");
+    navigate('landing');
   };
 
   // Cek blacklist setiap 30 detik — auto logout jika diblokir
@@ -1249,8 +1269,8 @@ export default function App() {
   }, [user?.email]);
 
   return (
-    <div className="relative text-slate-800 dark:text-slate-200 font-sans selection:bg-indigo-200 selection:text-indigo-900 bg-slate-50 dark:bg-[#060810] min-h-screen transition-colors duration-300" style={{WebkitTapHighlightColor:"transparent"}}>
-      
+    <div className="relative text-slate-800 dark:text-slate-200 font-sans selection:bg-indigo-200 selection:text-indigo-900 bg-slate-50 dark:bg-[#060810] min-h-screen transition-colors duration-300" style={{ WebkitTapHighlightColor: "transparent" }}>
+
       {/* GLOBAL TOAST NOTIFICATION */}
       {toastMsg && (
         <div className="fixed top-20 md:top-6 left-1/2 transform -translate-x-1/2 z-[200] bg-slate-900/95 dark:bg-white/95 backdrop-blur-md text-white dark:text-slate-900 px-5 py-3 rounded-2xl shadow-2xl font-bold flex items-center gap-2 transition-all animate-in fade-in slide-in-from-top-4 duration-300 max-w-[calc(100vw-2rem)] text-sm">
@@ -1297,8 +1317,8 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
   const [statsOn, setStatsOn] = useState(false);
   useEffect(() => { const t = setTimeout(() => setStatsOn(true), 500); return () => clearTimeout(t); }, []);
   const cnt500 = useCountUp(500, 1300, statsOn);
-  const cnt50  = useCountUp(50,  1200, statsOn);
-  const cnt99  = useCountUp(99,  1000, statsOn);
+  const cnt50 = useCountUp(50, 1200, statsOn);
+  const cnt99 = useCountUp(99, 1000, statsOn);
 
   useEffect(() => {
     if (isMenuOpen) document.body.style.overflow = 'hidden';
@@ -1316,14 +1336,14 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
   ];
 
   const scrollToId = (e: React.MouseEvent<HTMLElement>, id: string) => {
-    e.preventDefault(); 
+    e.preventDefault();
     setIsMenuOpen(false);
-    const el = document.getElementById(id); 
-    if(el) el.scrollIntoView({ behavior: 'smooth' });
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9fc] dark:bg-[#050810] transition-colors duration-300" style={{minHeight:"100svh", overflowX:"clip"}}>
+    <div className="min-h-screen bg-[#f8f9fc] dark:bg-[#050810] transition-colors duration-300" style={{ minHeight: "100svh", overflowX: "clip" }}>
       <style>{`
         @keyframes _heroIn { from { opacity:0; transform:translateY(22px); } to { opacity:1; transform:translateY(0); } }
         ._h1{animation:_heroIn .55s ease .05s both}
@@ -1352,7 +1372,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
         className="fixed bottom-6 right-4 z-[90] md:bottom-8 md:right-8 bg-[#25D366] text-white shadow-[0_4px_20px_rgba(37,211,102,0.5)] hover:bg-[#1ebd5a] transition-all hover:scale-105 flex items-center gap-2 group
           w-12 h-12 rounded-full justify-center
           md:w-auto md:h-auto md:rounded-full md:px-4 md:py-3">
-        <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5 shrink-0 md:w-6 md:h-6"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5 shrink-0 md:w-6 md:h-6"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
         <div className="text-left hidden md:block">
           <div className="text-[10px] font-bold opacity-80 leading-none mb-0.5">Chat Kami</div>
           <div className="text-sm font-black leading-none">WhatsApp CS</div>
@@ -1423,26 +1443,26 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
             Enterprise-level Virtual Number Platform with 100% Auto Refund guarantee and 24/7 stable servers.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center _h4">
-            <button onClick={() => onNavigate('register')} className="relative flex items-center justify-center px-8 py-4 text-base font-bold rounded-2xl text-white overflow-hidden group shadow-xl shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all hover:-translate-y-1" style={{background:'linear-gradient(135deg,#4f46e5,#7c3aed)'}}>
+            <button onClick={() => onNavigate('register')} className="relative flex items-center justify-center px-8 py-4 text-base font-bold rounded-2xl text-white overflow-hidden group shadow-xl shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all hover:-translate-y-1" style={{ background: 'linear-gradient(135deg,#4f46e5,#7c3aed)' }}>
               <span className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-              Open Dashboard <ArrowRight className="ml-2 w-5 h-5"/>
+              Open Dashboard <ArrowRight className="ml-2 w-5 h-5" />
             </button>
             <button onClick={(e) => scrollToId(e, 'fitur')} className="flex items-center justify-center px-8 py-4 border border-slate-200 dark:border-white/10 text-base font-bold rounded-2xl text-slate-700 dark:text-slate-300 _glass-card hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-all hover:-translate-y-0.5">
-              <ShieldCheck className="mr-2 w-5 h-5 text-indigo-500 dark:text-indigo-400"/> Explore Features
+              <ShieldCheck className="mr-2 w-5 h-5 text-indigo-500 dark:text-indigo-400" /> Explore Features
             </button>
           </div>
 
           {/* Floating app chips */}
           <div className="flex items-center justify-center gap-2 flex-wrap mt-10 _h5">
             {[
-              { name: 'WhatsApp',  domain: 'whatsapp.com'   },
-              { name: 'Telegram',  domain: 'telegram.org'   },
-              { name: 'Shopee',    domain: 'shopee.co.id'   },
-              { name: 'Tokopedia', domain: 'tokopedia.com'  },
-              { name: 'Gojek',     domain: 'gojek.com'      },
-              { name: 'Instagram', domain: 'instagram.com'  },
-              { name: 'TikTok',    domain: 'tiktok.com'     },
-              { name: 'Facebook',  domain: 'facebook.com'   },
+              { name: 'WhatsApp', domain: 'whatsapp.com' },
+              { name: 'Telegram', domain: 'telegram.org' },
+              { name: 'Shopee', domain: 'shopee.co.id' },
+              { name: 'Tokopedia', domain: 'tokopedia.com' },
+              { name: 'Gojek', domain: 'gojek.com' },
+              { name: 'Instagram', domain: 'instagram.com' },
+              { name: 'TikTok', domain: 'tiktok.com' },
+              { name: 'Facebook', domain: 'facebook.com' },
             ].map(app => (
               <div key={app.name} className="_chip _glass-card border rounded-xl px-3 py-1.5 flex items-center gap-1.5 shadow-sm text-xs font-bold text-slate-600 dark:text-slate-300">
                 <img src={`https://www.google.com/s2/favicons?domain=${app.domain}&sz=32`} width={14} height={14} className="w-3.5 h-3.5 object-contain" alt={app.name} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
@@ -1457,10 +1477,10 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
             <div className="_glass-card border rounded-3xl shadow-sm overflow-hidden">
               <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-slate-100 dark:divide-white/[0.06]">
                 {[
-                  { val: statsOn ? `${cnt500}+` : '0+',  label: 'Services Available', icon: <Package className="w-5 h-5 text-indigo-500"/>,  color: 'text-indigo-600 dark:text-indigo-400', i: 0 },
-                  { val: statsOn ? `${cnt50}K+` : '0K+', label: 'Active Users',        icon: <Users className="w-5 h-5 text-violet-500"/>,    color: 'text-violet-600 dark:text-violet-400', i: 1 },
-                  { val: statsOn ? `${cnt99}%`  : '0%',  label: 'Success Rate',        icon: <TrendingUp className="w-5 h-5 text-emerald-500"/>, color: 'text-emerald-600 dark:text-emerald-400', i: 2 },
-                  { val: '24/7',                          label: 'Server Online',       icon: <Activity className="w-5 h-5 text-sky-500"/>,     color: 'text-sky-600 dark:text-sky-400', i: 3 },
+                  { val: statsOn ? `${cnt500}+` : '0+', label: 'Services Available', icon: <Package className="w-5 h-5 text-indigo-500" />, color: 'text-indigo-600 dark:text-indigo-400', i: 0 },
+                  { val: statsOn ? `${cnt50}K+` : '0K+', label: 'Active Users', icon: <Users className="w-5 h-5 text-violet-500" />, color: 'text-violet-600 dark:text-violet-400', i: 1 },
+                  { val: statsOn ? `${cnt99}%` : '0%', label: 'Success Rate', icon: <TrendingUp className="w-5 h-5 text-emerald-500" />, color: 'text-emerald-600 dark:text-emerald-400', i: 2 },
+                  { val: '24/7', label: 'Server Online', icon: <Activity className="w-5 h-5 text-sky-500" />, color: 'text-sky-600 dark:text-sky-400', i: 3 },
                 ].map(s => (
                   <div key={s.label} className="flex flex-col items-center justify-center py-7 px-4 text-center gap-2 hover:-translate-y-1 transition-transform">
                     <div className="w-10 h-10 bg-slate-50 dark:bg-white/5 rounded-2xl flex items-center justify-center border border-slate-100 dark:border-white/[0.06]">{s.icon}</div>
@@ -1485,11 +1505,11 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
             </div>
           </FadeInSection>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-            <div className="hidden md:block absolute top-10 left-[18%] right-[18%] h-px bg-gradient-to-r from-transparent via-indigo-300 dark:via-indigo-500/40 to-transparent"/>
+            <div className="hidden md:block absolute top-10 left-[18%] right-[18%] h-px bg-gradient-to-r from-transparent via-indigo-300 dark:via-indigo-500/40 to-transparent" />
             {[
-              { step: '01', icon: <Wallet className="w-7 h-7 text-indigo-500"/>, title: 'Add Balance', desc: 'Top up your balance using available payment methods. Processed automatically in seconds.', glow: 'rgba(99,102,241,0.15)' },
-              { step: '02', icon: <ShoppingCart className="w-7 h-7 text-violet-500"/>, title: 'Pick & Buy Number', desc: 'Find the service you need, select a country, and click Buy Number. Number is instantly active.', glow: 'rgba(139,92,246,0.15)' },
-              { step: '03', icon: <CheckCircle className="w-7 h-7 text-emerald-500"/>, title: 'Receive OTP Code', desc: 'OTP code appears automatically in your dashboard within seconds. Copy & use it!', glow: 'rgba(16,185,129,0.15)' },
+              { step: '01', icon: <Wallet className="w-7 h-7 text-indigo-500" />, title: 'Add Balance', desc: 'Top up your balance using available payment methods. Processed automatically in seconds.', glow: 'rgba(99,102,241,0.15)' },
+              { step: '02', icon: <ShoppingCart className="w-7 h-7 text-violet-500" />, title: 'Pick & Buy Number', desc: 'Find the service you need, select a country, and click Buy Number. Number is instantly active.', glow: 'rgba(139,92,246,0.15)' },
+              { step: '03', icon: <CheckCircle className="w-7 h-7 text-emerald-500" />, title: 'Receive OTP Code', desc: 'OTP code appears automatically in your dashboard within seconds. Copy & use it!', glow: 'rgba(16,185,129,0.15)' },
             ].map((s, i) => (
               <FadeInSection key={i} delay={i * 130}>
                 <div
@@ -1498,7 +1518,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
                   onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-6px)'; }}
                   onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; }}
                 >
-                  <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 relative z-10" style={{background:`radial-gradient(circle, ${s.glow} 0%, transparent 70%)`, boxShadow:`0 0 0 1px ${s.glow}`}}>{s.icon}</div>
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 relative z-10" style={{ background: `radial-gradient(circle, ${s.glow} 0%, transparent 70%)`, boxShadow: `0 0 0 1px ${s.glow}` }}>{s.icon}</div>
                   <div className="absolute top-5 right-6 text-6xl font-black text-slate-100 dark:text-white/[0.04] select-none">{s.step}</div>
                   <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mb-3">{s.title}</h3>
                   <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">{s.desc}</p>
@@ -1510,7 +1530,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
       </div>
 
       {/* DEMO HARGA */}
-      <div id="demo" className="py-24 text-white relative border-t border-white/[0.06] overflow-hidden" style={{background:'linear-gradient(135deg,#0d1117 0%,#0f0c1e 50%,#0d1117 100%)'}}>
+      <div id="demo" className="py-24 text-white relative border-t border-white/[0.06] overflow-hidden" style={{ background: 'linear-gradient(135deg,#0d1117 0%,#0f0c1e 50%,#0d1117 100%)' }}>
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/10 blur-[100px] rounded-full" />
           <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-violet-600/10 blur-[100px] rounded-full" />
@@ -1518,27 +1538,27 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center relative">
           <div className="order-2 lg:order-1">
-            <div className="rounded-[2rem] p-2 border border-white/10 shadow-2xl" style={{background:'rgba(255,255,255,0.04)',backdropFilter:'blur(20px)'}}>
+            <div className="rounded-[2rem] p-2 border border-white/10 shadow-2xl" style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(20px)' }}>
               <div className="bg-[#0d1117] rounded-3xl overflow-hidden text-slate-200 flex flex-col h-[500px] border border-white/[0.06]">
-                <div className="p-6 border-b border-white/[0.06] flex justify-between items-center" style={{background:'rgba(99,102,241,0.08)'}}>
+                <div className="p-6 border-b border-white/[0.06] flex justify-between items-center" style={{ background: 'rgba(99,102,241,0.08)' }}>
                   <div><h3 className="font-bold text-lg text-white">Check Real-time Service Prices</h3><p className="text-xs text-slate-400">Find the app you need</p></div>
                 </div>
-                <div className="p-4 border-b border-white/[0.06]" style={{background:'#0d1117'}}>
+                <div className="p-4 border-b border-white/[0.06]" style={{ background: '#0d1117' }}>
                   <div className="relative">
-                    <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-500"/>
-                    <input type="text" placeholder="e.g. Shopee, Telegram..." className="w-full rounded-xl pl-12 pr-4 py-3 outline-none focus:ring-1 focus:ring-indigo-500 text-base font-medium text-white" style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.08)'}} id="search-service" name="search" aria-label="Search service" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                    <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-500" />
+                    <input type="text" placeholder="e.g. Shopee, Telegram..." className="w-full rounded-xl pl-12 pr-4 py-3 outline-none focus:ring-1 focus:ring-indigo-500 text-base font-medium text-white" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }} id="search-service" name="search" aria-label="Search service" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                   </div>
                 </div>
-                <div className="overflow-y-auto flex-1 bg-slate-50/50 dark:bg-[#0a0d16]/50 p-3">
+                <div className="overflow-y-auto flex-1 p-3" style={{ background: '#0d1117' }}>
                   {loadingServices ? (
                     // Loading skeleton
                     [...Array(4)].map((_, i) => (
-                      <div key={i} className="bg-white dark:bg-[#0f1320] p-3.5 rounded-2xl border border-slate-100 dark:border-white/[0.09] flex justify-between items-center mb-3 animate-pulse">
+                      <div key={i} className="p-3.5 rounded-2xl flex justify-between items-center mb-3 animate-pulse" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
                         <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 bg-slate-200 dark:bg-[#161b28] rounded-xl shrink-0"></div>
+                          <div className="w-12 h-12 rounded-xl shrink-0" style={{ background: 'rgba(255,255,255,0.08)' }}></div>
                           <div className="space-y-2">
-                            <div className="h-4 bg-slate-200 dark:bg-[#161b28] rounded w-24"></div>
-                            <div className="h-3 bg-slate-100 dark:bg-[#161b28] rounded w-16"></div>
+                            <div className="h-4 rounded w-24" style={{ background: 'rgba(255,255,255,0.08)' }}></div>
+                            <div className="h-3 rounded w-16" style={{ background: 'rgba(255,255,255,0.05)' }}></div>
                           </div>
                         </div>
                         <div className="space-y-2 items-end flex flex-col">
@@ -1548,24 +1568,24 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
                       </div>
                     ))
                   ) : filteredServices.length > 0 ? filteredServices.map((s) => (
-                    <div key={s.id} className="p-3.5 rounded-2xl flex justify-between items-center mb-2 transition-colors hover:bg-white/5" style={{border:'1px solid rgba(255,255,255,0.06)'}}>
+                    <div key={s.id} className="p-3.5 rounded-2xl flex justify-between items-center mb-2 transition-colors" style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
                       <div className="flex items-center space-x-4">
-                        <div className="p-2.5 rounded-xl" style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.08)'}}>{s.icon}</div>
+                        <div className="p-2.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.08)' }}>{s.icon}</div>
                         <div><div className="font-bold text-sm text-white">{s.name}</div><div className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Stock: <span className="text-emerald-400">{s.stock}</span></div></div>
                       </div>
                       <div className="text-right">
                         <div className="font-black text-indigo-400 text-sm">Rp {s.price.toLocaleString('id-ID')}</div>
-                        <button onClick={() => { showToast('Please login to start buying!'); onNavigate('login'); }} className="text-[10px] font-bold px-3.5 py-1.5 rounded-lg mt-1.5 transition-colors hover:bg-indigo-500 hover:text-white text-indigo-400" style={{background:'rgba(99,102,241,0.15)'}}>BUY NUMBER</button>
+                        <button onClick={() => { showToast('Please login to start buying!'); onNavigate('login'); }} className="text-[10px] font-bold px-3.5 py-1.5 rounded-lg mt-1.5 transition-colors hover:bg-indigo-500 hover:text-white text-indigo-400" style={{ background: 'rgba(99,102,241,0.15)' }}>BUY NUMBER</button>
                       </div>
                     </div>
-                  )) : <div className="text-center py-16 text-slate-500 text-sm font-medium"><Search className="w-10 h-10 mx-auto text-slate-600 mb-3"/>No services found.</div>}
+                  )) : <div className="text-center py-16 text-slate-500 text-sm font-medium"><Search className="w-10 h-10 mx-auto text-slate-600 mb-3" />No services found.</div>}
                 </div>
               </div>
             </div>
           </div>
           <div className="order-1 lg:order-2 text-center lg:text-left">
             <h2 className="text-indigo-400 font-bold tracking-wide uppercase mb-3 text-sm">Transparent & Real-time</h2>
-            <h3 className="text-4xl lg:text-5xl font-extrabold mb-6 leading-tight">Lowest Prices,<br/>Always In Stock.</h3>
+            <h3 className="text-4xl lg:text-5xl font-extrabold mb-6 leading-tight">Lowest Prices,<br />Always In Stock.</h3>
             <p className="text-lg text-slate-400 mb-8 leading-relaxed">
               Try searching for services in the demo panel without signing up. We guarantee <i>fresh</i> number stock updated in real-time from dozens of countries.
             </p>
@@ -1577,7 +1597,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
               ].map(item => (
                 <li key={item} className="flex items-center text-slate-300 font-medium">
                   <div className="w-6 h-6 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center mr-3 shrink-0">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400"/>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" />
                   </div>
                   {item}
                 </li>
@@ -1606,7 +1626,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
                 onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; }}
               >
                 <div className="relative z-10">
-                  <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-2xl flex items-center justify-center mb-5"><ShieldAlert className="w-7 h-7 text-indigo-600 dark:text-indigo-400"/></div>
+                  <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-2xl flex items-center justify-center mb-5"><ShieldAlert className="w-7 h-7 text-indigo-600 dark:text-indigo-400" /></div>
                   <h4 className="text-xl font-bold mb-2 text-slate-900 dark:text-white">Auto Refund 100%</h4>
                   <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md leading-relaxed">Our smart system tracks every OTP in real-time. If the code doesn't arrive within the waiting period, your balance is automatically returned in full with no deductions.</p>
                 </div>
@@ -1614,12 +1634,12 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
               </div>
               {/* Box 2: Transaksi */}
               <div className="_bento-hover rounded-3xl p-8 flex flex-col justify-center relative overflow-hidden group transition-all"
-                style={{ background:'linear-gradient(135deg,#4f46e5,#7c3aed)', transition: 'transform .25s ease, box-shadow .25s ease' }}
+                style={{ background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', transition: 'transform .25s ease, box-shadow .25s ease' }}
                 onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-5px)'; }}
                 onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; }}
               >
                 <div className="relative z-10">
-                  <Wallet className="w-12 h-12 text-indigo-200 mb-5"/>
+                  <Wallet className="w-12 h-12 text-indigo-200 mb-5" />
                   <h4 className="text-xl font-bold mb-2 text-white">Instant Transactions</h4>
                   <p className="text-indigo-200 text-sm leading-relaxed">Deposits processed automatically in seconds. History recorded transparently.</p>
                 </div>
@@ -1632,24 +1652,24 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
                 onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; }}
               >
                 <div className="relative z-10">
-                  <div className="w-14 h-14 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl flex items-center justify-center mb-5"><EyeOff className="w-7 h-7 text-slate-700 dark:text-slate-300"/></div>
+                  <div className="w-14 h-14 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl flex items-center justify-center mb-5"><EyeOff className="w-7 h-7 text-slate-700 dark:text-slate-300" /></div>
                   <h4 className="text-xl font-bold mb-2 text-slate-900 dark:text-white">Privacy Protected</h4>
                   <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">Keep your personal number safe from spam, telemarketing, or data breaches.</p>
                 </div>
               </div>
               {/* Box 4: Server */}
               <div className="_bento-hover md:col-span-2 text-white rounded-3xl p-8 flex items-center justify-between relative overflow-hidden border border-white/[0.06] group transition-all"
-                style={{ background:'linear-gradient(135deg,#0d1117 0%,#0f0c1e 100%)', transition: 'transform .25s ease, box-shadow .25s ease' }}
+                style={{ background: 'linear-gradient(135deg,#0d1117 0%,#0f0c1e 100%)', transition: 'transform .25s ease, box-shadow .25s ease' }}
                 onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-5px)'; }}
                 onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; }}
               >
                 <div className="w-full sm:w-2/3 relative z-10">
-                  <Server className="w-12 h-12 text-sky-400 mb-5"/>
+                  <Server className="w-12 h-12 text-sky-400 mb-5" />
                   <h4 className="text-xl font-bold mb-2">99.9% Stable Infrastructure</h4>
                   <p className="text-slate-400 text-sm leading-relaxed">We use cutting-edge server technology to ensure the platform stays responsive and accessible 24 hours a day without interruption.</p>
                 </div>
                 <Globe className="hidden sm:block _spin-slow w-48 h-48 text-indigo-500 opacity-10 absolute -right-6 top-1/2 -translate-y-1/2" />
-                <div className="absolute inset-0 pointer-events-none" style={{background:'radial-gradient(circle at 80% 50%, rgba(99,102,241,0.08) 0%, transparent 60%)'}} />
+                <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(circle at 80% 50%, rgba(99,102,241,0.08) 0%, transparent 60%)' }} />
               </div>
             </div>
           </FadeInSection>
@@ -1657,47 +1677,47 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
       </div>
 
       {/* TESTIMONIAL */}
-      <div className="py-20 relative border-t border-slate-200/70 dark:border-white/[0.04]" style={{background:'linear-gradient(180deg,#f1f3f9 0%,#f8f9fc 100%)'}}>
+      <div className="py-20 relative border-t border-slate-200/70 dark:border-white/[0.04]" style={{ background: 'linear-gradient(180deg,#f1f3f9 0%,#f8f9fc 100%)' }}>
         <style>{`.dark .testimonial-section{background:linear-gradient(180deg,#07090f 0%,#050810 100%)!important}`}</style>
         <div className="testimonial-section py-0">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <FadeInSection>
-            <div className="text-center mb-12">
-              <div className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest text-sm mb-3">Testimonials</div>
-              <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white">Trusted by Thousands of Users</h2>
-            </div>
-          </FadeInSection>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {[
-              { name: 'Andi R.', role: 'Online Reseller', text: 'Instantly created a new marketplace account. OTP came in super fast, less than 30 seconds. Highly recommended!', rating: 5, color:'from-indigo-500/10 to-violet-500/5' },
-              { name: 'Siti N.', role: 'Freelancer', text: 'Auto refund actually worked when my number failed to receive OTP. Balance returned in seconds. Honest and trustworthy!', rating: 5, color:'from-violet-500/10 to-purple-500/5' },
-              { name: 'Budi S.', role: 'Developer', text: "Huge and varied number stock. Can choose from many countries. Prices are competitive — the cheapest I've ever tried.", rating: 5, color:'from-sky-500/10 to-indigo-500/5' },
-            ].map((t, i) => (
-              <FadeInSection key={i} delay={i * 120}>
-                <div className="_glass-card _bento-hover relative rounded-3xl p-7 border transition-all overflow-hidden"
-                  style={{ transition: 'transform .25s ease, box-shadow .25s ease' }}
-                  onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-4px)'; }}
-                  onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; }}
-                >
-                  <div className={`absolute inset-0 bg-gradient-to-br ${t.color} pointer-events-none rounded-3xl`} />
-                  <div className="relative z-10">
-                    <div className="flex gap-1 mb-4">
-                      {[...Array(t.rating)].map((_, j) => <Star key={j} className="w-4 h-4 fill-amber-400 text-amber-400"/>)}
-                    </div>
-                    <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-6">"{t.text}"</p>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center font-black text-indigo-600 dark:text-indigo-300" style={{background:'linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.15))',border:'1px solid rgba(99,102,241,0.2)'}}>{t.name[0]}</div>
-                      <div>
-                        <div className="font-bold text-slate-900 dark:text-white text-sm">{t.name}</div>
-                        <div className="text-xs text-slate-400 font-medium">{t.role}</div>
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <FadeInSection>
+              <div className="text-center mb-12">
+                <div className="text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest text-sm mb-3">Testimonials</div>
+                <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white">Trusted by Thousands of Users</h2>
+              </div>
+            </FadeInSection>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {[
+                { name: 'Andi R.', role: 'Online Reseller', text: 'Instantly created a new marketplace account. OTP came in super fast, less than 30 seconds. Highly recommended!', rating: 5, color: 'from-indigo-500/10 to-violet-500/5' },
+                { name: 'Siti N.', role: 'Freelancer', text: 'Auto refund actually worked when my number failed to receive OTP. Balance returned in seconds. Honest and trustworthy!', rating: 5, color: 'from-violet-500/10 to-purple-500/5' },
+                { name: 'Budi S.', role: 'Developer', text: "Huge and varied number stock. Can choose from many countries. Prices are competitive — the cheapest I've ever tried.", rating: 5, color: 'from-sky-500/10 to-indigo-500/5' },
+              ].map((t, i) => (
+                <FadeInSection key={i} delay={i * 120}>
+                  <div className="_glass-card _bento-hover relative rounded-3xl p-7 border transition-all overflow-hidden"
+                    style={{ transition: 'transform .25s ease, box-shadow .25s ease' }}
+                    onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'translateY(-4px)'; }}
+                    onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = ''; }}
+                  >
+                    <div className={`absolute inset-0 bg-gradient-to-br ${t.color} pointer-events-none rounded-3xl`} />
+                    <div className="relative z-10">
+                      <div className="flex gap-1 mb-4">
+                        {[...Array(t.rating)].map((_, j) => <Star key={j} className="w-4 h-4 fill-amber-400 text-amber-400" />)}
+                      </div>
+                      <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-6">"{t.text}"</p>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center font-black text-indigo-600 dark:text-indigo-300" style={{ background: 'linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.15))', border: '1px solid rgba(99,102,241,0.2)' }}>{t.name[0]}</div>
+                        <div>
+                          <div className="font-bold text-slate-900 dark:text-white text-sm">{t.name}</div>
+                          <div className="text-xs text-slate-400 font-medium">{t.role}</div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </FadeInSection>
-            ))}
+                </FadeInSection>
+              ))}
+            </div>
           </div>
-        </div>
         </div>
       </div>
 
@@ -1711,8 +1731,8 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
             {faqs.map((faq, i) => (
               <FadeInSection key={i} delay={i * 80}>
                 <div className="bg-white dark:bg-[#0a0d16] border border-slate-200 dark:border-white/[0.07] rounded-2xl overflow-hidden shadow-sm">
-                  <button 
-                    onClick={() => setActiveFaq(activeFaq === i ? null : i)} 
+                  <button
+                    onClick={() => setActiveFaq(activeFaq === i ? null : i)}
                     className="w-full px-6 py-5 text-left flex justify-between font-bold text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/[0.07]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500 transition-colors"
                   >
                     {faq.q} <ChevronDown className={"w-5 h-5 text-slate-400 transition-transform " + (activeFaq === i ? 'rotate-180' : '')} />
@@ -1726,19 +1746,19 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
       </div>
 
       {/* CTA SECTION */}
-      <div className="py-24 relative overflow-hidden" style={{background:'linear-gradient(135deg,#3730a3 0%,#4f46e5 40%,#7c3aed 100%)'}}>
+      <div className="py-24 relative overflow-hidden" style={{ background: 'linear-gradient(135deg,#3730a3 0%,#4f46e5 40%,#7c3aed 100%)' }}>
         <div className="absolute inset-0 pointer-events-none">
           <div className="_dot-grid absolute inset-0 opacity-20" />
-          <div className="absolute -top-24 -left-24 w-96 h-96 bg-white/10 blur-[80px] rounded-full"/>
-          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-violet-400/20 blur-[80px] rounded-full"/>
+          <div className="absolute -top-24 -left-24 w-96 h-96 bg-white/10 blur-[80px] rounded-full" />
+          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-violet-400/20 blur-[80px] rounded-full" />
         </div>
         <FadeInSection>
           <div className="max-w-3xl mx-auto px-4 text-center relative z-10">
-            <h2 className="text-4xl sm:text-5xl font-black text-white mb-6 leading-tight">Ready to Verify<br/>Without the Hassle?</h2>
+            <h2 className="text-4xl sm:text-5xl font-black text-white mb-6 leading-tight">Ready to Verify<br />Without the Hassle?</h2>
             <p className="text-indigo-100 text-lg mb-10">Sign up for free. No credit card required. Buy your first OTP number right away.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button onClick={() => onNavigate('register')} className="flex items-center justify-center gap-2 px-8 py-4 bg-white text-indigo-600 font-black text-base rounded-2xl hover:bg-indigo-50 shadow-xl transition-all hover:-translate-y-0.5 active:scale-95">
-                Get Started Free <ArrowRight className="w-5 h-5"/>
+                Get Started Free <ArrowRight className="w-5 h-5" />
               </button>
               <button onClick={() => onNavigate('login')} className="flex items-center justify-center gap-2 px-8 py-4 border-2 border-white/30 text-white font-bold text-base rounded-2xl hover:bg-white/10 transition-all">
                 Already have an account? Login
@@ -1761,16 +1781,16 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
             <div>
               <h4 className="font-bold text-slate-900 dark:text-white mb-3 uppercase text-xs tracking-wider">Services</h4>
               <ul className="space-y-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                <li><a href="#demo" onClick={(e)=>scrollToId(e as any, 'demo')} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Real-time Pricing</a></li>
-                <li><a href="#" onClick={() => {onNavigate('login'); showToast("Login to deposit");}} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Add Balance</a></li>
+                <li><a href="#demo" onClick={(e) => scrollToId(e as any, 'demo')} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Real-time Pricing</a></li>
+                <li><a href="#" onClick={() => { onNavigate('login'); showToast("Login to deposit"); }} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Add Balance</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-bold text-slate-900 dark:text-white mb-3 uppercase text-xs tracking-wider">Company</h4>
               <ul className="space-y-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                <li><a href="#" onClick={(e)=>{e.preventDefault(); setShowSyarat(true);}} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Terms of Service</a></li>
-                <li><a href="#" onClick={(e)=>{e.preventDefault(); setShowPrivasi(true);}} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Privacy Policy</a></li>
-                <li><a href="#faq" onClick={(e)=>scrollToId(e as any, 'faq')} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Help & FAQ</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); setShowSyarat(true); }} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Terms of Service</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); setShowPrivasi(true); }} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Privacy Policy</a></li>
+                <li><a href="#faq" onClick={(e) => scrollToId(e as any, 'faq')} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Help & FAQ</a></li>
               </ul>
             </div>
             <div>
@@ -1778,12 +1798,12 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
               <ul className="space-y-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
                 <li>
                   <a href={`https://wa.me/${CS_WA}?text=Halo%20CS%20Pusat%20Nokos%2C%20saya%20butuh%20bantuan.`} target="_blank" rel="noopener noreferrer" className="flex items-center hover:text-green-600 dark:hover:text-green-400 transition-colors gap-1.5">
-                    <div className="w-3.5 h-3.5 shrink-0"><svg viewBox="0 0 24 24" fill="currentColor" className="text-green-500"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
+                    <div className="w-3.5 h-3.5 shrink-0"><svg viewBox="0 0 24 24" fill="currentColor" className="text-green-500"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg></div>
                     087862306726
                   </a>
                 </li>
                 <li>
-                  <a href={`https://t.me/${CS_TELEGRAM.replace("@","")}`} target="_blank" rel="noopener noreferrer" className="flex items-center hover:text-blue-500 dark:hover:text-blue-400 transition-colors gap-1.5">
+                  <a href={`https://t.me/${CS_TELEGRAM.replace("@", "")}`} target="_blank" rel="noopener noreferrer" className="flex items-center hover:text-blue-500 dark:hover:text-blue-400 transition-colors gap-1.5">
                     <Send className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                     {CS_TELEGRAM}
                   </a>
@@ -1967,23 +1987,23 @@ function ResendRow({ onBack, onResend, countdown, isLoading }: {
 
 function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewProps) {
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm,  setShowConfirm]  = useState(false);
-  const [isLoading,    setIsLoading]    = useState(false);
-  const [email,        setEmail]        = useState('');
-  const [password,     setPassword]     = useState('');
-  const [confirmPass,  setConfirmPass]  = useState('');
-  const [name,         setName]         = useState('');
-  const [error,        setError]        = useState('');
-  const [step,         setStep]         = useState<'form' | 'verify' | 'forgot' | 'reset'>('form');
-  const [otpCode,      setOtpCode]      = useState('');
-  const [countdown,    setCountdown]    = useState(0);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const [step, setStep] = useState<'form' | 'verify' | 'forgot' | 'reset'>('form');
+  const [otpCode, setOtpCode] = useState('');
+  const [countdown, setCountdown] = useState(0);
 
   // Cloudflare Turnstile
-  const [turnstileToken,     setTurnstileToken]     = useState<string | null>(null);
-  const turnstileLoginRef    = useRef<HTMLDivElement>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileLoginRef = useRef<HTMLDivElement>(null);
   const turnstileRegisterRef = useRef<HTMLDivElement>(null);
-  const turnstileLoginId     = useRef<string | null>(null);
-  const turnstileRegisterId  = useRef<string | null>(null);
+  const turnstileLoginId = useRef<string | null>(null);
+  const turnstileRegisterId = useRef<string | null>(null);
 
   const isLogin = type === 'login';
 
@@ -1991,7 +2011,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
   useEffect(() => {
     if (document.getElementById('cf-turnstile-script')) return;
     const s = document.createElement('script');
-    s.id  = 'cf-turnstile-script';
+    s.id = 'cf-turnstile-script';
     s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
     s.async = true; s.defer = true;
     document.head.appendChild(s);
@@ -2010,19 +2030,19 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
       if (isLogin && turnstileLoginRef.current && !turnstileLoginId.current) {
         turnstileLoginId.current = w.render(turnstileLoginRef.current, {
           sitekey,
-          theme   : isDarkMode ? 'dark' : 'light',
+          theme: isDarkMode ? 'dark' : 'light',
           callback: (token: string) => setTurnstileToken(token),
           'expired-callback': () => setTurnstileToken(null),
-          'error-callback'  : () => setTurnstileToken(null),
+          'error-callback': () => setTurnstileToken(null),
         });
       }
       if (!isLogin && turnstileRegisterRef.current && !turnstileRegisterId.current) {
         turnstileRegisterId.current = w.render(turnstileRegisterRef.current, {
           sitekey,
-          theme   : isDarkMode ? 'dark' : 'light',
+          theme: isDarkMode ? 'dark' : 'light',
           callback: (token: string) => setTurnstileToken(token),
           'expired-callback': () => setTurnstileToken(null),
-          'error-callback'  : () => setTurnstileToken(null),
+          'error-callback': () => setTurnstileToken(null),
         });
       }
     };
@@ -2031,7 +2051,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
     return () => {
       const w = (window as any).turnstile;
       if (!w) return;
-      if (turnstileLoginId.current)    { w.remove(turnstileLoginId.current);    turnstileLoginId.current    = null; }
+      if (turnstileLoginId.current) { w.remove(turnstileLoginId.current); turnstileLoginId.current = null; }
       if (turnstileRegisterId.current) { w.remove(turnstileRegisterId.current); turnstileRegisterId.current = null; }
       setTurnstileToken(null);
     };
@@ -2044,9 +2064,9 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
   }, [countdown]);
 
   // ── Rate limiting: maks 5 gagal login per 15 menit (client-side guard) ──
-  const MAX_ATTEMPTS  = 5;
-  const LOCKOUT_MS    = 15 * 60 * 1000; // 15 menit
-  const getRateKey    = () => `rl_${email.toLowerCase().trim()}`;
+  const MAX_ATTEMPTS = 5;
+  const LOCKOUT_MS = 15 * 60 * 1000; // 15 menit
+  const getRateKey = () => `rl_${email.toLowerCase().trim()}`;
 
   const checkRateLimit = (): { blocked: boolean; remaining: number; unlockIn: string } => {
     try {
@@ -2058,10 +2078,10 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
         localStorage.removeItem(getRateKey());
         return { blocked: false, remaining: MAX_ATTEMPTS, unlockIn: '' };
       }
-      const blocked   = count >= MAX_ATTEMPTS;
+      const blocked = count >= MAX_ATTEMPTS;
       const remaining = Math.max(0, MAX_ATTEMPTS - count);
       const unlockSec = Math.ceil((LOCKOUT_MS - elapsed) / 1000);
-      const unlockIn  = unlockSec > 60 ? `${Math.ceil(unlockSec / 60)} menit` : `${unlockSec} detik`;
+      const unlockIn = unlockSec > 60 ? `${Math.ceil(unlockSec / 60)} menit` : `${unlockSec} detik`;
       return { blocked, remaining, unlockIn };
     } catch { return { blocked: false, remaining: MAX_ATTEMPTS, unlockIn: '' }; }
   };
@@ -2072,11 +2092,11 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
       const prev = raw ? JSON.parse(raw) as { count: number; firstAt: number } : { count: 0, firstAt: Date.now() };
       const updated = { count: prev.count + 1, firstAt: prev.firstAt };
       safeLocalSet(getRateKey(), JSON.stringify(updated));
-    } catch {}
+    } catch { }
   };
 
   const clearAttempts = () => {
-    try { localStorage.removeItem(getRateKey()); } catch {}
+    try { localStorage.removeItem(getRateKey()); } catch { }
   };
 
   // ── LOGIN ──────────────────────────────────────────────────────────
@@ -2093,7 +2113,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
     }
     setIsLoading(true);
     try {
-      const res  = await fetch('/api/auth/login', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, turnstileToken }),
       });
@@ -2118,13 +2138,13 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!name)  { setError('Nama wajib diisi.'); return; }
-    if (password.length < 6) { setError('Password minimal 6 karakter.'); return; }
+    if (!name) { setError('Nama wajib diisi.'); return; }
+    if (password.length < 8) { setError('Password minimal 8 karakter.'); return; }
     if (password !== confirmPass) { setError('Passwords do not match.'); return; }
     if (!turnstileToken) { setError('Harap selesaikan verifikasi CAPTCHA.'); return; }
     setIsLoading(true);
     try {
-      const res  = await fetch('/api/auth/register', {
+      const res = await fetch('/api/auth/register', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, name, turnstileToken }),
       });
@@ -2144,7 +2164,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
     if (otpCode.length !== 6) { setError('Kode harus 6 digit.'); return; }
     setIsLoading(true);
     try {
-      const res  = await fetch('/api/auth/verify-otp', {
+      const res = await fetch('/api/auth/verify-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code: otpCode }),
       });
@@ -2163,7 +2183,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
     if (!email) { setError('Email wajib diisi.'); return; }
     setIsLoading(true);
     try {
-      const res  = await fetch('/api/auth/send-otp', {
+      const res = await fetch('/api/auth/send-otp', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, isRegister: false, isReset: true }),
       });
@@ -2181,11 +2201,11 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
     e.preventDefault();
     setError('');
     if (otpCode.length !== 6) { setError('Kode harus 6 digit.'); return; }
-    if (password.length < 6)  { setError('Password minimal 6 karakter.'); return; }
+    if (password.length < 8) { setError('Password minimal 8 karakter.'); return; }
     if (password !== confirmPass) { setError('Passwords do not match.'); return; }
     setIsLoading(true);
     try {
-      const res  = await fetch('/api/auth/reset-password', {
+      const res = await fetch('/api/auth/reset-password', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code: otpCode, newPassword: password }),
       });
@@ -2217,7 +2237,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
   };
 
   const inputCls = "w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl outline-none focus:bg-white dark:focus:bg-[#0a0d16] focus:ring-2 focus:ring-indigo-500/50 dark:text-white text-base font-medium transition-all";
-  const btnCls   = (loading: boolean) => "w-full flex justify-center items-center py-4 rounded-2xl text-sm font-bold text-white transition-all active:scale-95 disabled:opacity-70 " + (loading ? "bg-indigo-400" : "bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-700");
+  const btnCls = (loading: boolean) => "w-full flex justify-center items-center py-4 rounded-2xl text-sm font-bold text-white transition-all active:scale-95 disabled:opacity-70 " + (loading ? "bg-indigo-400" : "bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-700");
 
   const ErrorBox = () => error ? (
     <div className="flex items-start gap-2 text-red-600 dark:text-red-400 text-sm font-bold bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 px-4 py-3 rounded-2xl">
@@ -2226,20 +2246,20 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
   ) : null;
 
   const titles: Record<string, string> = {
-    form:   isLogin ? "Welcome Back" : "Create Account",
-    verify : "Verify Email",
-    forgot : "Forgot Password",
-    reset  : "Reset Password",
+    form: isLogin ? "Welcome Back" : "Create Account",
+    verify: "Verify Email",
+    forgot: "Forgot Password",
+    reset: "Reset Password",
   };
   const subtitles: Record<string, React.ReactNode> = {
-    form:   <>{isLogin ? "Don't have an account? " : "Already have an account? "}<button onClick={() => onNavigate(isLogin ? "register" : "login")} className="font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 transition">{isLogin ? "Sign Up" : "Login"}</button></>,
-    verify : <span>Code sent to <strong className="text-slate-800 dark:text-white">{email}</strong></span>,
-    forgot : "Enter your email to receive a reset code",
-    reset  : <span>Reset code sent to <strong className="text-slate-800 dark:text-white">{email}</strong></span>,
+    form: <>{isLogin ? "Don't have an account? " : "Already have an account? "}<button onClick={() => onNavigate(isLogin ? "register" : "login")} className="font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 transition">{isLogin ? "Sign Up" : "Login"}</button></>,
+    verify: <span>Code sent to <strong className="text-slate-800 dark:text-white">{email}</strong></span>,
+    forgot: "Enter your email to receive a reset code",
+    reset: <span>Reset code sent to <strong className="text-slate-800 dark:text-white">{email}</strong></span>,
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#060810] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden transition-colors duration-300" style={{minHeight:"100svh"}}>
+    <div className="min-h-screen bg-slate-50 dark:bg-[#060810] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden transition-colors duration-300" style={{ minHeight: "100svh" }}>
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[min(800px,100vw)] h-[min(800px,100vh)] bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none"></div>
       <div className="mx-auto w-full max-w-md text-center mb-8 relative z-10">
         <div className="flex justify-center cursor-pointer mb-6 hover:scale-105 transition-transform" onClick={() => onNavigate("landing")}>
@@ -2249,14 +2269,14 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 font-medium">{subtitles[step]}</p>
       </div>
 
-      <div className="mx-auto w-full max-w-md bg-white/90 dark:bg-[#0a0d16]/90 backdrop-blur-xl py-8 px-6 sm:px-10 shadow-2xl border border-slate-200/50 dark:border-white/[0.07]/50 rounded-3xl relative z-10" style={{paddingBottom:"calc(1.5rem + env(safe-area-inset-bottom,0px))"}}>
+      <div className="mx-auto w-full max-w-md bg-white/90 dark:bg-[#0a0d16]/90 backdrop-blur-xl py-8 px-6 sm:px-10 shadow-2xl border border-slate-200/50 dark:border-white/[0.07]/50 rounded-3xl relative z-10" style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom,0px))" }}>
 
         {/* ── LOGIN FORM ── */}
         {step === "form" && isLogin && (
           <form className="space-y-5" onSubmit={handleLogin}>
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Email Address</label>
-              <div className="relative"><Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
+              <div className="relative"><Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
                 <input id="login-email" name="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="Your email" aria-label="Email" />
               </div>
             </div>
@@ -2265,16 +2285,16 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
                 <label className="block text-sm font-bold text-slate-800 dark:text-slate-200">Password</label>
                 <button type="button" onClick={() => { setStep("forgot"); setError(""); }} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800">Forgot password?</button>
               </div>
-              <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
+              <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
                 <input id="login-password" name="password" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="••••••••" aria-label="Password" />
-                <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showPassword ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}</button>
+                <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}</button>
               </div>
             </div>
             <ErrorBox />
             {/* Cloudflare Turnstile */}
             <div ref={turnstileLoginRef} className="flex justify-center" />
             <button type="submit" disabled={isLoading || !turnstileToken} className={btnCls(isLoading)}>
-              {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2"/> : null}
+              {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2" /> : null}
               {isLoading ? "Processing..." : "Login to Dashboard"}
             </button>
           </form>
@@ -2285,35 +2305,35 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
           <form className="space-y-5" onSubmit={handleRegister}>
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Full Name</label>
-              <div className="relative"><User className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
+              <div className="relative"><User className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
                 <input id="reg-name" name="name" type="text" required value={name} onChange={e => setName(e.target.value)} className={inputCls} placeholder="Your Name" aria-label="Name" />
               </div>
             </div>
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Email Address</label>
-              <div className="relative"><Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
+              <div className="relative"><Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
                 <input id="login-email" name="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="Your email" aria-label="Email" />
               </div>
             </div>
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Password</label>
-              <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input id="reg-password" name="password" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="Min. 6 characters" aria-label="New password" />
-                <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showPassword ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}</button>
+              <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
+                <input id="reg-password" name="password" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="Min. 8 characters" aria-label="New password" />
+                <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}</button>
               </div>
             </div>
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Confirm Password</label>
-              <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
+              <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
                 <input id="reg-confirm" name="confirm_password" type={showConfirm ? "text" : "password"} required value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className={inputCls + " pr-12"} placeholder="Repeat password" aria-label="Confirm password" />
-                <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showConfirm ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}</button>
+                <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}</button>
               </div>
             </div>
             <ErrorBox />
             {/* Cloudflare Turnstile */}
             <div ref={turnstileRegisterRef} className="flex justify-center" />
             <button type="submit" disabled={isLoading || !turnstileToken} className={btnCls(isLoading)}>
-              {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2"/> : null}
+              {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2" /> : null}
               {isLoading ? "Sending Code..." : "Sign Up"}
             </button>
           </form>
@@ -2325,7 +2345,7 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
             <OtpInput value={otpCode} onChange={setOtpCode} />
             <ErrorBox />
             <button type="submit" disabled={isLoading || otpCode.length !== 6} className={btnCls(isLoading)}>
-              {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2"/> : <CheckCircle2 className="w-5 h-5 mr-2"/>}
+              {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2" /> : <CheckCircle2 className="w-5 h-5 mr-2" />}
               {isLoading ? "Verifying..." : "Activate Account"}
             </button>
             <ResendRow onBack={() => { setStep("form"); setError(""); setOtpCode(""); }} onResend={handleResendOTP} countdown={countdown} isLoading={isLoading} />
@@ -2337,13 +2357,13 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
           <form className="space-y-5" onSubmit={handleForgotSend}>
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Email Address</label>
-              <div className="relative"><Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
+              <div className="relative"><Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
                 <input id="login-email" name="email" type="email" required value={email} onChange={e => setEmail(e.target.value)} className={inputCls} placeholder="Your email" aria-label="Email" />
               </div>
             </div>
             <ErrorBox />
             <button type="submit" disabled={isLoading} className={btnCls(isLoading)}>
-              {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2"/> : <Mail className="w-5 h-5 mr-2"/>}
+              {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2" /> : <Mail className="w-5 h-5 mr-2" />}
               {isLoading ? "Sending..." : "Send Reset Code"}
             </button>
             <div className="text-center pt-2">
@@ -2358,21 +2378,21 @@ function AuthView({ type, onNavigate, onAuth, showToast, isDarkMode }: AuthViewP
             <OtpInput value={otpCode} onChange={setOtpCode} />
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">New Password</label>
-              <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
-                <input id="reg-password" name="password" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="Min. 6 characters" aria-label="New password" />
-                <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showPassword ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}</button>
+              <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
+                <input id="reg-password" name="password" type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className={inputCls + " pr-12"} placeholder="Min. 8 characters" aria-label="New password" />
+                <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}</button>
               </div>
             </div>
             <div>
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">Confirm Password</label>
-              <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400"/>
+              <div className="relative"><Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
                 <input id="reset-confirm" name="confirm_password" type={showConfirm ? "text" : "password"} required value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className={inputCls + " pr-12"} placeholder="Repeat new password" aria-label="Confirm new password" />
-                <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showConfirm ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}</button>
+                <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-600 transition">{showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}</button>
               </div>
             </div>
             <ErrorBox />
             <button type="submit" disabled={isLoading || otpCode.length !== 6} className={btnCls(isLoading)}>
-              {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2"/> : <CheckCircle2 className="w-5 h-5 mr-2"/>}
+              {isLoading ? <RefreshCw className="w-5 h-5 animate-spin mr-2" /> : <CheckCircle2 className="w-5 h-5 mr-2" />}
               {isLoading ? 'Sending...' : 'Verify'}
             </button>
             <ResendRow onBack={() => { setStep("forgot"); setError(""); setOtpCode(""); }} onResend={handleResendOTP} countdown={countdown} isLoading={isLoading} />
@@ -2410,17 +2430,17 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
   const [mutasi, setMutasi] = useState<Mutasi[]>([]);
   const [favorites, setFavorites] = useState<number[]>([1, 2]);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
-  const [autoRetryQueue, setAutoRetryQueue] = useState<{serviceName: string; serviceCode: string; price: number; icon: React.ReactNode}[]>([]);
+  const [autoRetryQueue, setAutoRetryQueue] = useState<{ serviceName: string; serviceCode: string; price: number; icon: React.ReactNode }[]>([]);
 
   const [showGuide, setShowGuide] = useState<boolean>(true);
-  const [showSyaratDash,     setShowSyaratDash]     = useState<boolean>(false);
-  const [showPrivasiDash,    setShowPrivasiDash]    = useState<boolean>(false);
-  const [showRefundDash,     setShowRefundDash]     = useState<boolean>(false);
-  const [showDepositDash,    setShowDepositDash]    = useState<boolean>(false);
-  const [showAntiAbuseDash,  setShowAntiAbuseDash]  = useState<boolean>(false);
+  const [showSyaratDash, setShowSyaratDash] = useState<boolean>(false);
+  const [showPrivasiDash, setShowPrivasiDash] = useState<boolean>(false);
+  const [showRefundDash, setShowRefundDash] = useState<boolean>(false);
+  const [showDepositDash, setShowDepositDash] = useState<boolean>(false);
+  const [showAntiAbuseDash, setShowAntiAbuseDash] = useState<boolean>(false);
   const [showDisclaimerDash, setShowDisclaimerDash] = useState<boolean>(false);
-  const [showLegalMenu,      setShowLegalMenu]      = useState<boolean>(false);
-  const [showContactMenu,    setShowContactMenu]    = useState<boolean>(false);
+  const [showLegalMenu, setShowLegalMenu] = useState<boolean>(false);
+  const [showContactMenu, setShowContactMenu] = useState<boolean>(false);
   // Blacklist nomor yang pernah gagal/expired (shared ke BuyView)
   const failedNumbers = useRef<Set<string>>(new Set());
 
@@ -2432,7 +2452,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
     fetch('/api/user/balance', { headers: authHeaders() })
       .then(r => r.json())
       .then(d => { if (typeof d.balance === 'number') setBalance(d.balance); })
-      .catch(() => {});
+      .catch(() => { });
 
     // Fetch orders aktif
     fetch('/api/user/orders', { headers: authHeaders() })
@@ -2440,30 +2460,30 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       .then((data: any[]) => {
         if (!Array.isArray(data)) return;
         const mapped: Order[] = data.map(o => ({
-          id           : o.id,
-          activationId : o.activation_id,
-          date         : new Date(o.created_at).toLocaleString('id-ID'),
-          serviceName  : o.service_name,
-          price        : o.price,
-          icon         : <Smartphone className="w-5 h-5" />,
-          number       : o.phone,
+          id: o.id,
+          activationId: o.activation_id,
+          date: new Date(o.created_at).toLocaleString('id-ID'),
+          serviceName: o.service_name,
+          price: o.price,
+          icon: <Smartphone className="w-5 h-5" />,
+          number: o.phone,
           // 'success' dari DB → tetap 'success' jika masih <10 menit (agar OTP masih tampil setelah refresh)
           // 'success' >10 menit → 'completed' agar tidak muncul di panel aktif
           // 'waiting' yang sudah lewat 20 menit → 'expired'
-          status       : o.status === 'success'
+          status: o.status === 'success'
             ? (Date.now() - new Date(o.created_at).getTime() < 10 * 60 * 1000
-                ? 'success' as Order['status']
-                : 'completed' as Order['status'])
+              ? 'success' as Order['status']
+              : 'completed' as Order['status'])
             : (o.status === 'waiting' && Date.now() - new Date(o.created_at).getTime() > 1200000)
               ? 'expired' as Order['status']
               : o.status as Order['status'],
-          timeLeft     : Math.max(0, 1200 - Math.floor((Date.now() - new Date(o.created_at).getTime()) / 1000)),
-          otpCode      : o.otp_code ?? null,
-          isV2         : o.is_v2 ?? false,
+          timeLeft: Math.max(0, 1200 - Math.floor((Date.now() - new Date(o.created_at).getTime()) / 1000)),
+          otpCode: o.otp_code ?? null,
+          isV2: o.is_v2 ?? false,
         }));
         setOrders(mapped);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [user?.email]);
 
   // ── Fetch papan info dari admin ──────────────────────────────────────
@@ -2473,7 +2493,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
     fetch('/api/notice')
       .then(r => r.json())
       .then((data: any[]) => { if (Array.isArray(data)) setNotices(data); })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // ── Fetch broadcast dari admin saat login ─────────────────────────
@@ -2487,15 +2507,15 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
           info: 'ℹ️', promo: '🎉', warning: '⚠️', maintenance: '🔧'
         };
         const broadcastNotifs = data.map(b => ({
-          id     : Date.now() + b.id,
-          msg    : `${TYPE_EMOJI[b.type] ?? 'ℹ️'} ${b.title}: ${b.message}`,
-          time   : new Date(b.created_at).toLocaleString('id-ID'),
-          read   : false,
+          id: Date.now() + b.id,
+          msg: `${TYPE_EMOJI[b.type] ?? 'ℹ️'} ${b.title}: ${b.message}`,
+          time: new Date(b.created_at).toLocaleString('id-ID'),
+          read: false,
         }));
         setNotifItems(prev => [...broadcastNotifs, ...prev].slice(0, 20));
         setNotifCount(c => c + broadcastNotifs.length);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [user?.email]);
 
   // ── Helper: update saldo di Supabase + state ───────────────────────
@@ -2506,7 +2526,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       const res = await fetch('/api/user/balance', { headers: authHeaders() });
       const d = await res.json();
       if (typeof d.balance === 'number') setBalance(d.balance);
-    } catch {}
+    } catch { }
   };
 
   const updateBalance = async (amount: number, type: 'add' | 'subtract', activationId?: string) => {
@@ -2522,9 +2542,9 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
 
     try {
       const res = await fetch('/api/user/balance', {
-        method : 'PATCH',
+        method: 'PATCH',
         headers: authHeaders({ 'X-User-Email': user.email }),
-        body   : JSON.stringify({ email: user.email, amount, type, activationId }),
+        body: JSON.stringify({ email: user.email, amount, type, activationId }),
       });
 
       if (res.ok) return; // sukses
@@ -2567,10 +2587,10 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
     await updateBalance(orderToCancel.price, 'add', orderToCancel.activationId);
     // Update status order di Supabase + kirim email untuk validasi ownership
     fetch('/api/user/orders', {
-      method : 'PATCH',
+      method: 'PATCH',
       headers: authHeaders(),
-      body   : JSON.stringify({ email: user?.email, activationId: orderToCancel.activationId, status: 'cancelled' }),
-    }).catch(() => {});
+      body: JSON.stringify({ email: user?.email, activationId: orderToCancel.activationId, status: 'cancelled' }),
+    }).catch(() => { });
 
     setOrders(current => current.map(order =>
       order.id === orderId ? { ...order, status: 'cancelled', timeLeft: 0 } : order
@@ -2580,9 +2600,9 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
     setTimeout(() => refreshBalance(), 1000);
   };
 
-  const [notifCount,  setNotifCount]  = useState(0);
-  const [notifItems,  setNotifItems]  = useState<{ id: number; msg: string; time: string; read: boolean }[]>([]);
-  const [showNotif,   setShowNotif]   = useState(false);
+  const [notifCount, setNotifCount] = useState(0);
+  const [notifItems, setNotifItems] = useState<{ id: number; msg: string; time: string; read: boolean }[]>([]);
+  const [showNotif, setShowNotif] = useState(false);
 
   // Tambah notifikasi baru — stable setter, aman dipanggil dari dalam interval/SSE
   const addNotif = useCallback((msg: string) => {
@@ -2638,7 +2658,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
           const endpoint = order.isV2
             ? `/api/order-v2?id=${order.activationId}`
             : `/api/order?id=${order.activationId}`;
-          const res  = await fetch(endpoint);
+          const res = await fetch(endpoint);
           const data = await res.json();
 
           if (data.status === 'ok') {
@@ -2650,7 +2670,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
               setOrders(current => current.map(o =>
                 o.id === order.id ? { ...o, status: 'success', otpCodes, autoDismissAt: Date.now() + 10 * 60 * 1000 } : o
               ));
-              fetch('/api/user/orders', { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ activationId: order.activationId, status: 'success', otpCode: data.otpCodes[0] }) }).catch(() => {});
+              fetch('/api/user/orders', { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ activationId: order.activationId, status: 'success', otpCode: data.otpCodes[0] }) }).catch(() => { });
               showToast(`OTP bundle ${order.serviceName} masuk!`);
               addNotif(`🔑 OTP Bundle ${order.serviceName} masuk!`);
               setTimeout(() => {
@@ -2662,7 +2682,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
               setOrders(current => current.map(o =>
                 o.id === order.id ? { ...o, status: 'success', otpCode: data.otpCode, autoDismissAt: Date.now() + 10 * 60 * 1000 } : o
               ));
-              fetch('/api/user/orders', { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ activationId: order.activationId, status: 'success', otpCode: data.otpCode }) }).catch(() => {});
+              fetch('/api/user/orders', { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ activationId: order.activationId, status: 'success', otpCode: data.otpCode }) }).catch(() => { });
               showToast(`OTP code for ${order.serviceName} received!`);
               addNotif(`🔑 OTP ${order.serviceName}: ${data.otpCode}`);
               setTimeout(() => {
@@ -2679,7 +2699,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
             setOrders(current => current.map(o =>
               o.id === order.id ? { ...o, status: 'cancelled', timeLeft: 0 } : o
             ));
-            fetch('/api/user/orders', { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ activationId: order.activationId, status: 'cancelled' }) }).catch(() => {});
+            fetch('/api/user/orders', { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ activationId: order.activationId, status: 'cancelled' }) }).catch(() => { });
             // ✅ Kirim activationId → backend cegah double refund via idempotency check
             await updateBalance(order.price, 'add', order.activationId);
             showToast(`Number ${order.serviceName} cancelled by provider. Balance Rp ${order.price.toLocaleString()} refunded.`);
@@ -2738,15 +2758,15 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
 
   const navItems: NavItem[] = [
     { id: 'dashboard', name: t.dashboard, icon: <BarChart2 className="w-5 h-5" /> },
-    { id: 'buy',       name: t.buy,       icon: <ShoppingCart className="w-5 h-5" /> },
-    { id: 'topup',     name: t.topup,     icon: <CreditCard className="w-5 h-5" /> },
-    { id: 'history',   name: t.history,   icon: <History className="w-5 h-5" /> },
-    { id: 'mutasi',    name: t.mutasi,    icon: <Receipt className="w-5 h-5" /> },
-    { id: 'profile',   name: t.profile,   icon: <Settings className="w-5 h-5" /> },
+    { id: 'buy', name: t.buy, icon: <ShoppingCart className="w-5 h-5" /> },
+    { id: 'topup', name: t.topup, icon: <CreditCard className="w-5 h-5" /> },
+    { id: 'history', name: t.history, icon: <History className="w-5 h-5" /> },
+    { id: 'mutasi', name: t.mutasi, icon: <Receipt className="w-5 h-5" /> },
+    { id: 'profile', name: t.profile, icon: <Settings className="w-5 h-5" /> },
   ];
 
   return (
-    <div suppressHydrationWarning className="min-h-screen bg-[#f4f5f9] dark:bg-[#060810] flex flex-col md:flex-row font-sans relative transition-colors duration-300 overflow-x-hidden" style={{minHeight:"100svh"}}>
+    <div suppressHydrationWarning className="min-h-screen bg-[#f4f5f9] dark:bg-[#060810] flex flex-col md:flex-row font-sans relative transition-colors duration-300 overflow-x-hidden" style={{ minHeight: "100svh" }}>
       <style>{`
         /* ── Dashboard dark mode depth ── */
         .dark .dash-card {
@@ -2791,21 +2811,21 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
         .dark .stat-card-amber  { background: linear-gradient(135deg,rgba(245,158,11,0.12),rgba(245,158,11,0.04)) !important; border-color: rgba(245,158,11,0.2) !important; }
         .dark .stat-card-blue   { background: linear-gradient(135deg,rgba(59,130,246,0.12),rgba(59,130,246,0.04)) !important; border-color: rgba(59,130,246,0.2) !important; }
       `}</style>
-      
+
       {/* SIDEBAR DESKTOP */}
       <div className="hidden md:flex flex-col w-72 border-r border-slate-200/80 dark:border-white/[0.06] fixed h-full z-10 transition-colors duration-300 bg-white dark:bg-[#0b0e1a] shadow-sm dark:shadow-[4px_0_24px_rgba(0,0,0,0.3)]">
         <div className="h-[80px] flex items-center px-8 border-b border-slate-100 dark:border-white/[0.06]">
           <img src="/logo.png" className="h-10 w-10 rounded-xl object-cover mr-3" alt="Pusat Nokos" />
           <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">PusatNokos.</span>
         </div>
-        <div className="p-8 border-b border-slate-100 dark:border-white/[0.06]" style={{background:'rgba(99,102,241,0.03)'}}>
+        <div className="p-8 border-b border-slate-100 dark:border-white/[0.06]" style={{ background: 'rgba(99,102,241,0.03)' }}>
           <div className="text-[11px] text-slate-500 dark:text-slate-500 font-bold mb-2 tracking-widest uppercase">{t.totalBalance.toUpperCase()}</div>
           <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400">Rp {balance.toLocaleString('id-ID')}</div>
         </div>
         <div className="flex-1 py-6 px-5 space-y-1.5 overflow-y-auto">
           {navItems.map(i => (
             <button key={i.id} onClick={() => setActiveTab(i.id)} className={"w-full flex items-center px-4 py-3.5 text-[14px] font-bold rounded-2xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500 " + (activeTab === i.id ? 'text-white shadow-lg' : 'text-slate-600 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-white/[0.06] hover:text-indigo-600 dark:hover:text-indigo-300')}
-              style={activeTab === i.id ? {background:'linear-gradient(135deg,#4f46e5,#7c3aed)',boxShadow:'0 4px 16px rgba(79,70,229,0.35)'} : {}}>
+              style={activeTab === i.id ? { background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', boxShadow: '0 4px 16px rgba(79,70,229,0.35)' } : {}}>
               <div className={"mr-4 " + (activeTab === i.id ? 'text-indigo-200' : 'text-slate-400 dark:text-slate-500')}>{i.icon}</div>{i.name}
             </button>
           ))}
@@ -2822,10 +2842,10 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
           {showContactMenu && (
             <div className="mt-2 mb-2 bg-white dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl shadow-lg overflow-hidden">
               {[
-                { label: 'Chat CS WhatsApp',   icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-[#25D366]"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>, href: `https://wa.me/${CS_WA}?text=Halo%20CS%20Pusat%20Nokos%2C%20saya%20butuh%20bantuan.` },
-                { label: 'Chat CS Telegram',   icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-[#26A5E4]"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>, href: `https://t.me/${CS_TELEGRAM.replace('@','')}` },
-                { label: 'WA Channel',         icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-[#25D366]"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>, href: 'https://whatsapp.com/channel/0029VbCrfqRADTO9OCqLXE1Y' },
-                { label: 'Telegram Channel',   icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-[#26A5E4]"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>, href: 'https://t.me/PusatNokosCH' },
+                { label: 'Chat CS WhatsApp', icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-[#25D366]"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>, href: `https://wa.me/${CS_WA}?text=Halo%20CS%20Pusat%20Nokos%2C%20saya%20butuh%20bantuan.` },
+                { label: 'Chat CS Telegram', icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-[#26A5E4]"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" /></svg>, href: `https://t.me/${CS_TELEGRAM.replace('@', '')}` },
+                { label: 'WA Channel', icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-[#25D366]"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>, href: 'https://whatsapp.com/channel/0029VbCrfqRADTO9OCqLXE1Y' },
+                { label: 'Telegram Channel', icon: <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-[#26A5E4]"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" /></svg>, href: 'https://t.me/PusatNokosCH' },
               ].map(item => (
                 <a key={item.label} href={item.href} target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/[0.05] transition-colors">
@@ -2850,12 +2870,12 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
           {showLegalMenu && (
             <div className="mt-2 bg-white dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl shadow-lg overflow-hidden">
               {[
-                { label: t.legalTerms,    icon: <ShieldCheck className="w-4 h-4 text-indigo-400" />,  action: () => { setShowSyaratDash(true);     setShowLegalMenu(false); } },
-                { label: t.legalPrivacy,     icon: <ShieldAlert className="w-4 h-4 text-green-400" />,  action: () => { setShowPrivasiDash(true);    setShowLegalMenu(false); } },
-                { label: t.legalRefund,      icon: <RotateCcw   className="w-4 h-4 text-blue-400" />,   action: () => { setShowRefundDash(true);     setShowLegalMenu(false); } },
-                { label: t.legalDeposit,     icon: <CreditCard  className="w-4 h-4 text-amber-400" />,  action: () => { setShowDepositDash(true);    setShowLegalMenu(false); } },
-                { label: t.legalAntiAbuse,   icon: <ShieldAlert className="w-4 h-4 text-red-400" />,    action: () => { setShowAntiAbuseDash(true);  setShowLegalMenu(false); } },
-                { label: t.legalDisclaimer,            icon: <AlertCircle className="w-4 h-4 text-orange-400" />, action: () => { setShowDisclaimerDash(true); setShowLegalMenu(false); } },
+                { label: t.legalTerms, icon: <ShieldCheck className="w-4 h-4 text-indigo-400" />, action: () => { setShowSyaratDash(true); setShowLegalMenu(false); } },
+                { label: t.legalPrivacy, icon: <ShieldAlert className="w-4 h-4 text-green-400" />, action: () => { setShowPrivasiDash(true); setShowLegalMenu(false); } },
+                { label: t.legalRefund, icon: <RotateCcw className="w-4 h-4 text-blue-400" />, action: () => { setShowRefundDash(true); setShowLegalMenu(false); } },
+                { label: t.legalDeposit, icon: <CreditCard className="w-4 h-4 text-amber-400" />, action: () => { setShowDepositDash(true); setShowLegalMenu(false); } },
+                { label: t.legalAntiAbuse, icon: <ShieldAlert className="w-4 h-4 text-red-400" />, action: () => { setShowAntiAbuseDash(true); setShowLegalMenu(false); } },
+                { label: t.legalDisclaimer, icon: <AlertCircle className="w-4 h-4 text-orange-400" />, action: () => { setShowDisclaimerDash(true); setShowLegalMenu(false); } },
               ].map(item => (
                 <button key={item.label} onClick={item.action} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-white/[0.1] text-slate-600 dark:text-slate-300 font-bold text-xs transition-colors border-b border-slate-100 dark:border-white/[0.09] last:border-0">
                   {item.icon}{item.label}
@@ -2867,12 +2887,12 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       </div>
 
       {/* MAIN WRAPPER */}
-      <div className="flex-1 md:ml-72 flex flex-col" style={{minHeight:"100svh"}}>
-        <header className="backdrop-blur-xl h-[64px] sm:h-[80px] border-b flex items-center justify-between px-4 sm:px-8 sticky top-0 z-40 transition-colors duration-300 bg-white/80 dark:bg-[#060810]/90 border-slate-200/80 dark:border-white/[0.05]" style={{boxShadow:'0 1px 20px rgba(0,0,0,0.04)'}}>
+      <div className="flex-1 md:ml-72 flex flex-col" style={{ minHeight: "100svh" }}>
+        <header className="backdrop-blur-xl h-[64px] sm:h-[80px] border-b flex items-center justify-between px-4 sm:px-8 sticky top-0 z-40 transition-colors duration-300 bg-white/80 dark:bg-[#060810]/90 border-slate-200/80 dark:border-white/[0.05]" style={{ boxShadow: '0 1px 20px rgba(0,0,0,0.04)' }}>
           <div className="md:hidden flex items-center font-black text-xl tracking-tight dark:text-white">
             <img src="/logo.png" className="h-8 w-8 rounded-xl object-cover mr-2" alt="Pusat Nokos" /> PusatNokos.
           </div>
-          
+
           <div className="hidden md:flex items-center">
             <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">{navItems.find(i => i.id === activeTab)?.name}</h2>
           </div>
@@ -2880,7 +2900,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
           <div className="flex items-center space-x-2 sm:space-x-5">
             {/* Language Switcher */}
             <div className="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-[#0f1320] rounded-xl p-1">
-              {(['id','en','zh'] as Lang[]).map(l => (
+              {(['id', 'en', 'zh'] as Lang[]).map(l => (
                 <button key={l} onClick={() => { setLang(l); safeLocalSet('lang', l); }}
                   className={"px-2.5 py-1 rounded-lg text-xs font-black transition-colors " + (lang === l ? 'bg-white dark:bg-[#161b28] text-slate-900 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300')}>
                   {l === 'id' ? '🇮🇩' : l === 'en' ? '🇺🇸' : '🇨🇳'}
@@ -2888,7 +2908,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
               ))}
             </div>
             <button suppressHydrationWarning onClick={() => setIsDarkMode(!isDarkMode)} aria-label="Toggle dark mode" className="hidden md:flex p-2.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.07] rounded-full transition-colors">
-              {isDarkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}
+              {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
 
             {/* Notifikasi Bell */}
@@ -2923,9 +2943,9 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                 </div>
               )}
             </div>
-            
+
             <button onClick={() => setActiveTab('topup')} className="font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl text-xs md:text-sm hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 transition-colors shadow-sm">+ Topup</button>
-            <button onClick={onLogout} className="hidden md:flex font-bold text-slate-500 dark:text-slate-400 text-sm hover:text-red-600 dark:hover:text-red-400 px-3 py-2 rounded-xl transition-colors"><LogOut className="w-5 h-5 mr-2"/> {t.logout}</button>
+            <button onClick={onLogout} className="hidden md:flex font-bold text-slate-500 dark:text-slate-400 text-sm hover:text-red-600 dark:hover:text-red-400 px-3 py-2 rounded-xl transition-colors"><LogOut className="w-5 h-5 mr-2" /> {t.logout}</button>
             <button onClick={() => setIsSidebarOpen(true)} aria-label="Buka menu" className="md:hidden p-2.5 text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-[#0f1320] rounded-xl min-w-[44px] min-h-[44px] flex items-center justify-center"><Menu className="h-6 w-6" /></button>
           </div>
         </header>
@@ -2940,18 +2960,18 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                   <div className="text-2xl font-black text-indigo-700 dark:text-indigo-400">Rp {balance.toLocaleString('id-ID')}</div>
                 </div>
                 <div className="flex items-center gap-1">
-                  {(['id','en','zh'] as Lang[]).map(l => (
+                  {(['id', 'en', 'zh'] as Lang[]).map(l => (
                     <button key={l} onClick={() => { setLang(l); safeLocalSet('lang', l); }}
                       className={"px-2 py-1 rounded-lg text-xs font-black transition-colors " + (lang === l ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-[#161b28] text-slate-400')}>
                       {l === 'id' ? '🇮🇩' : l === 'en' ? '🇺🇸' : '🇨🇳'}
                     </button>
                   ))}
                 </div>
-                <button onClick={() => setIsSidebarOpen(false)} aria-label="Tutup menu" className="bg-white dark:bg-[#0f1320] p-2 rounded-full shadow-sm border border-slate-100 dark:border-white/[0.09] text-slate-500 dark:text-slate-400"><X className="w-5 h-5"/></button>
+                <button onClick={() => setIsSidebarOpen(false)} aria-label="Tutup menu" className="bg-white dark:bg-[#0f1320] p-2 rounded-full shadow-sm border border-slate-100 dark:border-white/[0.09] text-slate-500 dark:text-slate-400"><X className="w-5 h-5" /></button>
               </div>
               <div className="flex-1 py-6 px-5 space-y-2 overflow-y-auto">
                 {navItems.map(i => (
-                  <button key={i.id} onClick={() => {setActiveTab(i.id); setIsSidebarOpen(false);}} className={"w-full flex items-center px-5 py-4 text-sm font-bold rounded-2xl transition-colors " + (activeTab === i.id ? 'bg-slate-900 dark:bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-white/[0.07] hover:text-indigo-600 dark:hover:text-indigo-400')}>
+                  <button key={i.id} onClick={() => { setActiveTab(i.id); setIsSidebarOpen(false); }} className={"w-full flex items-center px-5 py-4 text-sm font-bold rounded-2xl transition-colors " + (activeTab === i.id ? 'bg-slate-900 dark:bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-white/[0.07] hover:text-indigo-600 dark:hover:text-indigo-400')}>
                     <div className={"mr-4 " + (activeTab === i.id ? 'text-indigo-400 dark:text-indigo-200' : 'text-slate-400 dark:text-slate-500')}>{i.icon}</div> {i.name}
                   </button>
                 ))}
@@ -2970,10 +2990,10 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                   {showContactMenu && (
                     <div className="bg-slate-50 dark:bg-[#0f1320] border-t border-slate-100 dark:border-white/[0.09]">
                       {[
-                        { label: 'Chat CS WhatsApp',  href: `https://wa.me/${CS_WA}?text=Halo%20CS%20Pusat%20Nokos%2C%20saya%20butuh%20bantuan.`, color: 'text-[#25D366]' },
-                        { label: 'Chat CS Telegram',  href: `https://t.me/${CS_TELEGRAM.replace('@','')}`, color: 'text-[#26A5E4]' },
-                        { label: 'WA Channel',         href: 'https://whatsapp.com/channel/0029VbCrfqRADTO9OCqLXE1Y', color: 'text-[#25D366]' },
-                        { label: 'Telegram Channel',   href: 'https://t.me/PusatNokosCH', color: 'text-[#26A5E4]' },
+                        { label: 'Chat CS WhatsApp', href: `https://wa.me/${CS_WA}?text=Halo%20CS%20Pusat%20Nokos%2C%20saya%20butuh%20bantuan.`, color: 'text-[#25D366]' },
+                        { label: 'Chat CS Telegram', href: `https://t.me/${CS_TELEGRAM.replace('@', '')}`, color: 'text-[#26A5E4]' },
+                        { label: 'WA Channel', href: 'https://whatsapp.com/channel/0029VbCrfqRADTO9OCqLXE1Y', color: 'text-[#25D366]' },
+                        { label: 'Telegram Channel', href: 'https://t.me/PusatNokosCH', color: 'text-[#26A5E4]' },
                       ].map(item => (
                         <a key={item.label} href={item.href} target="_blank" rel="noopener noreferrer"
                           onClick={() => setIsSidebarOpen(false)}
@@ -2995,12 +3015,12 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                   {showLegalMenu && (
                     <div className="bg-slate-50 dark:bg-[#0f1320] border-t border-slate-100 dark:border-white/[0.09] grid grid-cols-2 gap-px">
                       {[
-                        { label: t.legalTerms,      icon: <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />, action: () => { setShowSyaratDash(true);     setIsSidebarOpen(false); setShowLegalMenu(false); } },
-                        { label: t.legalPrivacy,    icon: <ShieldAlert className="w-3.5 h-3.5 text-green-400" />,  action: () => { setShowPrivasiDash(true);    setIsSidebarOpen(false); setShowLegalMenu(false); } },
-                        { label: t.legalRefund,     icon: <RotateCcw   className="w-3.5 h-3.5 text-blue-400" />,  action: () => { setShowRefundDash(true);     setIsSidebarOpen(false); setShowLegalMenu(false); } },
-                        { label: t.legalDeposit,    icon: <CreditCard  className="w-3.5 h-3.5 text-amber-400" />, action: () => { setShowDepositDash(true);    setIsSidebarOpen(false); setShowLegalMenu(false); } },
-                        { label: t.legalAntiAbuse,  icon: <ShieldAlert className="w-3.5 h-3.5 text-red-400" />,   action: () => { setShowAntiAbuseDash(true);  setIsSidebarOpen(false); setShowLegalMenu(false); } },
-                        { label: t.legalDisclaimer, icon: <AlertCircle className="w-3.5 h-3.5 text-orange-400" />,action: () => { setShowDisclaimerDash(true); setIsSidebarOpen(false); setShowLegalMenu(false); } },
+                        { label: t.legalTerms, icon: <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />, action: () => { setShowSyaratDash(true); setIsSidebarOpen(false); setShowLegalMenu(false); } },
+                        { label: t.legalPrivacy, icon: <ShieldAlert className="w-3.5 h-3.5 text-green-400" />, action: () => { setShowPrivasiDash(true); setIsSidebarOpen(false); setShowLegalMenu(false); } },
+                        { label: t.legalRefund, icon: <RotateCcw className="w-3.5 h-3.5 text-blue-400" />, action: () => { setShowRefundDash(true); setIsSidebarOpen(false); setShowLegalMenu(false); } },
+                        { label: t.legalDeposit, icon: <CreditCard className="w-3.5 h-3.5 text-amber-400" />, action: () => { setShowDepositDash(true); setIsSidebarOpen(false); setShowLegalMenu(false); } },
+                        { label: t.legalAntiAbuse, icon: <ShieldAlert className="w-3.5 h-3.5 text-red-400" />, action: () => { setShowAntiAbuseDash(true); setIsSidebarOpen(false); setShowLegalMenu(false); } },
+                        { label: t.legalDisclaimer, icon: <AlertCircle className="w-3.5 h-3.5 text-orange-400" />, action: () => { setShowDisclaimerDash(true); setIsSidebarOpen(false); setShowLegalMenu(false); } },
                       ].map(item => (
                         <button key={item.label} onClick={item.action} className="flex items-center gap-2 px-3 py-2.5 bg-white dark:bg-[#0a0d16] hover:bg-indigo-50 dark:hover:bg-white/[0.07] text-slate-500 dark:text-slate-400 text-xs font-bold transition-colors">
                           {item.icon}<span className="truncate">{item.label}</span>
@@ -3009,13 +3029,13 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
                     </div>
                   )}
                 </div>
-                <button onClick={onLogout} className="w-full font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 py-4 rounded-2xl flex justify-center items-center transition-colors"><LogOut className="w-5 h-5 mr-2"/> {t.logoutBtn}</button>
+                <button onClick={onLogout} className="w-full font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 py-4 rounded-2xl flex justify-center items-center transition-colors"><LogOut className="w-5 h-5 mr-2" /> {t.logoutBtn}</button>
               </div>
             </div>
           </div>
         )}
 
-        <main className="flex-1 p-4 sm:p-8 md:!pb-8 dark:bg-[#060810]" style={{paddingBottom:"calc(6.5rem + env(safe-area-inset-bottom,0px))"}}>
+        <main className="flex-1 p-4 sm:p-8 md:!pb-8 dark:bg-[#060810]" style={{ paddingBottom: "calc(6.5rem + env(safe-area-inset-bottom,0px))" }}>
           {activeTab === 'dashboard' && <UserDashboardView user={user} balance={balance} orders={orders} mutasi={mutasi} setActiveTab={setActiveTab} notices={notices} lang={lang} />}
           {activeTab === 'buy' && <BuyView balance={balance} setBalance={setBalance} orders={orders} setOrders={setOrders} showToast={showToast} onCancelOrder={handleCancelOrder} favorites={favorites} setFavorites={setFavorites} setMutasi={setMutasi} activeServices={activeServices} serviceError={serviceError} countries={countries} selectedCountry={selectedCountry} setSelectedCountry={setSelectedCountry} user={user} updateBalance={updateBalance} autoRetryQueue={autoRetryQueue} setAutoRetryQueue={setAutoRetryQueue} failedNumbers={failedNumbers} lang={lang} />}
           {activeTab === 'topup' && <TopupView balance={balance} setBalance={setBalance} showToast={showToast} setActiveTab={setActiveTab} setMutasi={setMutasi} updateBalance={updateBalance} user={user} lang={lang} />}
@@ -3029,20 +3049,20 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
       <a href={`https://wa.me/${CS_WA}?text=Halo%20CS%20Pusat%20Nokos%2C%20saya%20butuh%20bantuan.`}
         target="_blank" rel="noopener noreferrer"
         className="md:hidden fixed right-4 z-30 flex items-center justify-center w-12 h-12 bg-[#25D366] hover:bg-[#1ebd5a] text-white rounded-full shadow-lg shadow-[#25D366]/40 transition-all active:scale-95"
-        style={{bottom:'calc(4.5rem + env(safe-area-inset-bottom, 12px))'}}
+        style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 12px))' }}
         aria-label="Chat CS WhatsApp">
-        <svg viewBox="0 0 24 24" fill="white" className="w-6 h-6"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        <svg viewBox="0 0 24 24" fill="white" className="w-6 h-6"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
       </a>
 
       {/* ── Bottom Navigation Bar (mobile only) ──────────────────────── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/[0.05] bg-white/95 dark:bg-[#060810]/95" style={{paddingBottom:"env(safe-area-inset-bottom, 12px)", boxShadow:'0 -4px 30px rgba(0,0,0,0.06)'}}>
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/[0.05] bg-white/95 dark:bg-[#060810]/95" style={{ paddingBottom: "env(safe-area-inset-bottom, 12px)", boxShadow: '0 -4px 30px rgba(0,0,0,0.06)' }}>
         <div className="flex items-stretch h-16 sm:h-[60px]">
           {[
-            { id: 'buy',      label: t.buy,        icon: <ShoppingCart className="w-5 h-5" /> },
-            { id: 'topup',    label: t.topup,      icon: <CreditCard className="w-5 h-5" /> },
-            { id: 'dashboard',label: 'Home',       icon: <BarChart2 className="w-5 h-5" /> },
-            { id: 'history',  label: t.history,    icon: <History className="w-5 h-5" /> },
-            { id: 'profile',  label: t.profile,    icon: <Settings className="w-5 h-5" /> },
+            { id: 'buy', label: t.buy, icon: <ShoppingCart className="w-5 h-5" /> },
+            { id: 'topup', label: t.topup, icon: <CreditCard className="w-5 h-5" /> },
+            { id: 'dashboard', label: 'Home', icon: <BarChart2 className="w-5 h-5" /> },
+            { id: 'history', label: t.history, icon: <History className="w-5 h-5" /> },
+            { id: 'profile', label: t.profile, icon: <Settings className="w-5 h-5" /> },
           ].map(item => (
             <button
               key={item.id}
@@ -3148,7 +3168,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
             {/* Footer */}
             <div className="p-5 border-t border-slate-100 dark:border-white/[0.07] shrink-0 flex gap-3">
               <a href={`https://wa.me/${CS_WA}?text=Halo%20CS%20Pusat%20Nokos%2C%20saya%20butuh%20bantuan.`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebd5a] text-white font-bold px-5 py-3 rounded-2xl transition-colors text-sm shrink-0">
-                <svg viewBox="0 0 24 24" fill="white" className="w-4 h-4 shrink-0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                <svg viewBox="0 0 24 24" fill="white" className="w-4 h-4 shrink-0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
                 Chat CS
               </a>
               <button onClick={() => setShowGuide(false)} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-2xl transition-colors text-sm">
@@ -3368,8 +3388,8 @@ interface BuyViewProps {
   setSelectedCountry: (val: string) => void;
   user: UserData | null;
   updateBalance: (amount: number, type: 'add' | 'subtract') => Promise<void>;
-  autoRetryQueue: {serviceName: string; serviceCode: string; price: number; icon: React.ReactNode}[];
-  setAutoRetryQueue: React.Dispatch<React.SetStateAction<{serviceName: string; serviceCode: string; price: number; icon: React.ReactNode}[]>>;
+  autoRetryQueue: { serviceName: string; serviceCode: string; price: number; icon: React.ReactNode }[];
+  setAutoRetryQueue: React.Dispatch<React.SetStateAction<{ serviceName: string; serviceCode: string; price: number; icon: React.ReactNode }[]>>;
   failedNumbers: React.MutableRefObject<Set<string>>;
   lang?: Lang;
 }
@@ -3397,15 +3417,15 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
     fetch('/api/user/account-info', { headers: authHeaders() })
       .then(r => r.json())
       .then(d => { if (d.totalOrders !== undefined) setDbStats(d); })
-      .catch(() => {});
+      .catch(() => { });
   }, [user?.email]);
 
-  const totalOrder   = dbStats?.totalOrders  ?? orders.length;
+  const totalOrder = dbStats?.totalOrders ?? orders.length;
   const successOrder = dbStats?.successOrders ?? orders.filter(o => o.status === 'success').length;
-  const activeOrder  = orders.filter(o => o.status === 'waiting').length;
-  const totalSpend   = dbStats?.totalSpend   ?? mutasi.filter(m => m.type === 'out').reduce((s, m) => s + m.amount, 0);
-  const totalTopup   = dbStats?.totalDeposit ?? mutasi.filter(m => m.type === 'in').reduce((s, m) => s + m.amount, 0);
-  const successRate  = dbStats?.successRate  ?? (totalOrder > 0 ? Math.round((successOrder / totalOrder) * 100) : 0);
+  const activeOrder = orders.filter(o => o.status === 'waiting').length;
+  const totalSpend = dbStats?.totalSpend ?? mutasi.filter(m => m.type === 'out').reduce((s, m) => s + m.amount, 0);
+  const totalTopup = dbStats?.totalDeposit ?? mutasi.filter(m => m.type === 'in').reduce((s, m) => s + m.amount, 0);
+  const successRate = dbStats?.successRate ?? (totalOrder > 0 ? Math.round((successOrder / totalOrder) * 100) : 0);
   const recentMutasi = mutasi.slice(0, 5);
 
   const isLoadingStats = dbStats === null;
@@ -3425,10 +3445,10 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
         <div className="space-y-2">
           {notices.map(n => {
             const TYPE_STYLE: Record<string, { emoji: string; cls: string }> = {
-              info        : { emoji: 'ℹ️',  cls: 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800/50 dark:text-blue-300' },
-              promo       : { emoji: '🎉',  cls: 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800/50 dark:text-green-300' },
-              warning     : { emoji: '⚠️',  cls: 'bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-800/50 dark:text-amber-300' },
-              maintenance : { emoji: '🔧',  cls: 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800/50 dark:text-red-300' },
+              info: { emoji: 'ℹ️', cls: 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800/50 dark:text-blue-300' },
+              promo: { emoji: '🎉', cls: 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800/50 dark:text-green-300' },
+              warning: { emoji: '⚠️', cls: 'bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-800/50 dark:text-amber-300' },
+              maintenance: { emoji: '🔧', cls: 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800/50 dark:text-red-300' },
             };
             const s = TYPE_STYLE[n.type] ?? TYPE_STYLE.info;
             return (
@@ -3473,10 +3493,10 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
           ))
         ) : (
           [
-            { label: t.totalOrder,   value: totalOrder,        icon: <Package className="w-4 h-4 md:w-5 md:h-5 text-indigo-600" />,   bg: 'bg-indigo-50 dark:bg-indigo-900/30', cls: 'stat-card-indigo' },
-            { label: t.successOrder, value: successOrder,      icon: <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-green-600" />, bg: 'bg-green-50 dark:bg-green-900/30',  cls: 'stat-card-green'  },
-            { label: t.activeOrder,  value: activeOrder,       icon: <Activity className="w-4 h-4 md:w-5 md:h-5 text-amber-600" />,    bg: 'bg-amber-50 dark:bg-amber-900/30',  cls: 'stat-card-amber'  },
-            { label: t.successRate,  value: successRate + '%', icon: <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />,   bg: 'bg-blue-50 dark:bg-blue-900/30',    cls: 'stat-card-blue'   },
+            { label: t.totalOrder, value: totalOrder, icon: <Package className="w-4 h-4 md:w-5 md:h-5 text-indigo-600" />, bg: 'bg-indigo-50 dark:bg-indigo-900/30', cls: 'stat-card-indigo' },
+            { label: t.successOrder, value: successOrder, icon: <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-green-600" />, bg: 'bg-green-50 dark:bg-green-900/30', cls: 'stat-card-green' },
+            { label: t.activeOrder, value: activeOrder, icon: <Activity className="w-4 h-4 md:w-5 md:h-5 text-amber-600" />, bg: 'bg-amber-50 dark:bg-amber-900/30', cls: 'stat-card-amber' },
+            { label: t.successRate, value: successRate + '%', icon: <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />, bg: 'bg-blue-50 dark:bg-blue-900/30', cls: 'stat-card-blue' },
           ].map(s => (
             <div key={s.label} className={`dash-card ${s.cls} bg-white rounded-xl md:rounded-2xl border border-slate-200 p-3 md:p-4`}>
               <div className={`${s.bg} p-2 md:p-2.5 rounded-lg md:rounded-xl w-fit mb-2 md:mb-3`}>{s.icon}</div>
@@ -3493,7 +3513,7 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
           <h3 className="text-sm font-black text-slate-900 dark:text-white mb-4">{t.financeSummary}</h3>
           {isLoadingStats ? (
             <div className="space-y-3 animate-pulse">
-              {[1,2,3].map(i => <div key={i} className="flex justify-between"><div className="h-4 bg-slate-200 dark:bg-[#161b28] rounded w-24"/><div className="h-4 bg-slate-200 dark:bg-[#161b28] rounded w-20"/></div>)}
+              {[1, 2, 3].map(i => <div key={i} className="flex justify-between"><div className="h-4 rounded w-24" style={{ background: 'rgba(255,255,255,0.08)' }} /><div className="h-4 bg-slate-200 dark:bg-[#161b28] rounded w-20" /></div>)}
             </div>
           ) : (
             <div className="space-y-3">
@@ -3537,9 +3557,9 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
       {/* Quick actions */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
-          { label: t.buyTitle,       tab: 'buy',     icon: <ShoppingCart className="w-5 h-5" />, color: 'bg-indigo-600 text-white' },
-          { label: t.topup,  tab: 'topup',   icon: <Wallet className="w-5 h-5" />,       color: 'bg-green-600 text-white' },
-          { label: t.history,            tab: 'history', icon: <History className="w-5 h-5" />,       color: 'bg-slate-800 dark:bg-[#161b28] text-white' },
+          { label: t.buyTitle, tab: 'buy', icon: <ShoppingCart className="w-5 h-5" />, color: 'bg-indigo-600 text-white' },
+          { label: t.topup, tab: 'topup', icon: <Wallet className="w-5 h-5" />, color: 'bg-green-600 text-white' },
+          { label: t.history, tab: 'history', icon: <History className="w-5 h-5" />, color: 'bg-slate-800 dark:bg-[#161b28] text-white' },
         ].map(a => (
           <button key={a.tab} onClick={() => setActiveTab(a.tab)} className={`${a.color} rounded-2xl p-4 flex items-center gap-3 font-bold text-sm hover:opacity-90 transition-opacity active:scale-95`}>
             {a.icon} {a.label}
@@ -3552,33 +3572,33 @@ function UserDashboardView({ user, balance, orders, mutasi, setActiveTab, notice
 
 // ── Flag & dial-code lookup ──────────────────────────────────────────
 const COUNTRY_META: Record<string, { flag: string; dial: string }> = {
-  id: { flag: '🇮🇩', dial: '+62'  }, us: { flag: '🇺🇸', dial: '+1'   },
-  gb: { flag: '🇬🇧', dial: '+44'  }, uk: { flag: '🇬🇧', dial: '+44'  },
-  my: { flag: '🇲🇾', dial: '+60'  }, th: { flag: '🇹🇭', dial: '+66'  },
-  br: { flag: '🇧🇷', dial: '+55'  }, fr: { flag: '🇫🇷', dial: '+33'  },
-  de: { flag: '🇩🇪', dial: '+49'  }, it: { flag: '🇮🇹', dial: '+39'  },
-  ru: { flag: '🇷🇺', dial: '+7'   }, cn: { flag: '🇨🇳', dial: '+86'  },
-  in: { flag: '🇮🇳', dial: '+91'  }, pk: { flag: '🇵🇰', dial: '+92'  },
-  ph: { flag: '🇵🇭', dial: '+63'  }, vn: { flag: '🇻🇳', dial: '+84'  },
-  sg: { flag: '🇸🇬', dial: '+65'  }, hk: { flag: '🇭🇰', dial: '+852' },
-  tw: { flag: '🇹🇼', dial: '+886' }, jp: { flag: '🇯🇵', dial: '+81'  },
-  kr: { flag: '🇰🇷', dial: '+82'  }, au: { flag: '🇦🇺', dial: '+61'  },
-  ca: { flag: '🇨🇦', dial: '+1'   }, mx: { flag: '🇲🇽', dial: '+52'  },
-  ar: { flag: '🇦🇷', dial: '+54'  }, co: { flag: '🇨🇴', dial: '+57'  },
-  eg: { flag: '🇪🇬', dial: '+20'  }, ng: { flag: '🇳🇬', dial: '+234' },
-  ke: { flag: '🇰🇪', dial: '+254' }, za: { flag: '🇿🇦', dial: '+27'  },
-  tr: { flag: '🇹🇷', dial: '+90'  }, sa: { flag: '🇸🇦', dial: '+966' },
+  id: { flag: '🇮🇩', dial: '+62' }, us: { flag: '🇺🇸', dial: '+1' },
+  gb: { flag: '🇬🇧', dial: '+44' }, uk: { flag: '🇬🇧', dial: '+44' },
+  my: { flag: '🇲🇾', dial: '+60' }, th: { flag: '🇹🇭', dial: '+66' },
+  br: { flag: '🇧🇷', dial: '+55' }, fr: { flag: '🇫🇷', dial: '+33' },
+  de: { flag: '🇩🇪', dial: '+49' }, it: { flag: '🇮🇹', dial: '+39' },
+  ru: { flag: '🇷🇺', dial: '+7' }, cn: { flag: '🇨🇳', dial: '+86' },
+  in: { flag: '🇮🇳', dial: '+91' }, pk: { flag: '🇵🇰', dial: '+92' },
+  ph: { flag: '🇵🇭', dial: '+63' }, vn: { flag: '🇻🇳', dial: '+84' },
+  sg: { flag: '🇸🇬', dial: '+65' }, hk: { flag: '🇭🇰', dial: '+852' },
+  tw: { flag: '🇹🇼', dial: '+886' }, jp: { flag: '🇯🇵', dial: '+81' },
+  kr: { flag: '🇰🇷', dial: '+82' }, au: { flag: '🇦🇺', dial: '+61' },
+  ca: { flag: '🇨🇦', dial: '+1' }, mx: { flag: '🇲🇽', dial: '+52' },
+  ar: { flag: '🇦🇷', dial: '+54' }, co: { flag: '🇨🇴', dial: '+57' },
+  eg: { flag: '🇪🇬', dial: '+20' }, ng: { flag: '🇳🇬', dial: '+234' },
+  ke: { flag: '🇰🇪', dial: '+254' }, za: { flag: '🇿🇦', dial: '+27' },
+  tr: { flag: '🇹🇷', dial: '+90' }, sa: { flag: '🇸🇦', dial: '+966' },
   ae: { flag: '🇦🇪', dial: '+971' }, il: { flag: '🇮🇱', dial: '+972' },
-  pl: { flag: '🇵🇱', dial: '+48'  }, ua: { flag: '🇺🇦', dial: '+380' },
-  ro: { flag: '🇷🇴', dial: '+40'  }, nl: { flag: '🇳🇱', dial: '+31'  },
-  be: { flag: '🇧🇪', dial: '+32'  }, se: { flag: '🇸🇪', dial: '+46'  },
-  es: { flag: '🇪🇸', dial: '+34'  }, pt: { flag: '🇵🇹', dial: '+351' },
-  cz: { flag: '🇨🇿', dial: '+420' }, hu: { flag: '🇭🇺', dial: '+36'  },
-  kz: { flag: '🇰🇿', dial: '+7'   }, uz: { flag: '🇺🇿', dial: '+998' },
-  mm: { flag: '🇲🇲', dial: '+95'  }, kh: { flag: '🇰🇭', dial: '+855' },
+  pl: { flag: '🇵🇱', dial: '+48' }, ua: { flag: '🇺🇦', dial: '+380' },
+  ro: { flag: '🇷🇴', dial: '+40' }, nl: { flag: '🇳🇱', dial: '+31' },
+  be: { flag: '🇧🇪', dial: '+32' }, se: { flag: '🇸🇪', dial: '+46' },
+  es: { flag: '🇪🇸', dial: '+34' }, pt: { flag: '🇵🇹', dial: '+351' },
+  cz: { flag: '🇨🇿', dial: '+420' }, hu: { flag: '🇭🇺', dial: '+36' },
+  kz: { flag: '🇰🇿', dial: '+7' }, uz: { flag: '🇺🇿', dial: '+998' },
+  mm: { flag: '🇲🇲', dial: '+95' }, kh: { flag: '🇰🇭', dial: '+855' },
   la: { flag: '🇱🇦', dial: '+856' }, mo: { flag: '🇲🇴', dial: '+853' },
-  bd: { flag: '🇧🇩', dial: '+880' }, lk: { flag: '🇱🇰', dial: '+94'  },
-  np: { flag: '🇳🇵', dial: '+977' }, ir: { flag: '🇮🇷', dial: '+98'  },
+  bd: { flag: '🇧🇩', dial: '+880' }, lk: { flag: '🇱🇰', dial: '+94' },
+  np: { flag: '🇳🇵', dial: '+977' }, ir: { flag: '🇮🇷', dial: '+98' },
   iq: { flag: '🇮🇶', dial: '+964' }, et: { flag: '🇪🇹', dial: '+251' },
   gh: { flag: '🇬🇭', dial: '+233' }, tz: { flag: '🇹🇿', dial: '+255' },
   '6': { flag: '🇮🇩', dial: '+62' },
@@ -3589,26 +3609,26 @@ function getCountryMeta(id: string) {
 
 // ── Country ID → ISO2 untuk flagcdn.com ─────────────────────────────
 const COUNTRY_ID_TO_ISO2: Record<string, string> = {
-  '0':'ru','1':'ua','2':'kz','3':'cn','4':'ph','5':'mm','6':'id','7':'my',
-  '8':'ke','9':'tz','10':'vn','11':'kg','12':'us','13':'il','14':'hk','15':'pl',
-  '16':'gb','17':'mg','18':'cd','19':'ng','20':'mo','21':'eg','22':'in','23':'ie',
-  '24':'kh','25':'la','26':'ht','27':'ci','28':'gm','29':'rs','30':'ye','31':'za',
-  '32':'ro','33':'co','34':'ee','35':'az','36':'ca','37':'ma','38':'gh','39':'ar',
-  '40':'uz','41':'cm','42':'td','43':'de','44':'lt','45':'hr','46':'se','47':'iq',
-  '48':'nl','49':'lv','50':'at','51':'by','52':'th','53':'sa','54':'mx','55':'tw',
-  '56':'es','57':'ir','58':'dz','59':'si','60':'bd','61':'sn','62':'tr','63':'cz',
-  '64':'lk','65':'pe','66':'pk','67':'nz','68':'gn','69':'ml','70':'ve','71':'et',
-  '72':'mn','73':'br','74':'af','75':'ug','76':'ao','77':'cy','78':'fr','79':'pg',
-  '80':'mz','81':'np','82':'be','83':'bg','84':'hu','85':'md','86':'it','87':'py',
-  '88':'hn','89':'tn','90':'ni','91':'tl','92':'bo','93':'cr','94':'gt','95':'ae',
-  '96':'zw','97':'pr','98':'sd','99':'tg','100':'kw','101':'sv','102':'ly',
-  '103':'jm','104':'tt','105':'ec','106':'sz','107':'bh','108':'om','109':'bw',
-  '110':'mu','111':'bj','112':'bi','113':'jo','114':'bf','115':'zm','116':'fi',
-  '117':'so','118':'dk','119':'do','120':'sy','121':'qa','122':'pa','123':'cu',
-  '124':'mw','125':'sl','126':'lr','127':'sk','128':'no','129':'ch','130':'pt',
-  '131':'gr','132':'jp','133':'au','134':'kr','135':'sg','136':'tj','137':'am',
-  '138':'cl','139':'lb','140':'rw','141':'al','142':'ge','143':'tm','144':'bn',
-  '145':'ba','146':'mk',
+  '0': 'ru', '1': 'ua', '2': 'kz', '3': 'cn', '4': 'ph', '5': 'mm', '6': 'id', '7': 'my',
+  '8': 'ke', '9': 'tz', '10': 'vn', '11': 'kg', '12': 'us', '13': 'il', '14': 'hk', '15': 'pl',
+  '16': 'gb', '17': 'mg', '18': 'cd', '19': 'ng', '20': 'mo', '21': 'eg', '22': 'in', '23': 'ie',
+  '24': 'kh', '25': 'la', '26': 'ht', '27': 'ci', '28': 'gm', '29': 'rs', '30': 'ye', '31': 'za',
+  '32': 'ro', '33': 'co', '34': 'ee', '35': 'az', '36': 'ca', '37': 'ma', '38': 'gh', '39': 'ar',
+  '40': 'uz', '41': 'cm', '42': 'td', '43': 'de', '44': 'lt', '45': 'hr', '46': 'se', '47': 'iq',
+  '48': 'nl', '49': 'lv', '50': 'at', '51': 'by', '52': 'th', '53': 'sa', '54': 'mx', '55': 'tw',
+  '56': 'es', '57': 'ir', '58': 'dz', '59': 'si', '60': 'bd', '61': 'sn', '62': 'tr', '63': 'cz',
+  '64': 'lk', '65': 'pe', '66': 'pk', '67': 'nz', '68': 'gn', '69': 'ml', '70': 've', '71': 'et',
+  '72': 'mn', '73': 'br', '74': 'af', '75': 'ug', '76': 'ao', '77': 'cy', '78': 'fr', '79': 'pg',
+  '80': 'mz', '81': 'np', '82': 'be', '83': 'bg', '84': 'hu', '85': 'md', '86': 'it', '87': 'py',
+  '88': 'hn', '89': 'tn', '90': 'ni', '91': 'tl', '92': 'bo', '93': 'cr', '94': 'gt', '95': 'ae',
+  '96': 'zw', '97': 'pr', '98': 'sd', '99': 'tg', '100': 'kw', '101': 'sv', '102': 'ly',
+  '103': 'jm', '104': 'tt', '105': 'ec', '106': 'sz', '107': 'bh', '108': 'om', '109': 'bw',
+  '110': 'mu', '111': 'bj', '112': 'bi', '113': 'jo', '114': 'bf', '115': 'zm', '116': 'fi',
+  '117': 'so', '118': 'dk', '119': 'do', '120': 'sy', '121': 'qa', '122': 'pa', '123': 'cu',
+  '124': 'mw', '125': 'sl', '126': 'lr', '127': 'sk', '128': 'no', '129': 'ch', '130': 'pt',
+  '131': 'gr', '132': 'jp', '133': 'au', '134': 'kr', '135': 'sg', '136': 'tj', '137': 'am',
+  '138': 'cl', '139': 'lb', '140': 'rw', '141': 'al', '142': 'ge', '143': 'tm', '144': 'bn',
+  '145': 'ba', '146': 'mk',
 };
 
 // Pakai span + background-image agar tidak ada hydration mismatch
@@ -3718,10 +3738,10 @@ function CountryDropdown({ countries, value, onChange, t }: {
 
 // ── Custom Sort Dropdown ─────────────────────────────────────────────
 const getSortOptions = (t: Record<string, string>) => [
-  { value: 'default',    label: t.recommended,      icon: '⭐' },
-  { value: 'price_asc',  label: t.sortPriceAsc,     icon: '↓' },
-  { value: 'price_desc', label: t.sortPriceDesc,    icon: '↑' },
-  { value: 'stock_desc', label: t.sortStockMost,    icon: '📦' },
+  { value: 'default', label: t.recommended, icon: '⭐' },
+  { value: 'price_asc', label: t.sortPriceAsc, icon: '↓' },
+  { value: 'price_desc', label: t.sortPriceDesc, icon: '↑' },
+  { value: 'stock_desc', label: t.sortStockMost, icon: '📦' },
 ];
 function SortDropdown({ value, onChange, t }: { value: string; onChange: (v: string) => void; t: Record<string, string> }) {
   const [open, setOpen] = useState(false);
@@ -3916,7 +3936,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
     setLoadingSms(true);
     setAllSms([]);
     try {
-      const res  = await fetch(`/api/sms?id=${order.activationId}`);
+      const res = await fetch(`/api/sms?id=${order.activationId}`);
       const data = await res.json();
       if (Array.isArray(data)) setAllSms(data);
     } catch { /* biarkan kosong */ }
@@ -3943,9 +3963,9 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          service     : primary.code,
-          country     : selectedCountry,
-          operator    : '0',
+          service: primary.code,
+          country: selectedCountry,
+          operator: '0',
           multiService: rest.map(s => s.code),
         }),
       });
@@ -3969,19 +3989,19 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
       // ✅ Update saldo di DB (bukan hanya local state)
       await updateBalance(bundleTotalPrice, 'subtract');
       const newOrder: Order = {
-        id             : Date.now(),
-        activationId   : data.activationId,
-        date           : new Date().toLocaleString('id-ID'),
-        serviceName    : bundleServices.map(s => s.name).join(' + '),
-        price          : bundleTotalPrice,
-        icon           : primary.icon,
-        number         : data.phone,
-        status         : 'waiting',
-        timeLeft       : 600,
-        otpCode        : null,
-        isV2           : true,
-        bundleServices : bundleServices.map(s => s.code),
-        otpCodes       : [],
+        id: Date.now(),
+        activationId: data.activationId,
+        date: new Date().toLocaleString('id-ID'),
+        serviceName: bundleServices.map(s => s.name).join(' + '),
+        price: bundleTotalPrice,
+        icon: primary.icon,
+        number: data.phone,
+        status: 'waiting',
+        timeLeft: 600,
+        otpCode: null,
+        isV2: true,
+        bundleServices: bundleServices.map(s => s.code),
+        otpCodes: [],
       };
       setOrders(prev => [newOrder, ...prev]);
       setMutasi(prev => [{ id: Date.now(), date: new Date().toLocaleString(), type: 'out', amount: bundleTotalPrice, desc: 'Bundle: ' + newOrder.serviceName }, ...prev]);
@@ -3990,7 +4010,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         fetch('/api/user/orders', {
           method: 'POST', headers: authHeaders({ 'X-User-Email': user.email }),
           body: JSON.stringify({ email: user.email, activationId: data.activationId, serviceCode: primary.code, serviceName: newOrder.serviceName, phone: data.phone, price: bundleTotalPrice, country: selectedCountry, isV2: true }),
-        }).catch(() => {});
+        }).catch(() => { });
       }
       showToast(`Bundle dipesan! Nomor: ${data.phone}`);
       setBundleSelected(new Set());
@@ -4038,14 +4058,14 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
     return () => clearTimeout(timer);
   }, [activeCategory, selectedCountry, sortOrder]);
 
-  let displayServices = sourceServices.filter(s => 
-    (activeCategory === 'ALL' || s.category === activeCategory) && 
+  let displayServices = sourceServices.filter(s =>
+    (activeCategory === 'ALL' || s.category === activeCategory) &&
     s.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (sortOrder === 'price_asc') displayServices.sort((a,b) => a.price - b.price);
-  if (sortOrder === 'price_desc') displayServices.sort((a,b) => b.price - a.price);
-  if (sortOrder === 'stock_desc') displayServices.sort((a,b) => b.stock - a.stock);
+  if (sortOrder === 'price_asc') displayServices.sort((a, b) => a.price - b.price);
+  if (sortOrder === 'price_desc') displayServices.sort((a, b) => b.price - a.price);
+  if (sortOrder === 'stock_desc') displayServices.sort((a, b) => b.stock - a.stock);
 
   const favServices = displayServices.filter(s => favorites.includes(s.id));
   const regularServices = displayServices.filter(s => !favorites.includes(s.id));
@@ -4056,7 +4076,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
   const bundleTotalPrice = bundleServices.reduce((sum, s) => sum + s.price, 0);
 
   const toggleFavorite = (id: number) => {
-    if(favorites.includes(id)) {
+    if (favorites.includes(id)) {
       setFavorites(favorites.filter(favId => favId !== id));
       showToast("Dihapus dari favorit.");
     } else {
@@ -4067,9 +4087,9 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
 
   const handleBuy = async (service: Service) => {
     if (isProcessing) return;
-    if (balance < service.price) { 
-      showToast('Insufficient balance! Please deposit first.'); 
-      return; 
+    if (balance < service.price) {
+      showToast('Insufficient balance! Please deposit first.');
+      return;
     }
     if (!service.code) {
       showToast('Kode layanan tidak ditemukan. Coba refresh halaman.');
@@ -4104,7 +4124,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
       if (failedNumbers.current.has(data.phone)) {
         showToast('Nomor pernah gagal, mencari nomor lain...');
         // Cancel dan retry
-        await fetch('/api/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: data.activationId, action: 'cancel' }) }).catch(() => {});
+        await fetch('/api/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: data.activationId, action: 'cancel' }) }).catch(() => { });
         setIsProcessing(false);
         handleBuy(service);
         return;
@@ -4130,7 +4150,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         fetch('/api/user/orders', {
           method: 'POST', headers: authHeaders({ 'X-User-Email': user.email }),
           body: JSON.stringify({ email: user.email, activationId: data.activationId, serviceCode: service.code, serviceName: service.name, phone: data.phone, price: service.price, country: selectedCountry }),
-        }).catch(() => {});
+        }).catch(() => { });
       }
       showToast("Successfully ordered " + service.name + " — " + data.phone);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -4231,8 +4251,8 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
         {/* Kategori tabs */}
         <div className="relative">
           <div className="pointer-events-none absolute right-0 top-0 bottom-2 w-10 bg-gradient-to-l from-[#fafafa] dark:from-[#020617] to-transparent z-10" />
-          <div className="flex overflow-x-auto gap-2 pb-2" style={{scrollbarWidth:'none', msOverflowStyle:'none', WebkitOverflowScrolling:'touch'}}>
-            {[{key:'ALL', label: t.categoryAll}, ...CATEGORIES_BASE.map(c => ({key:c, label:c})), {key:'Lainnya', label: t.categoryOthers}].map(cat => (
+          <div className="flex overflow-x-auto gap-2 pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
+            {[{ key: 'ALL', label: t.categoryAll }, ...CATEGORIES_BASE.map(c => ({ key: c, label: c })), { key: 'Lainnya', label: t.categoryOthers }].map(cat => (
               <button key={cat.key} onClick={() => setActiveCategory(cat.key)}
                 className={"flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap border-2 transition-all " + (activeCategory === cat.key ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-[#0a0d16] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.09]')}>
                 {cat.label}
@@ -4245,8 +4265,8 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
       {/* ── DESKTOP Kategori tabs ─────────────────────────────────── */}
       <div className="hidden md:block relative">
         <div className="pointer-events-none absolute right-0 top-0 bottom-2 w-12 bg-gradient-to-l from-[#fafafa] dark:from-[#020617] to-transparent z-10" />
-        <div className="flex overflow-x-auto gap-3 pb-2 px-1" style={{scrollbarWidth:'none', msOverflowStyle:'none', WebkitOverflowScrolling:'touch'}}>
-          {[{key:'ALL', label: t.categoryAll}, ...CATEGORIES_BASE.map(c => ({key:c, label:c})), {key:'Lainnya', label: t.categoryOthers}].map(cat => (
+        <div className="flex overflow-x-auto gap-3 pb-2 px-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
+          {[{ key: 'ALL', label: t.categoryAll }, ...CATEGORIES_BASE.map(c => ({ key: c, label: c })), { key: 'Lainnya', label: t.categoryOthers }].map(cat => (
             <button key={cat.key} onClick={() => setActiveCategory(cat.key)}
               className={"flex-shrink-0 px-6 py-3 rounded-xl text-sm font-bold whitespace-nowrap border-2 transition-all " + (activeCategory === cat.key ? 'bg-indigo-600 dark:bg-indigo-600 text-white border-indigo-600 dark:border-indigo-600 shadow-md shadow-indigo-600/20' : 'bg-white dark:bg-[#0a0d16] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.09] hover:border-indigo-300 dark:hover:border-indigo-500')}>
               {cat.label}
@@ -4256,7 +4276,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
       </div>
 
       <div className={`flex flex-col-reverse xl:grid xl:items-start ${activeOrders.length > 0 ? 'xl:grid-cols-3' : ''} gap-8`}>
-        
+
         <div className={`dash-table bg-white dark:bg-[#0d1020] shadow-sm border border-slate-200 dark:border-white/[0.06] rounded-[2rem] overflow-hidden flex flex-col transition-colors ${activeOrders.length > 0 ? 'xl:col-span-2' : ''}`}>
 
           {/* ===== DESKTOP: Tabel ===== */}
@@ -4329,7 +4349,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                           </button>
                         ) : (
                           <button onClick={() => !s.outOfStock && handleBuy(s)} disabled={isProcessing || s.outOfStock} className={"text-white px-6 py-3.5 rounded-xl text-sm font-bold shadow-md w-full max-w-36 ml-auto transition-all flex justify-center items-center " + (s.outOfStock ? 'bg-slate-300 dark:bg-[#161b28] cursor-not-allowed' : isProcessing ? 'bg-indigo-400 cursor-wait' : 'bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:shadow-lg active:scale-95')}>
-                            {s.outOfStock ? t.outOfStock : isProcessing ? <RefreshCw className="w-4 h-4 animate-spin"/>  : t.buyBtn}
+                            {s.outOfStock ? t.outOfStock : isProcessing ? <RefreshCw className="w-4 h-4 animate-spin" /> : t.buyBtn}
                           </button>
                         )}
                       </td>
@@ -4399,7 +4419,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                       </button>
                     ) : (
                       <button onClick={() => !s.outOfStock && handleBuy(s)} disabled={isProcessing || s.outOfStock} className={"text-white text-xs font-bold px-3 py-2 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1 " + (s.outOfStock ? 'bg-slate-300 dark:bg-[#161b28] cursor-not-allowed' : isProcessing ? 'bg-indigo-400 cursor-wait' : 'bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500')}>
-                        {s.outOfStock ? t.outOfStock : isProcessing ? <RefreshCw className="w-3 h-3 animate-spin"/> : t.buyBtn}
+                        {s.outOfStock ? t.outOfStock : isProcessing ? <RefreshCw className="w-3 h-3 animate-spin" /> : t.buyBtn}
                       </button>
                     )}
                   </div>
@@ -4425,10 +4445,10 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
 
         {activeOrders.length > 0 && (
           <div id="active-orders-mobile" className="xl:col-span-1 xl:sticky xl:top-[104px] order-first xl:order-last">
-            <div className="text-white rounded-[2rem] shadow-2xl overflow-hidden border border-indigo-500/30 animate-in fade-in slide-in-from-right-8 duration-300" style={{background:'linear-gradient(145deg,#3730a3 0%,#4f46e5 45%,#6d28d9 100%)',boxShadow:'0 20px 60px rgba(79,70,229,0.4),0 0 0 1px rgba(139,92,246,0.2)'}}>
+            <div className="text-white rounded-[2rem] shadow-2xl overflow-hidden border border-indigo-500/30 animate-in fade-in slide-in-from-right-8 duration-300" style={{ background: 'linear-gradient(145deg,#3730a3 0%,#4f46e5 45%,#6d28d9 100%)', boxShadow: '0 20px 60px rgba(79,70,229,0.4),0 0 0 1px rgba(139,92,246,0.2)' }}>
 
               {/* Header */}
-              <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between font-bold" style={{background:'rgba(0,0,0,0.15)'}}>
+              <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between font-bold" style={{ background: 'rgba(0,0,0,0.15)' }}>
                 <div className="flex items-center">
                   <Zap className="w-5 h-5 mr-2 text-yellow-300" />
                   <span>{t.activeOrders}</span>
@@ -4486,138 +4506,138 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
                 <div className="flex transition-transform duration-300 ease-in-out" style={{ transform: `translateX(-${activeOrderIndex * 100}%)` }}>
                   {activeOrders.map(o => (
                     <div key={o.id} className="min-w-full p-4 sm:p-5">
-                  <div key={o.id} className={"bg-white/10 backdrop-blur-md rounded-3xl p-5 border shadow-sm relative overflow-hidden transition-all " + (o.status === 'success' ? 'border-green-400 ring-2 ring-green-400/50' : 'border-white/20')}>
-                    {o.status === 'success' && <div className="absolute -right-6 -top-6 w-20 h-20 bg-green-500 rounded-full blur-2xl opacity-40 animate-pulse"></div>}
-                    
-                    <div className="flex justify-between items-center mb-4 relative z-10">
-                      <div className="flex items-center font-bold text-sm">
-                        <div className="mr-3 shrink-0">{getServiceIconByName(o.serviceName)}</div>
-                        {o.serviceName}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {o.status === 'waiting' && (
-                          <span className="bg-indigo-900/50 text-indigo-100 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-indigo-400/30 flex items-center shadow-sm">
-                            <Clock className="w-3.5 h-3.5 mr-1.5"/>{formatTimeStr(o.timeLeft)}
-                          </span>
-                        )}
-                        {o.status === 'success' && (
-                          <>
-                            <span className="bg-green-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider shadow-sm">SELESAI</span>
-                            <button
-                              onClick={() => setOrders(cur => cur.map(x => x.id === o.id ? { ...x, status: 'completed' as Order['status'] } : x))}
-                              className="bg-white/20 hover:bg-white/40 text-white w-6 h-6 rounded-full flex items-center justify-center transition-colors"
-                              title="Tutup"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                      <div key={o.id} className={"bg-white/10 backdrop-blur-md rounded-3xl p-5 border shadow-sm relative overflow-hidden transition-all " + (o.status === 'success' ? 'border-green-400 ring-2 ring-green-400/50' : 'border-white/20')}>
+                        {o.status === 'success' && <div className="absolute -right-6 -top-6 w-20 h-20 bg-green-500 rounded-full blur-2xl opacity-40 animate-pulse"></div>}
 
-                    {/* Action buttons row */}
-                    {o.status === 'waiting' && (
-                      <div className="grid grid-cols-3 gap-2 mb-4 relative z-10">
-                        <button 
-                          onClick={() => handleResend(o)}
-                          className="bg-blue-500/20 text-blue-200 hover:bg-blue-500 hover:text-white py-3 rounded-xl text-[11px] font-bold border border-blue-500/30 transition-colors active:scale-95"
-                        >
-                          RESEND
-                        </button>
-                        <button
-                          onClick={() => openSmsModal(o)}
-                          className="bg-white/10 text-white hover:bg-white/20 py-3 rounded-xl text-[11px] font-bold border border-white/20 transition-colors active:scale-95"
-                        >
-                          SMS
-                        </button>
-                        <button 
-                          onClick={() => onCancelOrder(o.id)} 
-                          disabled={o.timeLeft > 900}
-                          className={"py-3 rounded-xl text-[11px] font-bold border transition-colors active:scale-95 " + (o.timeLeft > 900 ? 'bg-white/5 text-white/30 border-white/10 cursor-not-allowed' : 'bg-red-500/20 text-red-300 hover:bg-red-500 hover:text-white border-red-500/30')}
-                          title={o.timeLeft > 900 ? 'Wait 5 minutes before cancelling' : 'Cancel order'}
-                        >
-                          {t.cancel}
-                        </button>
-                      </div>
-                    )}
-
-                    <div className="space-y-3 relative z-10">
-                      <div>
-                        <span className="text-[10px] uppercase text-indigo-200 font-bold tracking-wider mb-1.5 block">Nomor HP Diterima</span>
-                        <div className="bg-white text-slate-900 px-4 py-3 rounded-xl font-mono text-lg font-black tracking-widest cursor-pointer shadow-inner text-center hover:bg-slate-50 transition-colors flex justify-center items-center group" onClick={() => copyToClipboard(o.number, showToast)} aria-label={`Salin nomor ${o.number}`}>
-                          {o.number} <Copy className="w-4 h-4 ml-2.5 text-slate-300 group-hover:text-indigo-600 transition-colors"/>
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-[10px] uppercase text-indigo-200 font-bold tracking-wider mb-1.5 block">Kode Verifikasi (OTP)</span>
-                        {/* V2 Bundle: tampilkan multiple OTP */}
-                        {o.isV2 ? (
-                          o.otpCodes && o.otpCodes.length > 0 ? (
-                            <div className="space-y-2">
-                              {o.otpCodes.map((item, i) => (
-                                <div key={i} className="bg-green-500 text-white px-4 py-2.5 rounded-xl font-black text-lg tracking-widest cursor-pointer shadow-lg text-center border border-green-400 hover:bg-green-400 transition-colors flex justify-between items-center group" onClick={() => copyToClipboard(item.code, showToast)}>
-                                  <span className="text-xs font-bold opacity-70 uppercase">{item.service}</span>
-                                  <span>{item.code}</span>
-                                  <Copy className="w-4 h-4 opacity-70 group-hover:opacity-100" />
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="text-xs font-medium flex items-center justify-center text-indigo-200 py-4 border-2 border-dashed border-indigo-400/50 rounded-xl bg-indigo-900/20">
-                              <RefreshCw className="w-4 h-4 mr-2 animate-spin"/> Menunggu OTP Bundle...
-                            </div>
-                          )
-                        ) : (
-                          /* V1 reguler */
-                          o.otpCode ? (
-                            <div className="bg-green-500 text-white px-4 py-3.5 rounded-xl cursor-pointer shadow-lg border border-green-400 hover:bg-green-400 transition-colors animate-in zoom-in group" onClick={() => copyToClipboard(o.otpCode ?? '', showToast)}>
-                              <div className="font-black text-xl tracking-widest break-all leading-snug text-center">{o.otpCode}</div>
-                              <div className="flex items-center justify-center mt-1.5 opacity-70 group-hover:opacity-100 text-xs font-bold gap-1"><Copy className="w-3.5 h-3.5"/> Salin</div>
-                            </div>
-                          ) : (
-                            <div className="text-xs font-medium flex items-center justify-center text-indigo-200 py-4 border-2 border-dashed border-indigo-400/50 rounded-xl bg-indigo-900/20">
-                              <RefreshCw className="w-4 h-4 mr-2 animate-spin"/> Menunggu SMS Masuk...
-                            </div>
-                          )
-                        )}
-                      </div>
-
-                      {/* Semua SMS masuk */}
-                      {o.allSms && o.allSms.length > 0 && (
-                        <div className="mt-3">
-                          <span className="text-[10px] uppercase text-indigo-200 font-bold tracking-wider mb-2 block">{t.allSMS} ({o.allSms.length})</span>
-                          <div className="space-y-2 max-h-40 overflow-y-auto">
-                            {o.allSms.map((sms, i) => (
-                              <div key={i} className="bg-white/10 rounded-xl px-3 py-2.5 text-xs text-indigo-100 cursor-pointer hover:bg-white/20 transition-colors" onClick={() => copyToClipboard(sms.text, showToast)}>
-                                <div className="font-bold text-white mb-1 font-mono tracking-widest">{sms.code || '—'}</div>
-                                <div className="opacity-70 leading-relaxed">{sms.text}</div>
-                              </div>
-                            ))}
+                        <div className="flex justify-between items-center mb-4 relative z-10">
+                          <div className="flex items-center font-bold text-sm">
+                            <div className="mr-3 shrink-0">{getServiceIconByName(o.serviceName)}</div>
+                            {o.serviceName}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {o.status === 'waiting' && (
+                              <span className="bg-indigo-900/50 text-indigo-100 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-indigo-400/30 flex items-center shadow-sm">
+                                <Clock className="w-3.5 h-3.5 mr-1.5" />{formatTimeStr(o.timeLeft)}
+                              </span>
+                            )}
+                            {o.status === 'success' && (
+                              <>
+                                <span className="bg-green-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider shadow-sm">SELESAI</span>
+                                <button
+                                  onClick={() => setOrders(cur => cur.map(x => x.id === o.id ? { ...x, status: 'completed' as Order['status'] } : x))}
+                                  className="bg-white/20 hover:bg-white/40 text-white w-6 h-6 rounded-full flex items-center justify-center transition-colors"
+                                  title="Tutup"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
-                      )}
 
-                      {/* Tombol lihat semua SMS */}
-                      {o.activationId && o.status === 'waiting' && !o.isV2 && (
-                        <button
-                          onClick={async () => {
-                            try {
-                              const res  = await fetch(`/api/sms?id=${o.activationId}`);
-                              const data = await res.json();
-                              if (Array.isArray(data) && data.length > 0) {
-                                setOrders(cur => cur.map(x => x.id === o.id ? { ...x, allSms: data } : x));
-                              } else {
-                                showToast('No other SMS received yet.');
-                              }
-                            } catch { showToast('Gagal mengambil SMS.'); }
-                          }}
-                          className="mt-2 w-full text-[11px] font-bold text-indigo-300 hover:text-white py-2 border border-indigo-400/30 hover:border-indigo-300 rounded-xl transition-colors"
-                        >
-                          {t.viewAllSMS}
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                        {/* Action buttons row */}
+                        {o.status === 'waiting' && (
+                          <div className="grid grid-cols-3 gap-2 mb-4 relative z-10">
+                            <button
+                              onClick={() => handleResend(o)}
+                              className="bg-blue-500/20 text-blue-200 hover:bg-blue-500 hover:text-white py-3 rounded-xl text-[11px] font-bold border border-blue-500/30 transition-colors active:scale-95"
+                            >
+                              RESEND
+                            </button>
+                            <button
+                              onClick={() => openSmsModal(o)}
+                              className="bg-white/10 text-white hover:bg-white/20 py-3 rounded-xl text-[11px] font-bold border border-white/20 transition-colors active:scale-95"
+                            >
+                              SMS
+                            </button>
+                            <button
+                              onClick={() => onCancelOrder(o.id)}
+                              disabled={o.timeLeft > 900}
+                              className={"py-3 rounded-xl text-[11px] font-bold border transition-colors active:scale-95 " + (o.timeLeft > 900 ? 'bg-white/5 text-white/30 border-white/10 cursor-not-allowed' : 'bg-red-500/20 text-red-300 hover:bg-red-500 hover:text-white border-red-500/30')}
+                              title={o.timeLeft > 900 ? 'Wait 5 minutes before cancelling' : 'Cancel order'}
+                            >
+                              {t.cancel}
+                            </button>
+                          </div>
+                        )}
+
+                        <div className="space-y-3 relative z-10">
+                          <div>
+                            <span className="text-[10px] uppercase text-indigo-200 font-bold tracking-wider mb-1.5 block">Nomor HP Diterima</span>
+                            <div className="bg-white text-slate-900 px-4 py-3 rounded-xl font-mono text-lg font-black tracking-widest cursor-pointer shadow-inner text-center hover:bg-slate-50 transition-colors flex justify-center items-center group" onClick={() => copyToClipboard(o.number, showToast)} aria-label={`Salin nomor ${o.number}`}>
+                              {o.number} <Copy className="w-4 h-4 ml-2.5 text-slate-300 group-hover:text-indigo-600 transition-colors" />
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase text-indigo-200 font-bold tracking-wider mb-1.5 block">Kode Verifikasi (OTP)</span>
+                            {/* V2 Bundle: tampilkan multiple OTP */}
+                            {o.isV2 ? (
+                              o.otpCodes && o.otpCodes.length > 0 ? (
+                                <div className="space-y-2">
+                                  {o.otpCodes.map((item, i) => (
+                                    <div key={i} className="bg-green-500 text-white px-4 py-2.5 rounded-xl font-black text-lg tracking-widest cursor-pointer shadow-lg text-center border border-green-400 hover:bg-green-400 transition-colors flex justify-between items-center group" onClick={() => copyToClipboard(item.code, showToast)}>
+                                      <span className="text-xs font-bold opacity-70 uppercase">{item.service}</span>
+                                      <span>{item.code}</span>
+                                      <Copy className="w-4 h-4 opacity-70 group-hover:opacity-100" />
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-xs font-medium flex items-center justify-center text-indigo-200 py-4 border-2 border-dashed border-indigo-400/50 rounded-xl bg-indigo-900/20">
+                                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Menunggu OTP Bundle...
+                                </div>
+                              )
+                            ) : (
+                              /* V1 reguler */
+                              o.otpCode ? (
+                                <div className="bg-green-500 text-white px-4 py-3.5 rounded-xl cursor-pointer shadow-lg border border-green-400 hover:bg-green-400 transition-colors animate-in zoom-in group" onClick={() => copyToClipboard(o.otpCode ?? '', showToast)}>
+                                  <div className="font-black text-xl tracking-widest break-all leading-snug text-center">{o.otpCode}</div>
+                                  <div className="flex items-center justify-center mt-1.5 opacity-70 group-hover:opacity-100 text-xs font-bold gap-1"><Copy className="w-3.5 h-3.5" /> Salin</div>
+                                </div>
+                              ) : (
+                                <div className="text-xs font-medium flex items-center justify-center text-indigo-200 py-4 border-2 border-dashed border-indigo-400/50 rounded-xl bg-indigo-900/20">
+                                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Menunggu SMS Masuk...
+                                </div>
+                              )
+                            )}
+                          </div>
+
+                          {/* Semua SMS masuk */}
+                          {o.allSms && o.allSms.length > 0 && (
+                            <div className="mt-3">
+                              <span className="text-[10px] uppercase text-indigo-200 font-bold tracking-wider mb-2 block">{t.allSMS} ({o.allSms.length})</span>
+                              <div className="space-y-2 max-h-40 overflow-y-auto">
+                                {o.allSms.map((sms, i) => (
+                                  <div key={i} className="bg-white/10 rounded-xl px-3 py-2.5 text-xs text-indigo-100 cursor-pointer hover:bg-white/20 transition-colors" onClick={() => copyToClipboard(sms.text, showToast)}>
+                                    <div className="font-bold text-white mb-1 font-mono tracking-widest">{sms.code || '—'}</div>
+                                    <div className="opacity-70 leading-relaxed">{sms.text}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Tombol lihat semua SMS */}
+                          {o.activationId && o.status === 'waiting' && !o.isV2 && (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const res = await fetch(`/api/sms?id=${o.activationId}`);
+                                  const data = await res.json();
+                                  if (Array.isArray(data) && data.length > 0) {
+                                    setOrders(cur => cur.map(x => x.id === o.id ? { ...x, allSms: data } : x));
+                                  } else {
+                                    showToast('No other SMS received yet.');
+                                  }
+                                } catch { showToast('Gagal mengambil SMS.'); }
+                              }}
+                              className="mt-2 w-full text-[11px] font-bold text-indigo-300 hover:text-white py-2 border border-indigo-400/30 hover:border-indigo-300 rounded-xl transition-colors"
+                            >
+                              {t.viewAllSMS}
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -4709,7 +4729,7 @@ function BuyView({ balance, setBalance, orders, setOrders, showToast, onCancelOr
       )}
     </div>
   );
-} 
+}
 // ==========================================
 interface TopupViewProps {
   balance: number;
@@ -4724,33 +4744,33 @@ interface TopupViewProps {
 
 // Info rekening admin — sesuaikan dengan rekening kamu
 const BANK_ACCOUNTS = [
-  { id: 'seabank', name: 'SeaBank',   number: '901267885511', holder: 'Pusat Nokos', qrisUrl: '' },
-  { id: 'dana',    name: 'DANA',      number: '082115922647', holder: 'Pusat Nokos', qrisUrl: '' },
-  { id: 'jago',    name: 'Bank Jago', number: '503748353165', holder: 'Pusat Nokos', qrisUrl: '' },
-  { id: 'gopay',   name: 'GoPay',     number: '083878868994', holder: 'Pusat Nokos', qrisUrl: '' },
-  { id: 'qris',    name: 'QRIS',      number: 'NMID: ID1024342737094', holder: 'PUSAT NOKOS', qrisUrl: 'https://delynxoxxjzkptvrybst.supabase.co/storage/v1/object/public/deposit-proofs/6269328457800028135_121.jpg' },
+  { id: 'seabank', name: 'SeaBank', number: '901267885511', holder: 'Pusat Nokos', qrisUrl: '' },
+  { id: 'dana', name: 'DANA', number: '082115922647', holder: 'Pusat Nokos', qrisUrl: '' },
+  { id: 'jago', name: 'Bank Jago', number: '503748353165', holder: 'Pusat Nokos', qrisUrl: '' },
+  { id: 'gopay', name: 'GoPay', number: '083878868994', holder: 'Pusat Nokos', qrisUrl: '' },
+  { id: 'qris', name: 'QRIS', number: 'NMID: ID1024342737094', holder: 'PUSAT NOKOS', qrisUrl: 'https://delynxoxxjzkptvrybst.supabase.co/storage/v1/object/public/deposit-proofs/6269328457800028135_121.jpg' },
 ];
 
 function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, updateBalance, user, lang }: TopupViewProps) {
   const t = T[lang ?? 'en'];
-  const [depositMode, setDepositMode]   = useState<'select' | 'manual' | 'auto' | 'crypto' | 'history'>('select');
-  const [amount,      setAmount]        = useState('');
-  const [selectedBank,setSelectedBank]  = useState(BANK_ACCOUNTS[0]);
-  const [step,        setStep]          = useState(1); // 1=isi nominal, 2=instruksi, 3=upload bukti
-  const [proof,       setProof]         = useState<string | null>(null);
-  const [proofName,   setProofName]     = useState('');
-  const [note,        setNote]          = useState('');
-  const [isLoading,   setIsLoading]     = useState(false);
-  const [myRequests,  setMyRequests]    = useState<any[]>([]);
-  const [waUrl,       setWaUrl]         = useState<string | null>(null);
+  const [depositMode, setDepositMode] = useState<'select' | 'manual' | 'auto' | 'crypto' | 'history'>('select');
+  const [amount, setAmount] = useState('');
+  const [selectedBank, setSelectedBank] = useState(BANK_ACCOUNTS[0]);
+  const [step, setStep] = useState(1); // 1=isi nominal, 2=instruksi, 3=upload bukti
+  const [proof, setProof] = useState<string | null>(null);
+  const [proofName, setProofName] = useState('');
+  const [note, setNote] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [myRequests, setMyRequests] = useState<any[]>([]);
+  const [waUrl, setWaUrl] = useState<string | null>(null);
 
   // Crypto deposit states
-  const [cryptoAmount,   setCryptoAmount]   = useState('');
-  const [cryptoLoading,  setCryptoLoading]  = useState(false);
-  const [cryptoPayLink,  setCryptoPayLink]  = useState<string | null>(null);
-  const [cryptoTrackId,  setCryptoTrackId]  = useState<string | null>(null);
-  const [cryptoStatus,   setCryptoStatus]   = useState<'idle' | 'waiting' | 'paid' | 'expired'>('idle');
-  const [cryptoAmountUSD,setCryptoAmountUSD]= useState<number | null>(null);
+  const [cryptoAmount, setCryptoAmount] = useState('');
+  const [cryptoLoading, setCryptoLoading] = useState(false);
+  const [cryptoPayLink, setCryptoPayLink] = useState<string | null>(null);
+  const [cryptoTrackId, setCryptoTrackId] = useState<string | null>(null);
+  const [cryptoStatus, setCryptoStatus] = useState<'idle' | 'waiting' | 'paid' | 'expired'>('idle');
+  const [cryptoAmountUSD, setCryptoAmountUSD] = useState<number | null>(null);
   const cryptoPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Handle crypto invoice creation
@@ -4761,10 +4781,10 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
 
     setCryptoLoading(true);
     try {
-      const res  = await fetch('/api/deposit/crypto', {
-        method : 'POST',
+      const res = await fetch('/api/deposit/crypto', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders({ 'X-User-Email': user.email }) },
-        body   : JSON.stringify({ email: user.email, amount: amt }),
+        body: JSON.stringify({ email: user.email, amount: amt }),
       });
       const data = await res.json();
       if (!res.ok) { showToast(data.error ?? 'Failed to create payment.'); return; }
@@ -4801,21 +4821,21 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
   }, []);
 
   // Paymenku otomatis
-  const [autoChannel,  setAutoChannel]  = useState('qris');
-  const [autoLoading,  setAutoLoading]  = useState(false);
-  const [autoAmount,   setAutoAmount]   = useState('');
-  const [payUrl,       setPayUrl]       = useState<string | null>(null);
-  const [autoTrxId,    setAutoTrxId]    = useState<string | null>(null);
-  const [autoStatus,   setAutoStatus]   = useState<'idle' | 'waiting' | 'paid'>('idle');
+  const [autoChannel, setAutoChannel] = useState('qris');
+  const [autoLoading, setAutoLoading] = useState(false);
+  const [autoAmount, setAutoAmount] = useState('');
+  const [payUrl, setPayUrl] = useState<string | null>(null);
+  const [autoTrxId, setAutoTrxId] = useState<string | null>(null);
+  const [autoStatus, setAutoStatus] = useState<'idle' | 'waiting' | 'paid'>('idle');
   const autoPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const PAYMENKU_CHANNELS = [
-    { code: 'qris',       name: 'QRIS',    fee: 'Rp 200 + 0.7%',  feeFlat: 200, feePct: 0.007, type: 'qr'      },
-    { code: 'dana',       name: 'DANA',    fee: 'Rp 200 + 3%',    feeFlat: 200, feePct: 0.03,  type: 'ewallet' },
-    { code: 'linkaja',    name: 'LinkAja', fee: 'Rp 200 + 3%',    feeFlat: 200, feePct: 0.03,  type: 'ewallet' },
+    { code: 'qris', name: 'QRIS', fee: 'Rp 200 + 0.7%', feeFlat: 200, feePct: 0.007, type: 'qr' },
+    { code: 'dana', name: 'DANA', fee: 'Rp 200 + 3%', feeFlat: 200, feePct: 0.03, type: 'ewallet' },
+    { code: 'linkaja', name: 'LinkAja', fee: 'Rp 200 + 3%', feeFlat: 200, feePct: 0.03, type: 'ewallet' },
   ];
 
-  const QUICK_AUTO    = [5000, 10000, 25000, 50000, 100000, 200000];
+  const QUICK_AUTO = [5000, 10000, 25000, 50000, 100000, 200000];
   const QUICK_AMOUNTS = [10000, 25000, 50000, 100000, 200000, 500000];
 
   const handlePaymenku = async () => {
@@ -4825,9 +4845,9 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
     setAutoLoading(true);
     try {
       const res = await fetch('/api/deposit/paymenku/create', {
-        method : 'POST',
+        method: 'POST',
         headers: authHeaders({ 'X-User-Email': user.email }),
-        body   : JSON.stringify({ email: user.email, amount: nominal, channelCode: autoChannel }),
+        body: JSON.stringify({ email: user.email, amount: nominal, channelCode: autoChannel }),
       });
       const data = await res.json();
       if (!res.ok || !data.payUrl) { showToast(data.error ?? 'Gagal membuat transaksi.'); return; }
@@ -4838,7 +4858,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
 
       // Poll status deposit setiap 5 detik, stop otomatis setelah 15 menit
       if (autoPollRef.current) clearInterval(autoPollRef.current);
-      const pollStart   = Date.now();
+      const pollStart = Date.now();
       const MAX_POLL_MS = 15 * 60 * 1000; // 15 menit
       autoPollRef.current = setInterval(async () => {
         // Stop polling setelah 15 menit
@@ -4847,13 +4867,13 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
           return;
         }
         try {
-          const r    = await fetch('/api/user/deposit-history', { headers: authHeaders() });
+          const r = await fetch('/api/user/deposit-history', { headers: authHeaders() });
           const list = await r.json();
           if (!Array.isArray(list)) return;
           // Cek by trxId ATAU referenceId (fallback)
           const found = list.find((d: any) =>
             d.status === 'approved' && (
-              (data.trxId       && d.note?.includes(`trx:${data.trxId}`)) ||
+              (data.trxId && d.note?.includes(`trx:${data.trxId}`)) ||
               (data.referenceId && d.note?.includes(`ref:${data.referenceId}`))
             )
           );
@@ -4864,9 +4884,9 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
             fetch('/api/user/balance', { headers: authHeaders() })
               .then(r => r.json())
               .then(d => { if (typeof d.balance === 'number') setBalance(d.balance); })
-              .catch(() => {});
+              .catch(() => { });
           }
-        } catch {}
+        } catch { }
       }, 5000);
     } catch { showToast('Terjadi kesalahan jaringan.'); }
     finally { setAutoLoading(false); }
@@ -4884,7 +4904,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
       const r = await fetch('/api/user/deposit-history', { headers: authHeaders() });
       const data = await r.json();
       setMyRequests(Array.isArray(data) ? data : []);
-    } catch {}
+    } catch { }
   };
 
   useEffect(() => { if (depositMode === 'history') fetchMyRequests(); }, [depositMode]);
@@ -4905,12 +4925,12 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
     setIsLoading(true);
     try {
       const res = await fetch('/api/deposit/manual', {
-        method : 'POST',
+        method: 'POST',
         headers: authHeaders({ 'X-User-Email': user.email }),
-        body   : JSON.stringify({
-          email     : user.email,
-          amount    : parseInt(amount),
-          bankName  : selectedBank.name,
+        body: JSON.stringify({
+          email: user.email,
+          amount: parseInt(amount),
+          bankName: selectedBank.name,
           proofImage: proof,
           note,
         }),
@@ -4932,9 +4952,9 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
   };
 
   const STATUS_CFG: Record<string, { label: string; color: string; bg: string; border: string }> = {
-    pending : { label: t.depositStatusPending,  color: 'text-amber-600 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-900/20',  border: 'border-amber-200 dark:border-amber-800/50' },
-    approved: { label: t.depositStatusApproved, color: 'text-green-600 dark:text-green-400',  bg: 'bg-green-50 dark:bg-green-900/20',  border: 'border-green-200 dark:border-green-800/50' },
-    rejected: { label: t.depositStatusRejected, color: 'text-red-600 dark:text-red-400',      bg: 'bg-red-50 dark:bg-red-900/20',      border: 'border-red-200 dark:border-red-800/50' },
+    pending: { label: t.depositStatusPending, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800/50' },
+    approved: { label: t.depositStatusApproved, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-800/50' },
+    rejected: { label: t.depositStatusRejected, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-200 dark:border-red-800/50' },
   };
 
   return (
@@ -4965,7 +4985,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
 
           <div onClick={() => { setDepositMode('crypto'); setCryptoAmount(''); setCryptoStatus('idle'); setCryptoPayLink(null); }} className="bg-white dark:bg-[#0a0d16] rounded-2xl border-2 border-slate-200 dark:border-white/[0.09] hover:border-orange-400 dark:hover:border-orange-500 p-6 cursor-pointer transition-all group">
             <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-2xl w-fit mb-4 group-hover:bg-orange-500 transition-colors">
-              <svg className="w-6 h-6 text-orange-500 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/></svg>
+              <svg className="w-6 h-6 text-orange-500 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z" /></svg>
             </div>
             <h3 className="font-black text-slate-900 dark:text-white text-lg mb-1">Crypto Payment</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400">Pay with any cryptocurrency. USDT, BTC, ETH, and 100+ coins supported.</p>
@@ -4988,7 +5008,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
               {QUICK_AUTO.map(n => (
                 <button key={n} onClick={() => setAutoAmount(String(n))}
                   className={"py-2.5 rounded-xl text-sm font-bold transition-colors " + (autoAmount === String(n) ? 'bg-indigo-600 text-white' : 'bg-slate-50 dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 border border-slate-200 dark:border-white/[0.09]')}>
-                  Rp {(n/1000)}rb
+                  Rp {(n / 1000)}rb
                 </button>
               ))}
             </div>
@@ -5134,7 +5154,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                 <label className="block text-sm font-bold mb-3 text-slate-800 dark:text-slate-200">Nominal Deposit</label>
                 <div className="relative">
                   <span className="absolute left-5 top-4 text-slate-400 font-black text-xl">Rp</span>
-                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={amount} onChange={e => setAmount(e.target.value.replace(/\D/g,""))} min="10000" placeholder="10000" className="w-full px-14 py-4 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white" />
+                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={amount} onChange={e => setAmount(e.target.value.replace(/\D/g, ""))} min="10000" placeholder="10000" className="w-full px-14 py-4 bg-slate-50 dark:bg-[#0f1320] border border-slate-200 dark:border-white/[0.09] rounded-2xl font-black text-3xl outline-none focus:ring-2 focus:ring-indigo-500/50 dark:text-white" />
                 </div>
                 <div className="flex flex-wrap gap-2 mt-3">
                   {QUICK_AMOUNTS.map(q => (
@@ -5271,7 +5291,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                 rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-3 py-4 bg-[#25D366] hover:bg-[#1ebd5a] text-white font-bold rounded-2xl transition-colors text-base"
               >
-                <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5 shrink-0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5 shrink-0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
                 Konfirmasi via WhatsApp
               </a>
               <button onClick={() => { setStep(1); setAmount(''); setProof(null); setProofName(''); setNote(''); setWaUrl(null); setDepositMode('history'); }}
@@ -5295,7 +5315,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
             <div className="dash-card rounded-[2rem] bg-white border border-slate-200 p-6 md:p-8 space-y-6">
               <div className="flex items-center gap-3 mb-2">
                 <div className="bg-orange-50 dark:bg-orange-900/20 p-2.5 rounded-2xl">
-                  <svg className="w-6 h-6 text-orange-500" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/></svg>
+                  <svg className="w-6 h-6 text-orange-500" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z" /></svg>
                 </div>
                 <div>
                   <h3 className="font-black text-slate-900 dark:text-white">Crypto Payment</h3>
@@ -5334,7 +5354,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
                   {[20000, 50000, 100000, 200000, 500000, 1000000].map(q => (
                     <button key={q} onClick={() => setCryptoAmount(String(q))}
                       className={"px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors " + (cryptoAmount === String(q) ? 'bg-orange-500 text-white border-orange-500' : 'bg-white dark:bg-[#0f1320] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.09] hover:border-orange-300')}>
-                      {q >= 1000000 ? '1jt' : `${(q/1000).toFixed(0)}rb`}
+                      {q >= 1000000 ? '1jt' : `${(q / 1000).toFixed(0)}rb`}
                     </button>
                   ))}
                 </div>
@@ -5398,7 +5418,7 @@ function TopupView({ balance, setBalance, showToast, setActiveTab, setMutasi, up
 
                   <a href={cryptoPayLink} target="_blank" rel="noopener noreferrer"
                     className="w-full flex items-center justify-center gap-3 py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl transition-colors text-base">
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/></svg>
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z" /></svg>
                     Pay with Crypto
                   </a>
 
@@ -5488,11 +5508,11 @@ function HistoryFilterDropdown({
   }, []);
 
   const OPTS = [
-    { value: '',          label: labels.all,       dot: 'bg-slate-400',   badge: '' },
-    { value: 'success',   label: labels.success,   dot: 'bg-green-500',   badge: 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50' },
-    { value: 'waiting',   label: labels.waiting,   dot: 'bg-amber-400',   badge: 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50' },
-    { value: 'cancelled', label: labels.cancelled, dot: 'bg-red-400',     badge: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50' },
-    { value: 'expired',   label: labels.expired,   dot: 'bg-violet-500',  badge: 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800/50' },
+    { value: '', label: labels.all, dot: 'bg-slate-400', badge: '' },
+    { value: 'success', label: labels.success, dot: 'bg-green-500', badge: 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50' },
+    { value: 'waiting', label: labels.waiting, dot: 'bg-amber-400', badge: 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50' },
+    { value: 'cancelled', label: labels.cancelled, dot: 'bg-red-400', badge: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50' },
+    { value: 'expired', label: labels.expired, dot: 'bg-violet-500', badge: 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800/50' },
   ];
   const selected = OPTS.find(o => o.value === value) ?? OPTS[0];
 
@@ -5533,28 +5553,28 @@ function HistoryFilterDropdown({
 // ==========================================
 interface HistoryViewProps {
   orders: Order[];
-  user  : UserData | null;
-  lang  ?: Lang;
+  user: UserData | null;
+  lang?: Lang;
 }
 
 // Tipe data dari /api/history
 interface ApiHistoryItem {
   activationId: string;
-  phone       : string;
-  service     : string;
-  status      : string;
-  statusLabel : string;
-  otpCode     : string | null;
-  priceIDR    : number | null;
-  createdAt   : string | null;
+  phone: string;
+  service: string;
+  status: string;
+  statusLabel: string;
+  otpCode: string | null;
+  priceIDR: number | null;
+  createdAt: string | null;
 }
 
 function HistoryView({ orders, user, lang }: HistoryViewProps) {
   const t = T[lang ?? 'en'];
-  const [isLoading, setIsLoading]       = useState<boolean>(true);
-  const [apiHistory, setApiHistory]     = useState<ApiHistoryItem[]>([]);
-  const [page, setPage]                 = useState(1);
-  const [hasMore, setHasMore]           = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [apiHistory, setApiHistory] = useState<ApiHistoryItem[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [filterStatus, setFilterStatus] = useState('');
   const [reactivating, setReactivating] = useState<string | null>(null);
   const [historyToast, setHistoryToast] = useState<string | null>(null);
@@ -5576,7 +5596,7 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
     setReactivating(activationId);
     try {
       // Cek harga dulu
-      const costRes  = await fetch(`/api/reactivation?id=${activationId}`);
+      const costRes = await fetch(`/api/reactivation?id=${activationId}`);
       const costData = await costRes.json();
 
       if (!costRes.ok) {
@@ -5603,10 +5623,10 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
       if (!konfirmasi) return;
 
       // Proses reaktivasi
-      const res  = await fetch('/api/reactivation', {
-        method : 'POST',
+      const res = await fetch('/api/reactivation', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body   : JSON.stringify({ id: activationId }),
+        body: JSON.stringify({ id: activationId }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -5632,7 +5652,7 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
     try {
       const params = new URLSearchParams({ page: String(p), limit: '20' });
       if (status) params.set('status', status);
-      const res  = await fetch(`/api/history?${params}`, {
+      const res = await fetch(`/api/history?${params}`, {
         headers: authHeaders({ 'X-User-Email': user.email }),
       });
       const data = await res.json();
@@ -5670,10 +5690,10 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
   });
 
   const STATUS_COLOR: Record<string, string> = {
-    success   : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50',
-    waiting   : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800/50',
-    cancelled : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/50',
-    expired   : 'bg-slate-100 dark:bg-[#0f1320] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/[0.09]',
+    success: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50',
+    waiting: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800/50',
+    cancelled: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/50',
+    expired: 'bg-slate-100 dark:bg-[#0f1320] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/[0.09]',
   };
 
   return (
@@ -5732,7 +5752,7 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
                 ))
               ) : localOnly.length === 0 && apiHistory.length === 0 ? (
                 <tr><td colSpan={4} className="py-24 text-center">
-                  <div className="w-20 h-20 bg-slate-50 dark:bg-[#0f1320] border border-slate-100 dark:border-white/[0.09] rounded-full flex items-center justify-center mx-auto mb-4"><History className="w-10 h-10 text-slate-300 dark:text-slate-500"/></div>
+                  <div className="w-20 h-20 bg-slate-50 dark:bg-[#0f1320] border border-slate-100 dark:border-white/[0.09] rounded-full flex items-center justify-center mx-auto mb-4"><History className="w-10 h-10 text-slate-300 dark:text-slate-500" /></div>
                   <p className="font-extrabold text-slate-800 dark:text-slate-200 text-lg">Belum ada riwayat.</p>
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">Transaksi yang Anda lakukan akan muncul di sini.</p>
                 </td></tr>
@@ -5754,7 +5774,7 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
                       <td className="p-5 sm:px-6 text-right">
                         {a.status === 'success' && a.activationId && (
                           <button disabled={reactivating === a.activationId}
-                            onClick={async () => { setReactivating(a.activationId); try { const costRes = await fetch(`/api/reactivation?id=${a.activationId}`); const costData = await costRes.json(); if (!costRes.ok) { const e = typeof costData.error === 'string' ? costData.error.toLowerCase() : ''; showHistoryToast(e.includes('404')||e.includes('upstream')||e.includes('server')||e.includes('not found')||e.includes('invalid') ? 'Number has expired. Please buy a new one.' : (costData.error ?? 'Failed to check price.')); return; } const konfirm = await showConfirm(`Reuse number ${a.phone}? Cost: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`); if (!konfirm) return; const res = await fetch('/api/reactivation', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ id: a.activationId, service: a.service }) }); const data = await res.json(); if (!res.ok) { const e2 = typeof data.error === 'string' ? data.error.toLowerCase() : ''; showHistoryToast(e2.includes('upstream')||e2.includes('server') ? 'Reactivation failed — number expired.' : (data.error ?? 'Reactivation failed.')); return; } showHistoryToast(`Success! Number ${data.phone} is ready to use again.`); } catch { showHistoryToast('Network error.'); } finally { setReactivating(null); } }}
+                            onClick={async () => { setReactivating(a.activationId); try { const costRes = await fetch(`/api/reactivation?id=${a.activationId}`); const costData = await costRes.json(); if (!costRes.ok) { const e = typeof costData.error === 'string' ? costData.error.toLowerCase() : ''; showHistoryToast(e.includes('404') || e.includes('upstream') || e.includes('server') || e.includes('not found') || e.includes('invalid') ? 'Number has expired. Please buy a new one.' : (costData.error ?? 'Failed to check price.')); return; } const konfirm = await showConfirm(`Reuse number ${a.phone}? Cost: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`); if (!konfirm) return; const res = await fetch('/api/reactivation', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ id: a.activationId, service: a.service }) }); const data = await res.json(); if (!res.ok) { const e2 = typeof data.error === 'string' ? data.error.toLowerCase() : ''; showHistoryToast(e2.includes('upstream') || e2.includes('server') ? 'Reactivation failed — number expired.' : (data.error ?? 'Reactivation failed.')); return; } showHistoryToast(`Success! Number ${data.phone} is ready to use again.`); } catch { showHistoryToast('Network error.'); } finally { setReactivating(null); } }}
                             className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 rounded-lg text-[11px] font-black hover:bg-indigo-600 hover:text-white transition-colors disabled:opacity-50 flex items-center gap-1">
                             {reactivating === a.activationId ? <RefreshCw className="w-3 h-3 animate-spin" /> : null}Pakai Lagi
                           </button>
@@ -5780,7 +5800,7 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
             ))
           ) : localOnly.length === 0 && apiHistory.length === 0 ? (
             <div className="py-20 text-center px-4">
-              <div className="w-16 h-16 bg-slate-50 dark:bg-[#0f1320] border border-slate-100 dark:border-white/[0.09] rounded-full flex items-center justify-center mx-auto mb-3"><History className="w-8 h-8 text-slate-300 dark:text-slate-500"/></div>
+              <div className="w-16 h-16 bg-slate-50 dark:bg-[#0f1320] border border-slate-100 dark:border-white/[0.09] rounded-full flex items-center justify-center mx-auto mb-3"><History className="w-8 h-8 text-slate-300 dark:text-slate-500" /></div>
               <p className="font-extrabold text-slate-800 dark:text-slate-200">Belum ada riwayat.</p>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Transaksi yang Anda lakukan akan muncul di sini.</p>
             </div>
@@ -5806,7 +5826,7 @@ function HistoryView({ orders, user, lang }: HistoryViewProps) {
                   {a.otpCode && <div className="flex items-start gap-1.5 text-xs font-black text-green-700 dark:text-green-400"><span className="shrink-0">OTP:</span><span className="bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-800/50 tracking-widest break-all leading-snug">{a.otpCode}</span></div>}
                   {a.status === 'success' && a.activationId && (
                     <button disabled={reactivating === a.activationId}
-                      onClick={async () => { setReactivating(a.activationId); try { const costRes = await fetch(`/api/reactivation?id=${a.activationId}`); const costData = await costRes.json(); if (!costRes.ok) { const e = typeof costData.error === 'string' ? costData.error.toLowerCase() : ''; showHistoryToast(e.includes('404')||e.includes('upstream')||e.includes('server') ? 'Number has expired. Please buy a new one.' : (costData.error ?? 'Failed to check price.')); return; } const konfirm = await showConfirm(`Reuse number ${a.phone}? Cost: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`); if (!konfirm) return; const res = await fetch('/api/reactivation', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ id: a.activationId, service: a.service }) }); const data = await res.json(); if (!res.ok) { const e2 = typeof data.error === 'string' ? data.error.toLowerCase() : ''; showHistoryToast(e2.includes('upstream')||e2.includes('server') ? 'Reactivation failed — number expired.' : (data.error ?? 'Reactivation failed.')); return; } showHistoryToast(`Success! Number ${data.phone} is ready to use again.`); } catch { showHistoryToast('Network error.'); } finally { setReactivating(null); } }}
+                      onClick={async () => { setReactivating(a.activationId); try { const costRes = await fetch(`/api/reactivation?id=${a.activationId}`); const costData = await costRes.json(); if (!costRes.ok) { const e = typeof costData.error === 'string' ? costData.error.toLowerCase() : ''; showHistoryToast(e.includes('404') || e.includes('upstream') || e.includes('server') ? 'Number has expired. Please buy a new one.' : (costData.error ?? 'Failed to check price.')); return; } const konfirm = await showConfirm(`Reuse number ${a.phone}? Cost: Rp ${(costData.priceIDR ?? 0).toLocaleString('id-ID')}`); if (!konfirm) return; const res = await fetch('/api/reactivation', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ id: a.activationId, service: a.service }) }); const data = await res.json(); if (!res.ok) { const e2 = typeof data.error === 'string' ? data.error.toLowerCase() : ''; showHistoryToast(e2.includes('upstream') || e2.includes('server') ? 'Reactivation failed — number expired.' : (data.error ?? 'Reactivation failed.')); return; } showHistoryToast(`Success! Number ${data.phone} is ready to use again.`); } catch { showHistoryToast('Network error.'); } finally { setReactivating(null); } }}
                       className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50 rounded-xl text-xs font-black active:scale-95 transition-all disabled:opacity-50">
                       {reactivating === a.activationId ? <RefreshCw className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}Pakai Lagi
                     </button>
@@ -5856,9 +5876,9 @@ function MutasiFilterDropdown({
   }, []);
 
   const OPTS: { value: '' | 'in' | 'out'; label: string; dot: string; badge: string }[] = [
-    { value: '',    label: labels.all,     dot: 'bg-slate-400',  badge: '' },
-    { value: 'in',  label: labels.income,  dot: 'bg-green-500',  badge: 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50' },
-    { value: 'out', label: labels.expense, dot: 'bg-red-400',    badge: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50' },
+    { value: '', label: labels.all, dot: 'bg-slate-400', badge: '' },
+    { value: 'in', label: labels.income, dot: 'bg-green-500', badge: 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50' },
+    { value: 'out', label: labels.expense, dot: 'bg-red-400', badge: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50' },
   ];
   const selected = OPTS.find(o => o.value === value) ?? OPTS[0];
 
@@ -5907,11 +5927,11 @@ interface MutasiViewProps {
 
 function MutasiView({ mutasi, user, lang }: MutasiViewProps) {
   const t = T[lang ?? 'en'];
-  const [isLoading, setIsLoading]         = useState<boolean>(true);
-  const [dbMutasi, setDbMutasi]           = useState<Mutasi[]>([]);
-  const [page, setPage]                   = useState(1);
-  const [hasMore, setHasMore]             = useState(true);
-  const [filterType, setFilterType]       = useState<'' | 'in' | 'out'>('');
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [dbMutasi, setDbMutasi] = useState<Mutasi[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [filterType, setFilterType] = useState<'' | 'in' | 'out'>('');
 
   const fetchMutasi = async (p: number, type: string) => {
     if (!user?.email) { setIsLoading(false); return; }
@@ -5949,7 +5969,7 @@ function MutasiView({ mutasi, user, lang }: MutasiViewProps) {
   }, [filterType, user?.email]);
 
   // Gabung: sesi ini (lokal) + dari DB
-  const dbIds  = new Set(dbMutasi.map(m => m.id));
+  const dbIds = new Set(dbMutasi.map(m => m.id));
   const localOnly = mutasi.filter(m => !dbIds.has(m.id));
   const allMutasi = [...localOnly, ...dbMutasi];
 
@@ -5987,7 +6007,7 @@ function MutasiView({ mutasi, user, lang }: MutasiViewProps) {
               ) : allMutasi.length === 0 ? (
                 <tr>
                   <td colSpan={2} className="py-20 text-center">
-                    <div className="w-16 h-16 bg-slate-50 dark:bg-[#0f1320] border border-slate-100 dark:border-white/[0.09] rounded-full flex items-center justify-center mx-auto mb-3"><Receipt className="w-8 h-8 text-slate-300 dark:text-slate-500"/></div>
+                    <div className="w-16 h-16 bg-slate-50 dark:bg-[#0f1320] border border-slate-100 dark:border-white/[0.09] rounded-full flex items-center justify-center mx-auto mb-3"><Receipt className="w-8 h-8 text-slate-300 dark:text-slate-500" /></div>
                     <p className="font-extrabold text-slate-800 dark:text-slate-200">Belum ada mutasi.</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Buku kas akan terisi saat Anda deposit atau membeli nomor.</p>
                   </td>
@@ -6048,14 +6068,14 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
   const [loadingInfo, setLoadingInfo] = useState(true);
 
   // Ganti password
-  const [oldPass,     setOldPass]     = useState('');
-  const [newPass,     setNewPass]     = useState('');
+  const [oldPass, setOldPass] = useState('');
+  const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
-  const [showOld,     setShowOld]     = useState(false);
-  const [showNew,     setShowNew]     = useState(false);
+  const [showOld, setShowOld] = useState(false);
+  const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [passLoading, setPassLoading] = useState(false);
-  const [passError,   setPassError]   = useState('');
+  const [passError, setPassError] = useState('');
 
   useEffect(() => {
     if (!user?.email) return;
@@ -6065,7 +6085,7 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
         const r = await fetch('/api/user/account-info', { headers: authHeaders() });
         const d = await r.json();
         setAccountInfo(d);
-      } catch {}
+      } catch { }
       finally { setLoadingInfo(false); }
     };
     fetchInfo();
@@ -6088,10 +6108,10 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
     setPassLoading(true);
     try {
       const r = await fetch('/api/user/change-password', {
-        method : 'POST',
+        method: 'POST',
         headers: authHeaders({ 'X-User-Email': user?.email ?? '' }),
         // headers backup 'Content-Type': 'application/json' },
-        body   : JSON.stringify({ email: user?.email, oldPassword: oldPass, newPassword: newPass }),
+        body: JSON.stringify({ email: user?.email, oldPassword: oldPass, newPassword: newPass }),
       });
       const d = await r.json();
       if (d.success) {
@@ -6128,11 +6148,11 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
           <div>
             <h2 className="text-2xl font-black text-slate-900 dark:text-white">{user?.name}</h2>
             <p className="text-slate-500 dark:text-slate-400 font-bold flex items-center justify-center sm:justify-start mt-1.5 text-sm">
-              <Mail className="w-4 h-4 mr-2 text-slate-400 dark:text-slate-500"/> {user?.email}
+              <Mail className="w-4 h-4 mr-2 text-slate-400 dark:text-slate-500" /> {user?.email}
             </p>
             <div className="flex gap-2 mt-3 justify-center sm:justify-start">
               <span className="inline-flex items-center bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 text-green-700 dark:text-green-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md">
-                <CheckCircle className="w-3 h-3 mr-1"/> Verified
+                <CheckCircle className="w-3 h-3 mr-1" /> Verified
               </span>
             </div>
           </div>
@@ -6144,7 +6164,7 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
           </div>
           <div className="pt-2">
             <button type="submit" disabled={isLoading} className="bg-slate-900 dark:bg-indigo-600 text-white font-bold text-sm px-8 py-4 rounded-2xl hover:bg-indigo-600 dark:hover:bg-indigo-700 transition-all active:scale-95 shadow-lg w-full sm:w-auto flex justify-center items-center">
-              {isLoading ? <RefreshCw className="w-4 h-4 animate-spin mr-2"/> : null}
+              {isLoading ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : null}
               Perbarui Profil
             </button>
           </div>
@@ -6239,12 +6259,11 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
             {/* Strength indicator */}
             {newPass.length > 0 && (
               <div className="mt-2 flex gap-1.5">
-                {[1,2,3,4].map(i => (
-                  <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${
-                    newPass.length >= i * 3
-                      ? i <= 1 ? 'bg-red-400' : i <= 2 ? 'bg-amber-400' : i <= 3 ? 'bg-blue-400' : 'bg-green-500'
-                      : 'bg-slate-200 dark:bg-[#161b28]'
-                  }`} />
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${newPass.length >= i * 3
+                    ? i <= 1 ? 'bg-red-400' : i <= 2 ? 'bg-amber-400' : i <= 3 ? 'bg-blue-400' : 'bg-green-500'
+                    : 'bg-slate-200 dark:bg-[#161b28]'
+                    }`} />
                 ))}
                 <span className="text-[10px] font-bold text-slate-400 ml-1 self-center">
                   {newPass.length < 4 ? t.passStrWeak : newPass.length < 7 ? t.passStrMed : newPass.length < 10 ? t.passStrStrong : t.passStrVeryStrong}
@@ -6284,7 +6303,7 @@ function ProfileView({ user, showToast, lang }: ProfileViewProps) {
               disabled={passLoading || !oldPass || !newPass || !confirmPass}
               className="bg-slate-900 dark:bg-indigo-600 text-white font-bold text-sm px-8 py-4 rounded-2xl hover:bg-indigo-600 dark:hover:bg-indigo-700 transition-all active:scale-95 shadow-lg w-full sm:w-auto flex justify-center items-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {passLoading ? <RefreshCw className="w-4 h-4 animate-spin mr-2"/> : <Lock className="w-4 h-4 mr-2"/>}
+              {passLoading ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <Lock className="w-4 h-4 mr-2" />}
               {passLoading ? t.saving : t.changePassTitle}
             </button>
           </div>
