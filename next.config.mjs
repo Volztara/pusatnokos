@@ -23,7 +23,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com https://www.google.com https://cdn.simpleicons.org",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com https://www.google.com https://cdn.simpleicons.org https://icon.horse https://flagcdn.com",
               "frame-src https://challenges.cloudflare.com",
               "form-action 'self' mailto:",
               "base-uri 'self'",
