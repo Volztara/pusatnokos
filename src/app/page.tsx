@@ -953,7 +953,7 @@ function getServiceIconByName(name: string): React.ReactNode {
         return (
           <ServiceLogoImg
             src={`https://cdn.simpleicons.org/${cfg.slug}/${cfg.color}`}
-            fallbackSrc={`https://icon.horse/icon/${cfg.slug}.com`}
+            fallbackSrc={`/api/favicon?domain=${cfg.slug}.com`}
             bg={cfg.bg}
             initial={initial}
             color={`#${cfg.color}`}
@@ -975,8 +975,8 @@ function getServiceIconByName(name: string): React.ReactNode {
         // fallback: icon.horse (lebih reliable di iOS/Android, tidak diblok privacy filter)
         return (
           <ServiceLogoImg
-            src={`https://www.google.com/s2/favicons?sz=64&domain=${cfg.domain}`}
-            fallbackSrc={`https://icon.horse/icon/${cfg.domain}`}
+            src={`/api/favicon?domain=${cfg.domain}`}
+            fallbackSrc={`/api/favicon?domain=${cfg.domain}`}
             bg={cfg.bg}
             initial={initial}
             color="#4f46e5"
@@ -1512,7 +1512,7 @@ function LandingPage({ onNavigate, showToast, isDarkMode, setIsDarkMode, activeS
               { name: 'Facebook', domain: 'facebook.com' },
             ].map(app => (
               <div key={app.name} className="_chip _glass-card border rounded-xl px-3 py-1.5 flex items-center gap-1.5 shadow-sm text-xs font-bold text-slate-600 dark:text-slate-300">
-                <img src={`https://www.google.com/s2/favicons?domain=${app.domain}&sz=32`} width={14} height={14} className="w-3.5 h-3.5 object-contain" alt={app.name} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                <img src={`/api/favicon?domain=${app.domain}`} width={14} height={14} className="w-3.5 h-3.5 object-contain" alt={app.name} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 {app.name}
               </div>
             ))}
@@ -2668,7 +2668,7 @@ function DashboardLayout({ user, onLogout, showToast, isDarkMode, setIsDarkMode,
     // SSE: terima notifikasi OTP real-time dari webhook
     let es: EventSource | null = null;
     try {
-      es = new EventSource(`/api/webhook/stream?_token=${encodeURIComponent(_sessionToken ?? '')}`);
+      es = new EventSource('/api/webhook/stream');
       es.onmessage = (e) => {
         try {
           const event = JSON.parse(e.data);
