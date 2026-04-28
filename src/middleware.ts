@@ -190,6 +190,27 @@ export async function middleware(req: NextRequest) {
   }
 
   // ══ 5. WEBHOOK ROUTES (HeroSMS) ═══════════════════════════════════════
+  // SSE stream — EventSource tidak bisa kirim header, pakai query param _token
+  if (pathname === '/api/webhook/stream') {
+    if (!checkRate(`stream:${ip}`, 60, 60_000)) {
+      return new Response('Too Many Requests', { status: 429 });
+    }
+    const authHeader = req.headers.get('Authorization') ?? '';
+    const queryToken = req.nextUrl.searchParams.get('_token') ?? '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : queryToken;
+    if (!token) {
+      return NextResponse.json({ error: 'Autentikasi diperlukan.' }, { status: 401 });
+    }
+    const userInfo = await getUserFromToken(token);
+    if (!userInfo) {
+      return NextResponse.json({ error: 'Sesi habis. Silakan login ulang.' }, { status: 401 });
+    }
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('X-Verified-User-Id', userInfo.id);
+    requestHeaders.set('X-Verified-User-Email', userInfo.email);
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
   if (pathname.startsWith('/api/webhook')) {
     if (!checkRate(`webhook:${ip}`, 100, 60_000)) {
       return new Response('Too Many Requests', { status: 429 });
